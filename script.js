@@ -20,8 +20,8 @@ const deepModeButton = document.querySelector("#toggle-deep-mode");
 const jumpToNextButton = document.querySelector("#jump-to-next");
 const lessonTemplate = document.querySelector("#lesson-template");
 
-function generateLessonId(weekNumber, dayLabel) {
-  return `${weekNumber}-${dayLabel.toLowerCase().replace(/\s+/g, "-")}`;
+function generateLessonId(weekNumber, day) {
+  return `${weekNumber}-${day.toLowerCase().replace(/\s+/g, "-")}`;
 }
 
 const allLessons = courseWeeks.flatMap((week) =>
@@ -170,7 +170,7 @@ function renderWeeks() {
       lessonNode.querySelector(".lesson-checkpoint").textContent = lesson.checkpoint;
 
       const tags = lessonNode.querySelector(".lesson-tags");
-      [week.track, `Week ${week.week}`, completed ? "Complete" : "In progress"].forEach((tag) => {
+      [week.track, completed ? "Complete" : "In progress"].forEach((tag) => {
         const pill = document.createElement("span");
         pill.className = "tag";
         pill.textContent = tag;
