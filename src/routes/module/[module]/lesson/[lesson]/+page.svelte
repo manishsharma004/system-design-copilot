@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { base } from '$app/paths';
   import { progress } from '$lib/stores/progress';
   export let data;
 </script>
@@ -11,9 +12,9 @@
 
 <section class="panel hero-card">
   <div class="breadcrumb">
-    <a href="/">Curriculum</a>
+    <a href={`${base}/`}>Curriculum</a>
     <span>→</span>
-    <a href={`/module/${data.module.slug}`}>{data.module.title}</a>
+    <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
     <span>→</span>
     <span>{data.lesson.title}</span>
   </div>
@@ -63,7 +64,7 @@
       <article class="diagram-card">
         <p class="eyebrow">Reference diagram</p>
         <h3>Visual anchor</h3>
-        <img src={data.lesson.diagram.src} alt={data.lesson.diagram.alt} loading="lazy" />
+        <img src={`${base}${data.lesson.diagram.src}`} alt={data.lesson.diagram.alt} loading="lazy" />
         <p>{data.lesson.diagram.caption}</p>
         <p class="footer-copy">{data.lesson.diagram.credit}</p>
       </article>
@@ -110,12 +111,12 @@
   </div>
   <div class="action-row">
     {#if data.previousLesson}
-      <a class="action-link" href={`/module/${data.module.slug}/lesson/${data.previousLesson.slug}`}>← {data.previousLesson.title}</a>
+      <a class="action-link" href={`${base}/module/${data.module.slug}/lesson/${data.previousLesson.slug}`}>← {data.previousLesson.title}</a>
     {/if}
     {#if data.nextLesson}
-      <a class="action-link primary" href={`/module/${data.module.slug}/lesson/${data.nextLesson.slug}`}>{data.nextLesson.title} →</a>
+      <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${data.nextLesson.slug}`}>{data.nextLesson.title} →</a>
     {:else}
-      <a class="action-link primary" href="/">Back to curriculum</a>
+      <a class="action-link primary" href={`${base}/`}>Back to curriculum</a>
     {/if}
   </div>
 </section>

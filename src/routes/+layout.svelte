@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { base } from '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
   import { allLessons, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
@@ -13,8 +14,14 @@
   const moduleProgress = derived(progress, ($progress) =>
     Object.fromEntries(modules.map((module) => [module.slug, getModuleProgress($progress.completedLessonIds, module.slug)]))
   );
+  const homeHref = `${base}/`;
+  /** @param {string} moduleSlug */
+  const moduleHref = (moduleSlug) => `${base}/module/${moduleSlug}`;
+  /** @param {string} moduleSlug @param {string} lessonSlug */
+  const lessonHref = (moduleSlug, lessonSlug) => `${base}/module/${moduleSlug}/lesson/${lessonSlug}`;
 
   $: pathname = $page.url.pathname;
+  $: normalizedPathname = pathname !== homeHref && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
   $: filteredModules = modules
     .map((module) => ({
       ...module,
@@ -56,7 +63,7 @@
           <h2>{siteOverview.title}</h2>
         </div>
         <p class="muted">{siteOverview.subtitle}</p>
-        <a class="action-link primary" href="/">Open curriculum home</a>
+        <a class="action-link primary" href={homeHref}>Open curriculum home</a>
       </section>
 
       <section class="panel sidebar-card sidebar-search">
@@ -81,7 +88,7 @@
         {#each filteredModules as module}
           <section class="nav-module">
             <div>
-              <a class="nav-link {pathname === `/module/${module.slug}` ? 'active' : ''}" href={`/module/${module.slug}`}>
+              <a class="nav-link {normalizedPathname === moduleHref(module.slug) ? 'active' : ''}" href={moduleHref(module.slug)}>
                 <strong>{module.title}</strong>
                 <small>{module.summary}</small>
               </a>
@@ -89,7 +96,7 @@
             <span class="pill">{$moduleProgress[module.slug]?.completed ?? 0} / {$moduleProgress[module.slug]?.total ?? 0} complete</span>
             <div class="nav-links">
               {#each module.lessons as lesson}
-                <a class="nav-link {pathname === `/module/${module.slug}/lesson/${lesson.slug}` ? 'active' : ''}" href={`/module/${module.slug}/lesson/${lesson.slug}`}>
+                <a class="nav-link {normalizedPathname === lessonHref(module.slug, lesson.slug) ? 'active' : ''}" href={lessonHref(module.slug, lesson.slug)}>
                   <strong>{lesson.title}</strong>
                   <small>{lesson.summary}</small>
                 </a>

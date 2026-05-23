@@ -7,7 +7,10 @@ const config = {
     adapter: adapter({
       pages: 'dist',
       assets: 'dist'
-    })
+    }),
+    paths: {
+      base: '/system-design-copilot'
+    }
   }
 };
 

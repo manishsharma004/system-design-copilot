@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { base } from '$app/paths';
   import { completedLessonCount, progress } from '$lib/stores/progress';
   import { getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
 </script>
@@ -15,8 +16,8 @@
       <h1 class="hero-title">Study system design in the order interviews actually reward.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
       <div class="action-row">
-        <a class="action-link primary" href={`/module/${modules[0].slug}`}>Start with {modules[0].title}</a>
-        <a class="action-link" href={`/module/${modules[modules.length - 1].slug}`}>Jump to case studies</a>
+        <a class="action-link primary" href={`${base}/module/${modules[0].slug}`}>Start with {modules[0].title}</a>
+        <a class="action-link" href={`${base}/module/${modules[modules.length - 1].slug}`}>Jump to case studies</a>
       </div>
       <div class="action-row">
         <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
@@ -60,7 +61,7 @@
   <div class="module-grid">
     {#each modules as module}
       <article class="module-card">
-        <a class="topic-card-link" href={`/module/${module.slug}`}>
+          <a class="topic-card-link" href={`${base}/module/${module.slug}`}>
           <div>
             <p class="eyebrow">Module</p>
             <h3>{module.title}</h3>
