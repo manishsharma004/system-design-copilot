@@ -10,8 +10,7 @@ const config = {
     }),
     paths: {
       base: '/system-design-copilot'
-    },
-    trailingSlash: 'always'
+    }
   }
 };
 
