@@ -299,6 +299,9 @@ function renderLessonDetail() {
   state.selectedTopicId = topic.id;
   const currentMode = getMode();
   const isComplete = state.completedTopics.has(topic.id);
+  const emptySubtopicsMarkup = topic.children.length
+    ? ""
+    : '<p class="empty-state">This lesson stands on its own, so move to the exercises below.</p>';
 
   lessonDetail.innerHTML = `
     <div class="lesson-header">
@@ -340,7 +343,7 @@ function renderLessonDetail() {
         </div>
       </div>
       <div class="subtopic-grid ${topic.children.length ? "" : "empty"}">
-        ${topic.children.length ? "" : '<p class="empty-state">This lesson stands on its own, so move to the exercises below.</p>'}
+        ${emptySubtopicsMarkup}
       </div>
     </section>
 
@@ -397,10 +400,6 @@ function toggleCurrentTopic() {
 function jumpToNextLesson() {
   const filteredTopics = getFilteredTopics();
   const nextTopic = filteredTopics.find((topic) => !state.completedTopics.has(topic.id)) ?? filteredTopics[0] ?? searchableTopics[0];
-
-  if (!nextTopic) {
-    return;
-  }
 
   state.selectedTopicId = nextTopic.id;
   saveProgress();

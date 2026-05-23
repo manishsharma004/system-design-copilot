@@ -438,6 +438,7 @@ h3 {
 }
 
 @media (min-width: 880px) {
+  /* Switch to the two-column sidebar + lesson layout once both panels have comfortable width. */
   .page-shell {
     padding: 1.5rem 1.5rem 4rem;
   }
