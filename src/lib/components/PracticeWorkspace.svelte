@@ -3,6 +3,7 @@
   import { practiceAnswers } from '$lib/stores/practice';
   import { getLessonPracticeSteps } from '$lib/data/courseData';
 
+  /** @type {any} */
   export let lesson;
 
   let steps = [];
