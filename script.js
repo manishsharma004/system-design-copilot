@@ -170,7 +170,7 @@ function renderWeeks() {
       lessonNode.querySelector(".lesson-checkpoint").textContent = lesson.checkpoint;
 
       const tags = lessonNode.querySelector(".lesson-tags");
-      [week.track, "Interview ready", completed ? "Complete" : "In progress"].forEach((tag) => {
+      [week.track, `Week ${week.week}`, completed ? "Complete" : "In progress"].forEach((tag) => {
         const pill = document.createElement("span");
         pill.className = "tag";
         pill.textContent = tag;

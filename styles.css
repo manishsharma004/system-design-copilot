@@ -6,6 +6,7 @@
   --muted: #94a3b8;
   --accent: #38bdf8;
   --accent-strong: #0ea5e9;
+  --button-text-color: #022235;
   --shadow: 0 24px 80px rgba(2, 6, 23, 0.35);
   --bg-gradient:
     radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 34%),
@@ -22,6 +23,7 @@
     --muted: #475569;
     --accent: #0284c7;
     --accent-strong: #0369a1;
+    --button-text-color: #eff6ff;
     --shadow: 0 20px 50px rgba(148, 163, 184, 0.22);
     --bg-gradient:
       radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 34%),
@@ -141,7 +143,7 @@ h1 {
 .primary-button,
 .lesson-toggle {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: #022235;
+  color: var(--button-text-color);
 }
 
 .ghost-button,
