@@ -314,3 +314,77 @@ img { display: block; max-width: 100%; }
   .track-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .section-grid { grid-template-columns: 1.2fr 0.8fr; }
 }
+
+
+textarea {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 0.9rem 1rem;
+  resize: vertical;
+  min-height: 16rem;
+}
+
+button:disabled, .action-link[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.practice-workspace, .practice-layout, .practice-outline, .practice-card, .practice-guidance, .practice-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.practice-copy, .practice-step-list p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.practice-status-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.practice-step-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.practice-step-list li {
+  color: var(--muted);
+}
+
+.practice-step-list li.active {
+  color: var(--text);
+}
+
+.practice-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.practice-guidance ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.practice-nav {
+  justify-content: space-between;
+}
+
+@media (min-width: 960px) {
+  .practice-layout {
+    grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.3fr);
+  }
+}

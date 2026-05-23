@@ -1,7 +1,7 @@
 export const siteOverview = {
   "title": "System Design Copilot",
-  "subtitle": "A complete system design interview prep curriculum with topic guides, diagrams, trade-offs, and case studies.",
-  "description": "Study foundations, architecture patterns, storage, caching, reliability, security, and end-to-end design drills in a mobile-friendly SvelteKit site.",
+  "subtitle": "A deeper system design interview prep curriculum with topic guides, building blocks, trade-offs, case studies, and interactive practice labs.",
+  "description": "Study foundations, distributed systems building blocks, architecture patterns, storage, caching, reliability, security, and end-to-end design drills in a mobile-friendly SvelteKit site with locally saved practice answers.",
   "studyTracks": [
     {
       "title": "Interview sprint",
@@ -34,6 +34,17 @@ export const siteOverview = {
         "Choose storage and edge patterns",
         "Add scaling and resilience controls",
         "Compare alternatives"
+      ]
+    },
+    {
+      "title": "Interactive answer drafting",
+      "summary": "Open the practice lab inside each lesson, save your answer locally, and move through prompts one step at a time like a mock interview.",
+      "steps": [
+        "Open a lesson practice lab",
+        "Write a draft for the active prompt",
+        "Save the answer locally",
+        "Move to the next interview or design prompt",
+        "Return later and continue from your saved notes"
       ]
     }
   ],
@@ -1965,6 +1976,323 @@ export const modules = [
     ]
   },
   {
+    "slug": "distributed-systems",
+    "title": "Distributed systems building blocks",
+    "summary": "Go deeper on coordination, partitioning, probabilistic techniques, and workflow patterns that appear repeatedly in the primer and in senior-level interviews.",
+    "objectives": [
+      "Explain the building blocks behind partitioning, coordination, and large-scale data movement",
+      "Recognize when to use quorums, hashing, probabilistic structures, and sagas",
+      "Connect these lower-level concepts back to product-facing system designs"
+    ],
+    "lessons": [
+      {
+        "slug": "consistent-hashing-and-hot-keys",
+        "title": "Consistent hashing and hot-key management",
+        "summary": "Partitioning strategy determines whether scale-out stays smooth or turns into painful rebalancing and overloaded shards.",
+        "duration": "30-40 min",
+        "whyItMatters": "Many system design answers mention sharding, but stronger candidates can explain how data moves during capacity changes and how to survive skewed traffic.",
+        "sections": [
+          {
+            "heading": "Why consistent hashing exists",
+            "body": "Naive modulo-based sharding reshuffles a large fraction of keys whenever the node count changes. Consistent hashing reduces reshuffling so scale events and failures are less disruptive.",
+            "bullets": [
+              "Map both nodes and keys onto a logical ring or token space",
+              "Only a bounded slice of keys moves when capacity changes",
+              "Virtual nodes smooth uneven hardware and failure domains"
+            ]
+          },
+          {
+            "heading": "Hot partitions still need extra controls",
+            "body": "Even a good partitioning strategy can collapse under celebrity users, trending objects, or tenant imbalance. Plan for skew rather than assuming uniform traffic.",
+            "bullets": [
+              "Detect hot keys with per-partition saturation metrics",
+              "Use replication, selective fan-out, or request coalescing for extreme skew",
+              "Choose partition keys that follow the read and write path, not just the schema"
+            ]
+          },
+          {
+            "heading": "Tie hashing to operational behavior",
+            "body": "Partitioning decisions affect rebalancing speed, cache locality, failure isolation, and incident recovery. Explain those effects, not only the algorithm.",
+            "bullets": [
+              "Discuss how nodes join, leave, and recover",
+              "Separate logical ownership from physical placement",
+              "Mention metadata coordination and replica movement cost"
+            ]
+          }
+        ],
+        "checklist": [
+          "Explain why modulo sharding causes painful remaps.",
+          "Mention virtual nodes or tokens for balance.",
+          "Call out hot-key mitigation separately from normal partitioning.",
+          "Describe what happens during rebalance or node failure."
+        ],
+        "pitfalls": [
+          "Assuming even key distribution in real workloads.",
+          "Treating partitioning as only a data-model decision.",
+          "Ignoring rebalancing bandwidth and cache churn."
+        ],
+        "interviewPrompts": [
+          "Why is consistent hashing often preferred over modulo-based partitioning?",
+          "How would you handle a celebrity account that overwhelms one shard?",
+          "What operational metrics tell you a partitioning strategy is breaking down?"
+        ],
+        "diagram": null,
+        "related": [
+          "partitioning-and-sharding",
+          "caching-layers"
+        ],
+        "moduleSlug": "distributed-systems",
+        "moduleTitle": "Distributed systems building blocks",
+        "order": 1,
+        "id": "distributed-systems/consistent-hashing-and-hot-keys"
+      },
+      {
+        "slug": "consensus-quorums-and-leader-election",
+        "title": "Consensus, quorums, and leader election",
+        "summary": "Some systems need a clear write owner or coordinated control plane, and that requires more than just adding replicas.",
+        "duration": "30-40 min",
+        "whyItMatters": "Interviewers often probe replication and failover depth by asking who is allowed to write, how failover is detected, and what happens during split-brain risk.",
+        "sections": [
+          {
+            "heading": "Quorums trade latency for coordination safety",
+            "body": "Read and write quorums can keep replicas from drifting too far apart, but they increase coordination cost and still depend on careful failure handling.",
+            "bullets": [
+              "Use quorum math to reason about overlap between reads and writes",
+              "Be explicit about stale reads, repair, and failure windows",
+              "Separate data-plane quorum choices from control-plane consensus"
+            ]
+          },
+          {
+            "heading": "Leader election is about ownership",
+            "body": "A leader can serialize writes, coordinate metadata, or manage leases, but only when followers can reliably detect leader loss without creating split brain.",
+            "bullets": [
+              "Heartbeats, leases, and fencing tokens matter during failover",
+              "Election speed and safety usually pull in opposite directions",
+              "Leaders are common in metadata and coordination services even when data serving is distributed"
+            ]
+          },
+          {
+            "heading": "Use coordination sparingly",
+            "body": "Global consensus on the critical path is expensive. Strong designs isolate where coordination is truly required and keep everything else partitionable or asynchronous.",
+            "bullets": [
+              "Prefer local autonomy when the domain allows it",
+              "Keep leader scope narrow to reduce blast radius",
+              "Discuss how clients discover the current writer or metadata owner"
+            ]
+          }
+        ],
+        "checklist": [
+          "Name who owns writes and how that ownership changes.",
+          "Explain how replicas detect and recover from leader failure.",
+          "Use quorum language only when you can describe the trade-off.",
+          "Avoid putting unnecessary global coordination on every request."
+        ],
+        "pitfalls": [
+          "Using 'leader election' as a buzzword with no failure story.",
+          "Assuming replication alone solves split-brain risk.",
+          "Ignoring the latency cost of cross-zone or cross-region coordination."
+        ],
+        "interviewPrompts": [
+          "When do you actually need a leader in a distributed system?",
+          "How do leases and fencing tokens reduce split-brain risk?",
+          "Why can quorum reads still return stale data in some systems?"
+        ],
+        "diagram": null,
+        "related": [
+          "replication-and-failover",
+          "multi-region-disaster-recovery"
+        ],
+        "moduleSlug": "distributed-systems",
+        "moduleTitle": "Distributed systems building blocks",
+        "order": 2,
+        "id": "distributed-systems/consensus-quorums-and-leader-election"
+      },
+      {
+        "slug": "distributed-transactions-and-sagas",
+        "title": "Distributed transactions, sagas, and idempotent workflows",
+        "summary": "Once one user action touches multiple services, the real design problem becomes how to preserve intent when part of the workflow fails halfway through.",
+        "duration": "30-40 min",
+        "whyItMatters": "This is where shallow microservice answers usually break down: interviewers want to know how money, inventory, reservations, or emails stay coherent under retries and partial failure.",
+        "sections": [
+          {
+            "heading": "Understand transaction boundaries",
+            "body": "Single-database transactions are powerful, but cross-service workflows often need looser coordination, compensations, or an outbox pattern rather than pretending there is one global ACID boundary.",
+            "bullets": [
+              "Use local atomicity where you can and explicit workflow state where you cannot",
+              "Outbox and change-data-capture patterns reduce dual-write risk",
+              "Exactly-once claims usually hide idempotency and reconciliation work"
+            ]
+          },
+          {
+            "heading": "Sagas model long-running business intent",
+            "body": "A saga breaks a workflow into local steps with compensating actions or retriable states. It accepts temporary inconsistency in exchange for availability and service autonomy.",
+            "bullets": [
+              "Choose orchestration when you need centralized visibility",
+              "Choose choreography carefully to avoid hidden coupling",
+              "Persist workflow state so retries and operators see the same truth"
+            ]
+          },
+          {
+            "heading": "Idempotency closes the retry loop",
+            "body": "Retries are only safe when duplicate work can be detected or collapsed. Tokens, deduplication windows, and reconciliation jobs often matter as much as the happy path.",
+            "bullets": [
+              "Give every externally visible command a stable idempotency key",
+              "Design compensations for irreversible side effects such as emails or payouts",
+              "Add audit trails for manual recovery and dispute analysis"
+            ]
+          }
+        ],
+        "checklist": [
+          "Name the local transaction boundary for each step.",
+          "Explain how the workflow recovers from a mid-flight failure.",
+          "Use idempotency keys or deduplication for retried commands.",
+          "Mention reconciliation or operator visibility for stuck workflows."
+        ],
+        "pitfalls": [
+          "Hand-waving cross-service consistency with 'eventual consistency'.",
+          "Assuming retries are safe without idempotency.",
+          "Forgetting that compensations can fail too."
+        ],
+        "interviewPrompts": [
+          "How would you design order placement across payment, inventory, and shipping services?",
+          "When is a saga a better fit than a distributed transaction coordinator?",
+          "What makes an API truly idempotent from a caller's perspective?"
+        ],
+        "diagram": null,
+        "related": [
+          "idempotency-retries-backpressure",
+          "payments-ledger"
+        ],
+        "moduleSlug": "distributed-systems",
+        "moduleTitle": "Distributed systems building blocks",
+        "order": 3,
+        "id": "distributed-systems/distributed-transactions-and-sagas"
+      },
+      {
+        "slug": "probabilistic-data-structures",
+        "title": "Probabilistic data structures and cardinality estimation",
+        "summary": "Bloom filters, sketches, and approximate counters let large systems answer useful questions cheaply when exact answers would be too slow or too expensive.",
+        "duration": "25-35 min",
+        "whyItMatters": "These are classic primer topics and strong interview differentiators because they show you can trade tiny error bounds for major savings in memory, storage, or request cost.",
+        "sections": [
+          {
+            "heading": "Use approximation where exactness is wasteful",
+            "body": "Many large-scale questions are screening or monitoring questions: have we probably seen this item, roughly how many unique users were active, or which keys are heavy hitters.",
+            "bullets": [
+              "Bloom filters trade false positives for compact membership tests",
+              "HyperLogLog-style sketches estimate cardinality with tiny memory",
+              "Count-min sketches help surface frequent items under high volume"
+            ]
+          },
+          {
+            "heading": "Place probabilistic structures carefully",
+            "body": "Approximate structures are usually front-line filters or telemetry tools, not the final source of truth. Pair them with exact systems on the confirmation path.",
+            "bullets": [
+              "Use a Bloom filter before a cache or database lookup to reduce pointless reads",
+              "Keep exact stores for billing, payouts, or legal reporting",
+              "Refresh or rebuild sketches as data ages and traffic shifts"
+            ]
+          },
+          {
+            "heading": "Explain the operational trade-off",
+            "body": "Interviewers care about what you save and what error you accept. Quantify that exchange in terms of memory, latency, or write amplification.",
+            "bullets": [
+              "State whether false positives or false negatives are acceptable",
+              "Describe how approximation quality degrades as the structure fills up",
+              "Tie the choice back to system bottlenecks such as cache misses or expensive storage"
+            ]
+          }
+        ],
+        "checklist": [
+          "State what kind of approximation error is acceptable.",
+          "Use approximate structures as filters or summaries, not silent truth replacement.",
+          "Connect the choice to saved memory or reduced backend load.",
+          "Mention rebuild, aging, or saturation behavior."
+        ],
+        "pitfalls": [
+          "Using approximate counters where exact billing or compliance is required.",
+          "Skipping discussion of false positives or drift.",
+          "Treating sketches as magical optimizations without an exact fallback path."
+        ],
+        "interviewPrompts": [
+          "Where would you place a Bloom filter in a read-heavy architecture?",
+          "Why is an approximate unique-user count often good enough for analytics dashboards?",
+          "What trade-off makes probabilistic structures attractive at scale?"
+        ],
+        "diagram": null,
+        "related": [
+          "query-cache",
+          "caching-layers"
+        ],
+        "moduleSlug": "distributed-systems",
+        "moduleTitle": "Distributed systems building blocks",
+        "order": 4,
+        "id": "distributed-systems/probabilistic-data-structures"
+      },
+      {
+        "slug": "batch-stream-and-mapreduce",
+        "title": "Batch processing, stream processing, and MapReduce",
+        "summary": "Not every workload belongs on the synchronous request path; many large systems depend on layered data pipelines for indexing, analytics, backfills, and asynchronous enrichment.",
+        "duration": "30-40 min",
+        "whyItMatters": "The primer covers MapReduce and asynchronous data movement because scalable systems often separate online serving from offline or near-real-time computation.",
+        "sections": [
+          {
+            "heading": "Choose the right processing mode",
+            "body": "Batch jobs maximize throughput and simplify recovery for large historical datasets, while stream processors keep derived views fresher for user-facing products and alerting.",
+            "bullets": [
+              "Batch is strong for backfills, compaction, and heavy recomputation",
+              "Streams are strong for incremental counters, pipelines, and near-real-time views",
+              "Some systems combine both with a serving layer on top"
+            ]
+          },
+          {
+            "heading": "MapReduce is a mental model for data-parallel work",
+            "body": "Split the work, process partitions independently, then aggregate or materialize results. The important interview skill is identifying when the problem is embarrassingly parallel versus coordination-heavy.",
+            "bullets": [
+              "Keep input immutable when possible for simpler recovery",
+              "Plan for skewed partitions and slow tasks",
+              "Separate raw storage from serving indexes or dashboards"
+            ]
+          },
+          {
+            "heading": "Operationalize the pipeline",
+            "body": "Large data pipelines need checkpointing, replay rules, lineage, and output validation. Data correctness failures can be as harmful as serving outages.",
+            "bullets": [
+              "Track lag, freshness, and dropped-record counts",
+              "Make backfills and replays explicit operational tools",
+              "Version schemas and derived datasets carefully"
+            ]
+          }
+        ],
+        "checklist": [
+          "Separate online serving from offline or streaming computation.",
+          "Choose batch or stream based on freshness and cost requirements.",
+          "Discuss skew, replay, and checkpointing for pipeline reliability.",
+          "Explain how pipeline outputs reach the serving path."
+        ],
+        "pitfalls": [
+          "Forcing expensive analytics onto synchronous request paths.",
+          "Ignoring data skew and replay semantics in large jobs.",
+          "Treating derived data as trustworthy without validation or lineage."
+        ],
+        "interviewPrompts": [
+          "When is a nightly batch job better than a streaming pipeline?",
+          "How does the MapReduce model help you reason about large-scale data processing?",
+          "What metrics would you track for a user-facing indexing pipeline?"
+        ],
+        "diagram": null,
+        "related": [
+          "queues-and-streams",
+          "search-autocomplete"
+        ],
+        "moduleSlug": "distributed-systems",
+        "moduleTitle": "Distributed systems building blocks",
+        "order": 5,
+        "id": "distributed-systems/batch-stream-and-mapreduce"
+      }
+    ]
+  },
+  {
     "slug": "product-patterns",
     "title": "Common product design patterns",
     "summary": "Practice recurring architectures that appear across many interview prompts and real-world products.",
@@ -2664,4 +2992,60 @@ export function getModuleProgress(completedLessonIds, moduleSlug) {
   if (!module) return { completed: 0, total: 0 };
   const completed = module.lessons.filter((lesson) => completedLessonIds.includes(`${moduleSlug}/${lesson.slug}`)).length;
   return { completed, total: module.lessons.length };
+}
+
+/**
+ * @param {typeof allLessons[number]} lesson
+ */
+export function getLessonPracticeSteps(lesson) {
+  const sectionHeadings = lesson.sections.slice(0, 3).map((section) => section.heading);
+  const checklist = lesson.checklist.slice(0, 3);
+  const pitfalls = lesson.pitfalls.slice(0, 2);
+  const prompts = lesson.interviewPrompts.slice(0, 3);
+  const isCaseStudy = lesson.moduleSlug === 'case-studies';
+
+  return [
+    {
+      id: 'opening',
+      kind: isCaseStudy ? 'design' : 'interview',
+      title: isCaseStudy ? 'Interview opening' : 'Explain the concept',
+      objective: isCaseStudy
+        ? 'Frame the problem, scope, assumptions, and success metrics before you draw components.'
+        : 'Explain the topic in interviewer-friendly language before diving into implementation details.',
+      prompt: isCaseStudy
+        ? `You are starting a mock interview for "${lesson.title}". Capture the product assumptions, scale estimates, core APIs, and the first diagram you would draw.`
+        : `Teach "${lesson.title}" back to an interviewer. Summarize what it is, when you would use it, and why it matters in a real system.`,
+      guardrails: [
+        prompts[0] ?? `Start with the highest-signal interview question for ${lesson.title}.`,
+        ...sectionHeadings.slice(0, 2),
+        ...checklist.slice(0, 1)
+      ]
+    },
+    {
+      id: 'design',
+      kind: 'design',
+      title: isCaseStudy ? 'Core architecture pass' : 'System design drill',
+      objective: 'Walk the critical path and write down the main components, data flow, and scale decisions.',
+      prompt: isCaseStudy
+        ? `Draft the end-to-end architecture for "${lesson.title}". Focus on request flow, storage, asynchronous work, and the first bottleneck you would expect.`
+        : `Apply "${lesson.title}" in a realistic system. Describe where it sits in the architecture, what it depends on, and what trade-offs it creates.`,
+      guardrails: [
+        ...sectionHeadings,
+        prompts[1] ?? `Identify the critical path and one scaling constraint for ${lesson.title}.`,
+        ...checklist.slice(1, 3)
+      ]
+    },
+    {
+      id: 'tradeoffs',
+      kind: 'review',
+      title: 'Trade-offs and failure review',
+      objective: 'Close the answer the way a strong interview candidate would: trade-offs, failure modes, and operational follow-through.',
+      prompt: `Review your answer for "${lesson.title}". Add the failure modes, monitoring signals, trade-offs, and next-step improvements you would say before wrapping up.`,
+      guardrails: [
+        prompts[2] ?? `Name the most important trade-off for ${lesson.title}.`,
+        ...pitfalls,
+        `Use these checklist items as a final pass: ${checklist.join('; ')}`
+      ]
+    }
+  ];
 }

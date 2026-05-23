@@ -2,6 +2,7 @@
 <script>
   import { base } from '$app/paths';
   import { progress } from '$lib/stores/progress';
+  import PracticeWorkspace from '$lib/components/PracticeWorkspace.svelte';
   export let data;
 </script>
 
@@ -101,6 +102,8 @@
     </article>
   </div>
 </section>
+
+<PracticeWorkspace lesson={data.lesson} />
 
 <section class="panel hero-card">
   <div class="action-row" style="justify-content: space-between; align-items: end;">
