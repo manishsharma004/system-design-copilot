@@ -84,6 +84,8 @@ img { display: block; max-width: 100%; }
 .backdrop {
   position: fixed;
   inset: 0;
+  border: 0;
+  padding: 0;
   background: rgba(2, 6, 23, 0.64);
   opacity: 0;
   pointer-events: none;

@@ -1,8 +1,8 @@
-
+<svelte:options runes={false} />
 <script>
   import { getModuleProgress } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
-  let { data } = $props();
+  export let data;
 </script>
 
 <svelte:head>
@@ -19,10 +19,9 @@
   <p class="eyebrow">Module overview</p>
   <h1>{data.module.title}</h1>
   <p class="hero-subtitle">{data.module.summary}</p>
-  {@const progressState = getModuleProgress($progress.completedLessonIds, data.module.slug)}
   <div class="action-row">
     <span class="pill">{data.module.lessons.length} lessons</span>
-    <span class="pill">{progressState.completed}/{progressState.total} complete</span>
+    <span class="pill">{getModuleProgress($progress.completedLessonIds, data.module.slug).completed}/{getModuleProgress($progress.completedLessonIds, data.module.slug).total} complete</span>
     <a class="action-link primary" href={`/module/${data.module.slug}/lesson/${data.module.lessons[0].slug}`}>Start module</a>
   </div>
 </section>

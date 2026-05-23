@@ -1,4 +1,4 @@
-
+<svelte:options runes={false} />
 <script>
   import { completedLessonCount, progress } from '$lib/stores/progress';
   import { getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
@@ -55,7 +55,7 @@
       <p class="eyebrow">Curriculum map</p>
       <h2>Modules and lesson progress</h2>
     </div>
-    <button class="reset-link" type="button" on:click={() => progress.reset()}>Reset progress</button>
+    <button class="reset-link" type="button" onclick={() => progress.reset()}>Reset progress</button>
   </div>
   <div class="module-grid">
     {#each modules as module}
@@ -71,10 +71,9 @@
               <li>{objective}</li>
             {/each}
           </ul>
-          {@const progressState = getModuleProgress($progress.completedLessonIds, module.slug)}
           <div class="card-meta">
             <span class="pill">{module.lessons.length} lessons</span>
-            <span class="pill">{progressState.completed}/{progressState.total} complete</span>
+            <span class="pill">{getModuleProgress($progress.completedLessonIds, module.slug).completed}/{getModuleProgress($progress.completedLessonIds, module.slug).total} complete</span>
           </div>
         </a>
       </article>

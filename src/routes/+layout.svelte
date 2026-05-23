@@ -1,15 +1,11 @@
-
+<svelte:options runes={false} />
 <script>
-  import '$app/environment';
-  import '$app/forms';
-  import '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
   import { allLessons, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import { derived } from 'svelte/store';
 
-  let { children } = $props();
   let navOpen = false;
   let query = '';
 
@@ -39,11 +35,11 @@
   <meta name="description" content={siteOverview.description} />
 </svelte:head>
 
-<div class:open={navOpen} class="backdrop" on:click={() => (navOpen = false)}></div>
+<button aria-label="Close navigation" class:open={navOpen} class="backdrop" type="button" onclick={() => (navOpen = false)}></button>
 
 <div class="shell">
   <header class="topbar">
-    <button class="nav-toggle" type="button" on:click={() => (navOpen = !navOpen)}>
+    <button class="nav-toggle" type="button" onclick={() => (navOpen = !navOpen)}>
       {navOpen ? 'Close' : 'Browse'} topics
     </button>
     <div class="brand">
@@ -107,7 +103,7 @@
     </aside>
 
     <main class="page">
-      {@render children()}
+      <slot />
     </main>
   </div>
 </div>

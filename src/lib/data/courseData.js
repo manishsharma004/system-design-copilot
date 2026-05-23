@@ -2640,14 +2640,25 @@ export const allLessons = modules.flatMap((module) =>
 export const moduleIndex = Object.fromEntries(modules.map((module) => [module.slug, module]));
 export const lessonIndex = Object.fromEntries(allLessons.map((lesson) => [lesson.id, lesson]));
 
+/**
+ * @param {string} moduleSlug
+ */
 export function getModuleBySlug(moduleSlug) {
   return moduleIndex[moduleSlug];
 }
 
+/**
+ * @param {string} moduleSlug
+ * @param {string} lessonSlug
+ */
 export function getLessonBySlug(moduleSlug, lessonSlug) {
   return lessonIndex[`${moduleSlug}/${lessonSlug}`];
 }
 
+/**
+ * @param {string[]} completedLessonIds
+ * @param {string} moduleSlug
+ */
 export function getModuleProgress(completedLessonIds, moduleSlug) {
   const module = getModuleBySlug(moduleSlug);
   if (!module) return { completed: 0, total: 0 };

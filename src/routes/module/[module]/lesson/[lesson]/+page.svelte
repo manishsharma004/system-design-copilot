@@ -1,7 +1,7 @@
-
+<svelte:options runes={false} />
 <script>
   import { progress } from '$lib/stores/progress';
-  let { data } = $props();
+  export let data;
 </script>
 
 <svelte:head>
@@ -27,7 +27,7 @@
       class:done={$progress.completedLessonIds.includes(data.lesson.id)}
       class="lesson-toggle"
       type="button"
-      on:click={() => progress.toggleLesson(data.lesson.id)}
+      onclick={() => progress.toggleLesson(data.lesson.id)}
     >
       {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
     </button>

@@ -3,8 +3,10 @@ import { browser } from '$app/environment';
 import { derived, writable } from 'svelte/store';
 
 const STORAGE_KEY = 'system-design-copilot-progress-v4';
+/** @typedef {{ completedLessonIds: string[] }} ProgressState */
 
 function createProgressStore() {
+  /** @type {ProgressState} */
   const initial = { completedLessonIds: [] };
   const { subscribe, set, update } = writable(initial);
 
@@ -22,11 +24,16 @@ function createProgressStore() {
 
   return {
     subscribe,
+    /**
+     * @param {string} lessonId
+     */
     toggleLesson(lessonId) {
+      /** @param {ProgressState} state */
       update((state) => {
         const next = state.completedLessonIds.includes(lessonId)
           ? state.completedLessonIds.filter((id) => id !== lessonId)
           : [...state.completedLessonIds, lessonId];
+        /** @type {ProgressState} */
         const value = { completedLessonIds: next };
         if (browser) {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
