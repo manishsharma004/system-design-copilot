@@ -1,0 +1,21 @@
+{
+  "name": "system-design-copilot",
+  "version": "1.0.0",
+  "description": "Mobile-first system design interview prep course",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manishsharma004/system-design-copilot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/manishsharma004/system-design-copilot/issues"
+  },
+  "homepage": "https://github.com/manishsharma004/system-design-copilot#readme"
+}
