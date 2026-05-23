@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { base } from '$app/paths';
   import { getModuleProgress } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   export let data;
@@ -12,7 +13,7 @@
 
 <section class="panel hero-card">
   <div class="breadcrumb">
-    <a href="/">Curriculum</a>
+    <a href={`${base}/`}>Curriculum</a>
     <span>→</span>
     <span>{data.module.title}</span>
   </div>
@@ -22,7 +23,7 @@
   <div class="action-row">
     <span class="pill">{data.module.lessons.length} lessons</span>
     <span class="pill">{getModuleProgress($progress.completedLessonIds, data.module.slug).completed}/{getModuleProgress($progress.completedLessonIds, data.module.slug).total} complete</span>
-    <a class="action-link primary" href={`/module/${data.module.slug}/lesson/${data.module.lessons[0].slug}`}>Start module</a>
+    <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${data.module.lessons[0].slug}`}>Start module</a>
   </div>
 </section>
 
@@ -59,7 +60,7 @@
 <section class="lesson-grid">
   {#each data.module.lessons as lesson}
     <article class="lesson-card">
-      <a class="topic-card-link" href={`/module/${data.module.slug}/lesson/${lesson.slug}`}>
+      <a class="topic-card-link" href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}>
         <div>
           <p class="eyebrow">Lesson {lesson.order}</p>
           <h3>{lesson.title}</h3>
