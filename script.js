@@ -20,13 +20,18 @@ const deepModeButton = document.querySelector("#toggle-deep-mode");
 const jumpToNextButton = document.querySelector("#jump-to-next");
 const lessonTemplate = document.querySelector("#lesson-template");
 
+function generateLessonId(weekNumber, dayLabel) {
+  return `${weekNumber}-${dayLabel.toLowerCase().replace(/\s+/g, "-")}`;
+}
+
 const allLessons = courseWeeks.flatMap((week) =>
   week.lessons.map((lesson) => ({
     ...lesson,
     week: week.week,
     track: week.track,
     weekTitle: week.title,
-    id: `${week.week}-${lesson.day.toLowerCase().replace(/\s+/g, "-")}`,
+    id: generateLessonId(week.week, lesson.day),
+    searchText: `${lesson.title} ${lesson.outcome} ${lesson.depth} ${lesson.advancedNote} ${lesson.checkpoint}`.toLowerCase(),
   }))
 );
 
@@ -100,9 +105,8 @@ function renderTrackFilters() {
 }
 
 function lessonMatches(lesson, weekTrack) {
-  const searchTarget = `${lesson.title} ${lesson.outcome} ${lesson.depth} ${lesson.advancedNote} ${lesson.checkpoint}`.toLowerCase();
   const matchesTrack = state.activeTrack === "All" || state.activeTrack === weekTrack;
-  const matchesQuery = !state.query || searchTarget.includes(state.query);
+  const matchesQuery = !state.query || lesson.searchText.includes(state.query);
   return matchesTrack && matchesQuery;
 }
 
@@ -129,7 +133,7 @@ function renderWeeks() {
     }
 
     const completedInWeek = visibleLessons.filter((lesson) =>
-      state.completedLessons.has(`${week.week}-${lesson.day.toLowerCase().replace(/\s+/g, "-")}`)
+      state.completedLessons.has(generateLessonId(week.week, lesson.day))
     ).length;
 
     const weekCard = document.createElement("section");
@@ -153,7 +157,7 @@ function renderWeeks() {
 
     visibleLessons.forEach((lesson) => {
       const lessonNode = lessonTemplate.content.firstElementChild.cloneNode(true);
-      const lessonId = `${week.week}-${lesson.day.toLowerCase().replace(/\s+/g, "-")}`;
+      const lessonId = generateLessonId(week.week, lesson.day);
       const completed = state.completedLessons.has(lessonId);
       lessonNode.dataset.lessonId = lessonId;
       lessonNode.classList.toggle("done", completed);
