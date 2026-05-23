@@ -1,21 +1,33 @@
 {
   "name": "system-design-copilot",
-  "version": "1.0.0",
-  "description": "Mobile-first system design interview prep course",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Complete system design prep site built with SvelteKit",
+  "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 4173",
+    "dev": "vite dev --host 0.0.0.0 --port 4173",
+    "start": "vite dev --host 0.0.0.0 --port 4173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "test": "node --test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/manishsharma004/system-design-copilot.git"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/manishsharma004/system-design-copilot/issues"
   },
-  "homepage": "https://github.com/manishsharma004/system-design-copilot#readme"
+  "homepage": "https://github.com/manishsharma004/system-design-copilot#readme",
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.57.1",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "svelte": "^5.55.2",
+    "svelte-check": "^4.4.6",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.7"
+  }
 }
