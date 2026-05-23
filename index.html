@@ -8,112 +8,59 @@
   </head>
   <body>
     <div class="page-shell">
-      <header class="hero">
+      <header class="hero panel">
         <div class="hero-copy">
-          <p class="eyebrow">Advanced interview prep · 8 weeks · phone friendly</p>
-          <h1>Build system design intuition with daily deep dives.</h1>
-          <p class="hero-text">
-            A mobile-first course that turns advanced system design topics into
-            compact lessons, concrete drills, and interview-ready talking points.
-          </p>
+          <p class="eyebrow">Interactive system design primer</p>
+          <h1 id="hero-title"></h1>
+          <p id="hero-subtitle" class="hero-text"></p>
           <div class="hero-actions">
             <button id="jump-to-next" class="primary-button" type="button">Continue next lesson</button>
-            <button id="toggle-deep-mode" class="ghost-button" type="button">Deep mode: On</button>
+            <button id="mark-current-topic" class="ghost-button" type="button">Mark lesson complete</button>
           </div>
         </div>
-        <div class="hero-card">
-          <p class="hero-card-label">Study loop</p>
-          <ol>
-            <li>Frame the trade-off</li>
-            <li>Model failure modes</li>
-            <li>Choose the control knobs</li>
-            <li>Stress test the design</li>
-          </ol>
+        <div class="hero-side">
+          <div class="hero-card">
+            <p class="hero-card-label">Study loop</p>
+            <ol id="study-loop"></ol>
+          </div>
+          <div class="hero-card">
+            <p class="hero-card-label">Progress</p>
+            <div id="overview-grid" class="overview-grid"></div>
+          </div>
         </div>
       </header>
 
-      <main class="content">
-        <section class="panel overview-panel">
-          <div class="panel-heading">
+      <main class="app-grid">
+        <aside class="panel sidebar-panel">
+          <div class="panel-heading compact">
             <div>
-              <p class="eyebrow">Course overview</p>
-              <h2>Two months of deep systems practice</h2>
+              <p class="eyebrow">Learner mode</p>
+              <h2>Pick your depth</h2>
             </div>
           </div>
-          <div id="overview-grid" class="overview-grid"></div>
-          <div id="study-rhythm" class="study-rhythm"></div>
-        </section>
+          <div id="mode-selector" class="mode-selector" aria-label="Learner modes"></div>
+          <p id="mode-description" class="mode-description"></p>
 
-        <section class="panel controls-panel">
-          <div class="panel-heading">
+          <label class="search-field">
+            <span>Search lessons</span>
+            <input id="topic-search" type="search" placeholder="Search topics, subtopics, and concepts" />
+          </label>
+
+          <div class="panel-heading compact topic-list-heading">
             <div>
-              <p class="eyebrow">Plan your session</p>
-              <h2>Filter by concept or search a lesson</h2>
+              <p class="eyebrow">Lesson navigator</p>
+              <h2>Topic map</h2>
             </div>
             <p id="progress-copy" class="progress-copy"></p>
           </div>
-          <div class="controls">
-            <label class="search-field">
-              <span>Search lessons</span>
-              <input id="lesson-search" type="search" placeholder="e.g. quorum, cache, consistency" />
-            </label>
-            <div id="track-filters" class="chip-row" aria-label="Lesson tracks"></div>
-          </div>
-        </section>
+          <div id="topic-list" class="topic-list" aria-live="polite"></div>
+        </aside>
 
-        <section class="panel schedule-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">8-week roadmap</p>
-              <h2>Open a week and work lesson by lesson</h2>
-            </div>
-          </div>
-          <div id="weeks-container" class="weeks-container"></div>
-        </section>
-
-        <section class="panel toolkit-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Interview toolkit</p>
-              <h2>Use these prompts to sharpen depth</h2>
-            </div>
-          </div>
-          <div id="toolkit-grid" class="toolkit-grid"></div>
+        <section class="panel lesson-panel">
+          <div id="lesson-detail"></div>
         </section>
       </main>
     </div>
-
-    <template id="lesson-template">
-      <article class="lesson-card">
-        <div class="lesson-card-top">
-          <div>
-            <p class="lesson-day"></p>
-            <h4 class="lesson-title"></h4>
-          </div>
-          <button class="lesson-toggle" type="button">Mark done</button>
-        </div>
-        <p class="lesson-outcome"></p>
-        <div class="lesson-tags"></div>
-        <div class="lesson-body">
-          <div>
-            <p class="lesson-label">Mental model</p>
-            <p class="lesson-depth"></p>
-          </div>
-          <div>
-            <p class="lesson-label">Drill</p>
-            <ul class="lesson-drills"></ul>
-          </div>
-          <div class="advanced-only">
-            <p class="lesson-label">Deep note</p>
-            <p class="lesson-advanced"></p>
-          </div>
-          <div>
-            <p class="lesson-label">Interview checkpoint</p>
-            <p class="lesson-checkpoint"></p>
-          </div>
-        </div>
-      </article>
-    </template>
 
     <script type="module" src="./script.js"></script>
   </body>
