@@ -1,9 +1,22 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { allLessons } from '../src/lib/data/courseData.js'
 import { getSimulationLesson } from '../src/lib/data/simulationLessons.js'
 import { compileFlowGraph } from '../src/lib/simulation/graphCompiler.js'
 import { runSimulation } from '../src/lib/simulation/engine.js'
 import { parseSimulationScript } from '../src/lib/simulation/scriptApi.js'
+
+test('every lesson exposes a simulation scenario', () => {
+  allLessons.forEach((lesson) => {
+    const simulation = getSimulationLesson(lesson.id)
+    assert.ok(simulation, `missing simulation lesson data for ${lesson.id}`)
+    assert.match(simulation.title, /Simulation lab:/)
+    assert.equal(simulation.apis.length >= 2, true)
+    assert.equal(simulation.workloadProfiles.length >= 3, true)
+    assert.equal(simulation.recommendationThemes.length >= 3, true)
+    assert.match(simulation.starterDiagram, /node /)
+  })
+})
 
 test('url shortener lesson exposes an authored simulation scenario', () => {
   const simulation = getSimulationLesson('case-studies/url-shortener')

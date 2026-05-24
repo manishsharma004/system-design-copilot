@@ -17,6 +17,8 @@
   export let markersByFile = {}
   export let summaryByFile = {}
   export let runtimeHints = []
+  export let snippetActions = []
+  export let helperDescription = ''
 
   const dispatch = createEventDispatcher()
 
@@ -27,6 +29,8 @@
   let ready = false
   let mutedModelSync = false
   let internalActiveFileId = ''
+  let wordWrapEnabled = true
+  let copyState = ''
   /** @type {Map<string, import('monaco-editor').editor.ITextModel>} */
   let models = new Map()
   /** @type {Map<string, string[]>} */
@@ -45,6 +49,14 @@
       : normalizedFiles[0]?.id ?? ''
 
   $: currentFile = normalizedFiles.find((file) => file.id === resolvedActiveFileId) ?? normalizedFiles[0] ?? null
+  $: currentSummary = currentFile ? summaryByFile[currentFile.id] ?? '' : ''
+  $: currentMarkers = currentFile ? markersByFile[currentFile.id] ?? [] : []
+  $: currentPreviewItems = currentFile ? previewItemsByFile[currentFile.id] ?? [] : []
+  $: currentText = currentFile?.value ?? value ?? ''
+  $: lineCount = currentText ? currentText.split('\n').length : 1
+  $: wordCount = currentText.trim() ? currentText.trim().split(/\s+/).filter(Boolean).length : 0
+  $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
+  $: helperVisible = Boolean(currentSummary || currentMarkers.length || currentPreviewItems.length || scopedSnippetActions.length)
 
   /**
    * @param {string} name
@@ -154,25 +166,31 @@
     }
   }
 
-  function emitModelChange() {
-    const model = editor?.getModel()
-    if (!model) return
-    const fileId = [...models.entries()].find(([, candidate]) => candidate === model)?.[0]
-    if (!fileId) return
-
-    const nextFiles = normalizedFiles.map((file) => (
+  /**
+   * @param {string} fileId
+   * @param {string} nextValue
+   */
+  function buildNextFiles(fileId, nextValue) {
+    return normalizedFiles.map((file) => (
       file.id === fileId
-        ? { ...file, value: model.getValue() }
+        ? { ...file, value: nextValue }
         : file
     ))
+  }
 
+  /**
+   * @param {string} fileId
+   * @param {string} nextValue
+   */
+  function dispatchFileState(fileId, nextValue) {
+    const nextFiles = buildNextFiles(fileId, nextValue)
     if (!files.length) {
-      value = model.getValue()
+      value = nextValue
     }
 
     dispatch('change', {
       fileId,
-      value: model.getValue(),
+      value: nextValue,
       files: nextFiles
     })
     dispatch('fileschange', {
@@ -181,9 +199,61 @@
     })
   }
 
+  function emitModelChange() {
+    const model = editor?.getModel()
+    if (!model) return
+    const fileId = [...models.entries()].find(([, candidate]) => candidate === model)?.[0]
+    if (!fileId) return
+    dispatchFileState(fileId, model.getValue())
+  }
+
+  /**
+   * @param {string} fileId
+   * @param {string} nextValue
+   */
+  function updateFileValue(fileId, nextValue) {
+    internalActiveFileId = fileId
+    const model = models.get(fileId)
+    if (model && model.getValue() !== nextValue) {
+      mutedModelSync = true
+      model.setValue(nextValue)
+      mutedModelSync = false
+    }
+    if (editor && model && editor.getModel() !== model) {
+      editor.setModel(model)
+    }
+    dispatchFileState(fileId, nextValue)
+  }
+
   function activateFile(fileId) {
     internalActiveFileId = fileId
+    copyState = ''
     dispatch('tabchange', { fileId })
+  }
+
+  function toggleWordWrap() {
+    wordWrapEnabled = !wordWrapEnabled
+    editor?.updateOptions({ wordWrap: wordWrapEnabled ? 'on' : 'off' })
+  }
+
+  async function copyCurrentFile() {
+    if (!currentText || !navigator?.clipboard) return
+    await navigator.clipboard.writeText(currentText)
+    copyState = 'Copied'
+    setTimeout(() => {
+      copyState = ''
+    }, 1200)
+  }
+
+  /** @param {{ insertText: string, fileId?: string }} action */
+  function insertSnippet(action) {
+    const targetFileId = action.fileId ?? currentFile?.id
+    if (!targetFileId) return
+    const targetModel = models.get(targetFileId)
+    const existing = targetModel?.getValue() ?? normalizedFiles.find((file) => file.id === targetFileId)?.value ?? ''
+    const needsSpacer = existing.trim().length > 0 && !existing.endsWith('\n')
+    const nextValue = `${existing}${needsSpacer ? '\n\n' : existing.trim().length ? '\n' : ''}${action.insertText}`
+    updateFileValue(targetFileId, nextValue)
   }
 
   onMount(() => {
@@ -205,18 +275,37 @@
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         roundedSelection: true,
         renderLineHighlight: 'gutter',
+        wordWrap: 'on',
+        guides: {
+          bracketPairs: true,
+          indentation: true
+        },
+        bracketPairColorization: {
+          enabled: true
+        },
+        stickyScroll: {
+          enabled: true
+        },
         scrollbar: {
           verticalScrollbarSize: 10,
           horizontalScrollbarSize: 10
         },
         suggest: {
           showSnippets: true,
-          showWords: true
+          showWords: true,
+          preview: true
         },
         quickSuggestions: {
           comments: true,
           other: true,
           strings: true
+        },
+        inlineSuggest: {
+          enabled: true
+        },
+        padding: {
+          top: 12,
+          bottom: 12
         }
       })
 
@@ -248,6 +337,22 @@
 </script>
 
 <div class="code-editor-shell">
+  <div class="code-editor-toolbar">
+    <div class="code-editor-overview">
+      <strong>{currentFile?.label ?? title}</strong>
+      <span>{helperDescription || `Edit ${currentFile?.filename ?? filename} with completion, diagnostics, and inline cues.`}</span>
+    </div>
+    <div class="code-editor-actions">
+      <span class="pill">{lineCount} lines · {wordCount} words</span>
+      <button class="code-editor-control" type="button" onclick={toggleWordWrap}>
+        {wordWrapEnabled ? 'Wrap on' : 'Wrap off'}
+      </button>
+      <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()}>
+        {copyState || 'Copy'}
+      </button>
+    </div>
+  </div>
+
   {#if normalizedFiles.length > 1}
     <div class="code-editor-header">
       <div class="code-editor-tabs" role="tablist" aria-label="Open exercise files">
@@ -262,9 +367,19 @@
           </button>
         {/each}
       </div>
-      {#if currentFile && summaryByFile[currentFile.id]}
-        <span class="pill">{summaryByFile[currentFile.id]}</span>
+      {#if currentSummary}
+        <span class="pill">{currentSummary}</span>
       {/if}
+    </div>
+  {/if}
+
+  {#if scopedSnippetActions.length}
+    <div class="code-editor-snippets">
+      {#each scopedSnippetActions as action}
+        <button class="code-editor-snippet" type="button" onclick={() => insertSnippet(action)}>
+          {action.label}
+        </button>
+      {/each}
     </div>
   {/if}
 
@@ -279,15 +394,66 @@
   {/if}
 
   {#if !ready}
-    <textarea bind:value rows="12"></textarea>
+    <textarea
+      rows="12"
+      value={currentText}
+      oninput={(event) => updateFileValue(currentFile?.id ?? '__single__', event.currentTarget.value)}
+    ></textarea>
   {/if}
 
   <div class:editor-hidden={!ready} class="monaco-host" style={`min-height: ${minHeight};`} bind:this={host}></div>
+
+  {#if helperVisible}
+    <div class="code-editor-helper-grid">
+      {#if currentSummary}
+        <article class="code-editor-helper-card">
+          <p class="eyebrow">Snapshot</p>
+          <h4>Current file summary</h4>
+          <p>{currentSummary}</p>
+        </article>
+      {/if}
+
+      {#if currentPreviewItems.length}
+        <article class="code-editor-helper-card">
+          <p class="eyebrow">Signals</p>
+          <h4>What the editor found</h4>
+          <ul>
+            {#each currentPreviewItems.slice(0, 6) as item}
+              <li>
+                <strong>Line {item.line}:</strong> {item.text}
+              </li>
+            {/each}
+          </ul>
+        </article>
+      {/if}
+
+      {#if currentMarkers.length}
+        <article class="code-editor-helper-card">
+          <p class="eyebrow">Diagnostics</p>
+          <h4>Things to fix or tighten</h4>
+          <ul>
+            {#each currentMarkers.slice(0, 6) as marker}
+              <li>
+                <strong>Line {marker.line}:</strong> {marker.message}
+              </li>
+            {/each}
+          </ul>
+        </article>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
+  .code-editor-shell {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .code-editor-toolbar,
   .code-editor-header,
-  .code-editor-runtime-row {
+  .code-editor-runtime-row,
+  .code-editor-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
@@ -295,13 +461,33 @@
     align-items: center;
   }
 
-  .code-editor-tabs {
+  .code-editor-overview {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .code-editor-overview strong,
+  .code-editor-helper-card h4 {
+    margin: 0;
+  }
+
+  .code-editor-overview span,
+  .code-editor-helper-card p,
+  .code-editor-helper-card li {
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .code-editor-tabs,
+  .code-editor-snippets {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
 
-  .code-editor-tab {
+  .code-editor-tab,
+  .code-editor-control,
+  .code-editor-snippet {
     border-radius: 999px;
     border: 1px solid var(--border);
     background: var(--surface);
@@ -310,7 +496,9 @@
     padding: 0.55rem 0.9rem;
   }
 
-  .code-editor-tab.active {
+  .code-editor-tab.active,
+  .code-editor-snippet:hover,
+  .code-editor-control:hover {
     border-color: var(--border-strong);
     background: rgba(56, 189, 248, 0.12);
   }
@@ -319,6 +507,28 @@
     overflow: hidden;
     border-radius: 1rem;
     border: 1px solid var(--border);
+  }
+
+  .code-editor-helper-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  .code-editor-helper-card {
+    display: grid;
+    gap: 0.6rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+  }
+
+  .code-editor-helper-card ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.45rem;
   }
 
   :global(.monaco-editor),
@@ -337,5 +547,9 @@
     color: #7dd3fc;
     opacity: 0.75;
     font-style: italic;
+  }
+
+  .editor-hidden {
+    display: none;
   }
 </style>

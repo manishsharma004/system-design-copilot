@@ -4,6 +4,7 @@
   import CodeEditor from '$lib/components/CodeEditor.svelte';
   import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte';
   import { getLessonPracticeSteps } from '$lib/data/courseData';
+  import { buildMarkdownMetadata, markdownCompletions } from '$lib/editor/exerciseMetadata';
 
   /** @type {any} */
   export let lesson;
@@ -25,6 +26,17 @@
   $: isSaved = Boolean(savedEntry?.savedAt) && (savedEntry?.answer ?? '') === draft;
   $: canSave = draft.trim().length > 0 && !isSaved;
   $: canAdvance = isSaved && currentStepIndex < steps.length - 1;
+  $: draftMetadata = buildMarkdownMetadata(draft);
+  $: editorSnippetActions = [
+    ...markdownCompletions.map((item) => ({
+      label: item.label,
+      insertText: item.insertText
+    })),
+    {
+      label: 'Code block',
+      insertText: ['```ts', '// Add an API, schema, worker loop, or core algorithm here.', '```'].join('\n')
+    }
+  ];
 
   function saveCurrent() {
     if (!draft.trim()) return;
@@ -46,6 +58,11 @@
     if (canAdvance) {
       currentStepIndex += 1;
     }
+  }
+
+  /** @param {number} index */
+  function goToStep(index) {
+    currentStepIndex = index;
   }
 
   function insertStructureTemplate() {
@@ -85,14 +102,16 @@
       <h3>What you will practice</h3>
       <ol class="practice-step-list">
         {#each steps as step, index}
-          <li class:active={index === currentStepIndex}>
-            <div>
-              <strong>{step.title}</strong>
-              <p>{step.objective}</p>
-            </div>
-            <span class:done={$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt} class="progress-badge">
-              {$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt ? 'Saved' : 'Draft'}
-            </span>
+          <li>
+            <button class:active={index === currentStepIndex} class="practice-step-button" type="button" onclick={() => goToStep(index)}>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.objective}</p>
+              </div>
+              <span class:done={$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt} class="progress-badge">
+                {$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt ? 'Saved' : 'Draft'}
+              </span>
+            </button>
           </li>
         {/each}
       </ol>
@@ -108,6 +127,10 @@
       </div>
 
       <p>{currentStep.prompt}</p>
+      <div class="practice-guidance compact">
+        <p class="eyebrow">Goal for this step</p>
+        <p>{currentStep.objective}</p>
+      </div>
 
       <div class="practice-guidance">
         <p class="eyebrow">Use these guardrails</p>
@@ -135,7 +158,18 @@
 
       <label class="practice-editor">
         <span class="eyebrow">Your answer</span>
-        <CodeEditor bind:value={draft} language="markdown" filename="answer.md" title="Answer draft" minHeight="20rem" />
+        <CodeEditor
+          bind:value={draft}
+          language="markdown"
+          filename="answer.md"
+          title="Answer draft"
+          minHeight="20rem"
+          helperDescription="Use visible section cues, draft diagnostics, and quick inserts to shape a cleaner interview answer."
+          snippetActions={editorSnippetActions}
+          previewItemsByFile={{ __single__: draftMetadata.previewItems }}
+          markersByFile={{ __single__: draftMetadata.markers }}
+          summaryByFile={{ __single__: draftMetadata.summary }}
+        />
       </label>
 
       <div class="action-row">
