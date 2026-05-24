@@ -3,9 +3,9 @@
   import { base } from '$app/paths';
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
-  import SimulationLab from '$lib/components/SimulationLab.svelte';
+  import SimulationIDE from '$lib/components/SimulationIDE.svelte';
   import { progress } from '$lib/stores/progress';
-  import PracticeWorkspace from '$lib/components/PracticeWorkspace.svelte';
+  import PracticeIDE from '$lib/components/PracticeIDE.svelte';
   export let data;
 
   /** @param {string} heading */
@@ -202,9 +202,9 @@
 </section>
 
 <LessonExplorer lesson={data.lesson} />
-<SimulationLab lesson={data.lesson} />
+<SimulationIDE lesson={data.lesson} />
 
-<PracticeWorkspace lesson={data.lesson} />
+<PracticeIDE lesson={data.lesson} />
 <LessonSolutionPanel lesson={data.lesson} />
 
 <section class="panel hero-card">
