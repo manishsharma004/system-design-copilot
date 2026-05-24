@@ -63,7 +63,7 @@ export const siteOverview = {
   }
 };
 
-export const modules = [
+const rawModules = [
   {
     "slug": "foundations",
     "title": "Foundations and estimation",
@@ -2953,6 +2953,8 @@ export const modules = [
   }
 ];
 
+export const modules = rawModules;
+
 
 export const allLessons = modules.flatMap((module) =>
   module.lessons.map((lesson, index) => ({
@@ -2998,11 +3000,22 @@ export function getModuleProgress(completedLessonIds, moduleSlug) {
  * @param {typeof allLessons[number]} lesson
  */
 export function getLessonPracticeSteps(lesson) {
-  const sectionHeadings = lesson.sections.slice(0, 3).map((section) => section.heading);
+  /** @type {string[]} */
+  const sectionHeadings = [];
+  for (const section of lesson.sections.slice(0, 3)) {
+    sectionHeadings.push(section.heading);
+  }
   const checklist = lesson.checklist.slice(0, 3);
   const pitfalls = lesson.pitfalls.slice(0, 2);
   const prompts = lesson.interviewPrompts.slice(0, 3);
   const isCaseStudy = lesson.moduleSlug === 'case-studies';
+  const openingStructure = isCaseStudy
+    ? ['Requirements and assumptions', 'Scale estimate', 'Core APIs', 'First diagram']
+    : ['Definition', 'When to use it', 'Benefits', 'Trade-offs'];
+  const designStructure = isCaseStudy
+    ? ['Core components', 'Primary data model', 'Read and write paths', 'Scaling decisions']
+    : ['Where it fits', 'Dependencies', 'Failure modes', 'Operational trade-offs'];
+  const reviewStructure = ['Bottlenecks', 'Consistency and failure handling', 'Observability', 'Next iteration'];
 
   return [
     {
@@ -3019,7 +3032,9 @@ export function getLessonPracticeSteps(lesson) {
         prompts[0] ?? `Start with the highest-signal interview question for ${lesson.title}.`,
         ...sectionHeadings.slice(0, 2),
         ...checklist.slice(0, 1)
-      ]
+      ],
+      structure: openingStructure,
+      template: buildPracticeTemplate(lesson.title, openingStructure, currentPromptLabel(prompts[0], lesson.title))
     },
     {
       id: 'design',
@@ -3033,7 +3048,9 @@ export function getLessonPracticeSteps(lesson) {
         ...sectionHeadings,
         prompts[1] ?? `Identify the critical path and one scaling constraint for ${lesson.title}.`,
         ...checklist.slice(1, 3)
-      ]
+      ],
+      structure: designStructure,
+      template: buildPracticeTemplate(lesson.title, designStructure, currentPromptLabel(prompts[1], lesson.title))
     },
     {
       id: 'tradeoffs',
@@ -3045,7 +3062,40 @@ export function getLessonPracticeSteps(lesson) {
         prompts[2] ?? `Name the most important trade-off for ${lesson.title}.`,
         ...pitfalls,
         `Use these checklist items as a final pass: ${checklist.join('; ')}`
-      ]
+      ],
+      structure: reviewStructure,
+      template: buildPracticeTemplate(lesson.title, reviewStructure, currentPromptLabel(prompts[2], lesson.title))
     }
   ];
+}
+
+/**
+ * @param {string | undefined} prompt
+ * @param {string} lessonTitle
+ */
+function currentPromptLabel(prompt, lessonTitle) {
+  return prompt ?? `Use this space to answer the highest-signal question for ${lessonTitle}.`;
+}
+
+/**
+ * @param {string} lessonTitle
+ * @param {string[]} structure
+ * @param {string} prompt
+ */
+function buildPracticeTemplate(lessonTitle, structure, prompt) {
+  return [
+    `# ${lessonTitle}`,
+    '',
+    `> Prompt: ${prompt}`,
+    '',
+    ...structure.flatMap((heading) => [
+      `## ${heading}`,
+      '- Add 2-4 concise bullets here.',
+      ''
+    ]),
+    '## Interview-ready code or schema',
+    '```ts',
+    '// Add an API shape, schema, worker loop, or core algorithm when useful.',
+    '```'
+  ].join('\n');
 }

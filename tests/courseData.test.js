@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { allLessons, getLessonPracticeSteps, modules, siteOverview } from '../courseData.js';
+import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
 
 test('site overview describes the expanded curriculum', () => {
   assert.match(siteOverview.title, /System Design Copilot/);
@@ -62,6 +63,28 @@ test('every lesson exposes a saveable three-step practice flow', () => {
       assert.ok(step.prompt);
       assert.ok(Array.isArray(step.guardrails));
       assert.ok(step.guardrails.length >= 3);
+      assert.ok(Array.isArray(step.structure));
+      assert.ok(step.structure.length >= 3);
+      assert.match(step.template, /## /);
     });
   });
+});
+
+test('case studies include revealable solutions and code', async () => {
+  const caseStudies = allLessons.filter((lesson) => lesson.moduleSlug === 'case-studies');
+  for (const lesson of caseStudies) {
+    const solution = await loadLessonSolution(lesson.id);
+    assert.ok(solution?.referenceSource?.url);
+    assert.ok(solution?.solutionOverview?.summary);
+    assert.ok(solution?.solutionOverview?.requirements?.length >= 3);
+    assert.ok(solution?.detailedSolution?.length >= 3);
+    assert.ok(solution?.sampleAnswer?.length >= 3);
+    assert.ok(solution?.interviewCode?.length >= 1);
+    solution.interviewCode.forEach((/** @type {{ title: string, filename: string, language: string, code: string }} */ snippet) => {
+      assert.ok(snippet.title);
+      assert.ok(snippet.filename);
+      assert.ok(snippet.language);
+      assert.match(snippet.code, /class|function|type|interface/);
+    });
+  }
 });

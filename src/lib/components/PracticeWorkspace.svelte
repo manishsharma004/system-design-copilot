@@ -1,6 +1,7 @@
 <svelte:options runes={false} />
 <script>
   import { practiceAnswers } from '$lib/stores/practice';
+  import CodeEditor from '$lib/components/CodeEditor.svelte';
   import { getLessonPracticeSteps } from '$lib/data/courseData';
 
   /** @type {any} */
@@ -44,6 +45,17 @@
     if (canAdvance) {
       currentStepIndex += 1;
     }
+  }
+
+  function insertStructureTemplate() {
+    const template = currentStep?.template ?? '';
+    if (!template) return;
+    draft = draft.trim() ? `${draft}\n\n${template}` : template;
+  }
+
+  function insertCodeBlock() {
+    const block = ['```ts', '// Add an API, schema, worker loop, or core algorithm here.', '```'].join('\n');
+    draft = draft.trim() ? `${draft}\n\n${block}` : block;
   }
 
   /** @param {string | undefined} savedAt */
@@ -105,9 +117,24 @@
         </ul>
       </div>
 
+       <div class="practice-structure-panel">
+        <div class="practice-structure-copy">
+          <p class="eyebrow">Suggested structure</p>
+          <ul class="practice-structure-list">
+            {#each currentStep.structure as item}
+              <li>{item}</li>
+            {/each}
+          </ul>
+        </div>
+        <div class="practice-toolbar">
+          <button class="action-link" type="button" onclick={insertStructureTemplate}>Insert structured template</button>
+          <button class="action-link" type="button" onclick={insertCodeBlock}>Insert code block</button>
+        </div>
+      </div>
+
       <label class="practice-editor">
         <span class="eyebrow">Your answer</span>
-        <textarea bind:value={draft} rows="12" placeholder="Write your notes, bullets, or interview answer here. Save before moving to the next prompt."></textarea>
+        <CodeEditor bind:value={draft} minHeight="20rem" />
       </label>
 
       <div class="action-row">

@@ -1,7 +1,7 @@
 
 # system-design-copilot
 
-Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site.
+Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site. The lesson workspace now includes a structured in-browser editor plus reveal-on-demand sample answers and interview-ready code for case-study solutions.
 
 ## Run locally
 
