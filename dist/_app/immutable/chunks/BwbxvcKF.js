@@ -1,1 +1,0 @@
-import{x as e}from"./CrMkoJEQ.js";export{e as createArchitectureServices};

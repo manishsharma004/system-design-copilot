@@ -32,7 +32,7 @@ body {
   min-height: 100vh;
 }
 a { color: inherit; text-decoration: none; }
-button, input { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 img { display: block; max-width: 100%; }
 
@@ -515,8 +515,60 @@ button:disabled, .action-link[disabled] {
   gap: 0.75rem;
 }
 
+.code-editor-shell textarea,
+.llm-panel textarea,
+.llm-panel input,
+.llm-panel select {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 0.9rem 1rem;
+}
+
 .editor-hidden {
   display: none;
+}
+
+.llm-panel,
+.llm-settings-grid,
+.llm-response-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.llm-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.llm-settings-grid {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.llm-settings-grid label,
+.llm-panel label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.llm-full {
+  grid-column: 1 / -1;
+}
+
+.llm-response-card pre {
+  margin: 0;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 17, 31, 0.96);
+  padding: 1rem;
+  color: #bfdbfe;
+  white-space: pre-wrap;
 }
 
 .solution-overview-grid,

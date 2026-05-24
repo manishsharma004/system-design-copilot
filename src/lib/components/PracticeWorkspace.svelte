@@ -2,6 +2,7 @@
 <script>
   import { practiceAnswers } from '$lib/stores/practice';
   import CodeEditor from '$lib/components/CodeEditor.svelte';
+  import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte';
   import { getLessonPracticeSteps } from '$lib/data/courseData';
 
   /** @type {any} */
@@ -134,7 +135,7 @@
 
       <label class="practice-editor">
         <span class="eyebrow">Your answer</span>
-        <CodeEditor bind:value={draft} minHeight="20rem" />
+        <CodeEditor bind:value={draft} language="markdown" filename="answer.md" title="Answer draft" minHeight="20rem" />
       </label>
 
       <div class="action-row">
@@ -156,4 +157,16 @@
       </div>
     </article>
   </div>
+
+  <LlmAssistantPanel
+    title="Practice answer copilot"
+    objective={currentStep.prompt}
+    draft={draft}
+    contextSections={[
+      `Lesson: ${lesson.title}`,
+      `Practice step: ${currentStep.title}`,
+      ...currentStep.guardrails,
+      ...currentStep.structure
+    ]}
+  />
 </section>
