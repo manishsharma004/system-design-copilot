@@ -13,29 +13,58 @@
   <meta name="description" content={data.lesson.summary} />
 </svelte:head>
 
-<section class="panel hero-card">
-  <div class="breadcrumb">
-    <a href={`${base}/`}>Curriculum</a>
-    <span>→</span>
-    <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
-    <span>→</span>
-    <span>{data.lesson.title}</span>
-  </div>
-  <p class="eyebrow">Lesson {data.lesson.order} of {data.module.lessons.length}</p>
-  <h1>{data.lesson.title}</h1>
-  <p class="hero-subtitle">{data.lesson.summary}</p>
-  <div class="action-row">
-    <span class="pill">{data.lesson.duration}</span>
-    <span class="pill">{data.module.title}</span>
-    <button
-      class:done={$progress.completedLessonIds.includes(data.lesson.id)}
-      class="lesson-toggle"
-      type="button"
-      onclick={() => progress.toggleLesson(data.lesson.id)}
-    >
-      {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
-    </button>
-  </div>
+<section class="lesson-hero-grid">
+  <article class="panel hero-card">
+    <div class="breadcrumb">
+      <a href={`${base}/`}>Curriculum</a>
+      <span>→</span>
+      <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
+      <span>→</span>
+      <span>{data.lesson.title}</span>
+    </div>
+    <p class="eyebrow">Lesson {data.lesson.order} of {data.module.lessons.length}</p>
+    <h1>{data.lesson.title}</h1>
+    <p class="hero-subtitle">{data.lesson.summary}</p>
+    <div class="action-row">
+      <span class="pill">{data.lesson.duration}</span>
+      <span class="pill">{data.module.title}</span>
+      <button
+        class:done={$progress.completedLessonIds.includes(data.lesson.id)}
+        class="lesson-toggle"
+        type="button"
+        onclick={() => progress.toggleLesson(data.lesson.id)}
+      >
+        {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
+      </button>
+    </div>
+  </article>
+
+  <article class="list-card lesson-summary-card">
+    <p class="eyebrow">Study map</p>
+    <h3>What this lesson helps you explain</h3>
+    <p>{data.lesson.whyItMatters}</p>
+    <div class="lesson-section-preview">
+      {#each data.lesson.sections.slice(0, 4) as section}
+        <div class="section-chip">
+          <strong>{section.heading}</strong>
+          <span>{section.bullets?.[0] ?? section.body}</span>
+        </div>
+      {/each}
+    </div>
+    {#if data.lesson.relatedLessons?.length}
+      <div class="lesson-detail-block">
+        <p class="eyebrow">Related topics</p>
+        <div class="link-stack">
+          {#each data.lesson.relatedLessons as relatedLesson}
+            <a class="nav-link" href={`${base}/module/${relatedLesson.moduleSlug}/lesson/${relatedLesson.slug}`}>
+              <strong>{relatedLesson.title}</strong>
+              <small>{relatedLesson.moduleTitle}</small>
+            </a>
+          {/each}
+        </div>
+      </div>
+    {/if}
+  </article>
 </section>
 
 <section class="section-grid">

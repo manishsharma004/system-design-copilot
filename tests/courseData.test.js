@@ -26,12 +26,16 @@ test('curriculum covers a complete prep path', () => {
     'Caching layers and cache placement',
     'Security foundations for system design',
     'Case study: URL shortener',
+    'Case study: pastebin',
     'Case study: distributed web crawler',
+    'Case study: Mint-style budgeting app',
     'Consistent hashing and hot-key management',
     'Consensus, quorums, and leader election',
     'Distributed transactions, sagas, and idempotent workflows',
     'Probabilistic data structures and cardinality estimation',
-    'Batch processing, stream processing, and MapReduce'
+    'Batch processing, stream processing, and MapReduce',
+    'Case study: Twitter timeline and search',
+    'Case study: sales rank by category'
   ].forEach((title) => assert.ok(titles.has(title), `missing lesson: ${title}`));
 });
 
@@ -73,6 +77,7 @@ test('every lesson exposes a saveable three-step practice flow', () => {
 
 test('case studies include revealable solutions and code', async () => {
   const caseStudies = allLessons.filter((lesson) => lesson.moduleSlug === 'case-studies');
+  assert.equal(caseStudies.length, 9);
   for (const lesson of caseStudies) {
     const solution = await loadLessonSolution(lesson.id);
     assert.ok(solution?.referenceSource?.url);

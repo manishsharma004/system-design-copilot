@@ -22,6 +22,17 @@
 
   $: pathname = $page.url.pathname;
   $: normalizedPathname = pathname !== homeHref && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  $: activeModule = modules.find((module) =>
+    normalizedPathname === moduleHref(module.slug) || normalizedPathname.startsWith(`${moduleHref(module.slug)}/lesson/`)
+  );
+  $: activeLesson = activeModule?.lessons.find((lesson) => normalizedPathname === lessonHref(activeModule.slug, lesson.slug)) ?? null;
+  $: activeModuleProgress = activeModule ? $moduleProgress[activeModule.slug] : null;
+  $: contextTitle = activeLesson?.title ?? activeModule?.title ?? siteOverview.title;
+  $: contextSubtitle = activeLesson
+    ? `${activeModule?.title ?? ''} · Lesson ${activeLesson.order} of ${activeModule?.lessons.length ?? 0}`
+    : activeModule
+      ? `${activeModule.lessons.length} lessons · ${activeModuleProgress?.completed ?? 0}/${activeModuleProgress?.total ?? 0} complete`
+      : siteOverview.subtitle;
   $: filteredModules = modules
     .map((module) => ({
       ...module,
@@ -46,23 +57,39 @@
 
 <div class="shell">
   <header class="topbar">
-    <button class="nav-toggle" type="button" onclick={() => (navOpen = !navOpen)}>
-      {navOpen ? 'Close' : 'Browse'} topics
-    </button>
-    <div class="brand">
-      <strong>{siteOverview.title}</strong>
-      <span>{$progress.completedLessonIds.length} / {lessonTotal} lessons complete</span>
+    <div class="topbar-main">
+      <a class="brand" href={homeHref}>
+        <strong>{siteOverview.title}</strong>
+        <span>{$progress.completedLessonIds.length} / {lessonTotal} lessons complete</span>
+      </a>
+      <div class="topbar-context">
+        <strong>{contextTitle}</strong>
+        <span>{contextSubtitle}</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
+      <button class="nav-toggle" type="button" onclick={() => (navOpen = !navOpen)}>
+        {navOpen ? 'Close' : 'Browse'} topics
+      </button>
     </div>
   </header>
 
   <div class="layout">
     <aside class:open={navOpen} class="sidebar">
       <section class="sidebar-header panel sidebar-card">
-        <div>
-          <p class="eyebrow">System design prep</p>
-          <h2>{siteOverview.title}</h2>
+        <div class="sidebar-header-row">
+          <div>
+            <p class="eyebrow">System design prep</p>
+            <h2>{siteOverview.title}</h2>
+          </div>
+          <button class="sidebar-close" type="button" onclick={() => (navOpen = false)}>Close</button>
         </div>
-        <p class="muted">{siteOverview.subtitle}</p>
+        <div>
+          <p class="eyebrow">Current focus</p>
+          <h3>{contextTitle}</h3>
+        </div>
+        <p class="muted">{contextSubtitle}</p>
         <a class="action-link primary" href={homeHref}>Open curriculum home</a>
       </section>
 

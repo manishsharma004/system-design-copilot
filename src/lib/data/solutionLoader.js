@@ -3,7 +3,11 @@ export const solutionLessonIds = new Set([
   'case-studies/web-crawler',
   'case-studies/social-graph',
   'case-studies/query-cache',
-  'case-studies/scaling-playbook'
+  'case-studies/scaling-playbook',
+  'case-studies/pastebin',
+  'case-studies/mint',
+  'case-studies/twitter',
+  'case-studies/sales-rank'
 ]);
 
 /**

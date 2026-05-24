@@ -11,20 +11,32 @@
   <meta name="description" content={data.module.summary} />
 </svelte:head>
 
-<section class="panel hero-card">
-  <div class="breadcrumb">
-    <a href={`${base}/`}>Curriculum</a>
-    <span>→</span>
-    <span>{data.module.title}</span>
-  </div>
-  <p class="eyebrow">Module overview</p>
-  <h1>{data.module.title}</h1>
-  <p class="hero-subtitle">{data.module.summary}</p>
-  <div class="action-row">
-    <span class="pill">{data.module.lessons.length} lessons</span>
-    <span class="pill">{getModuleProgress($progress.completedLessonIds, data.module.slug).completed}/{getModuleProgress($progress.completedLessonIds, data.module.slug).total} complete</span>
-    <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${data.module.lessons[0].slug}`}>Start module</a>
-  </div>
+<section class="module-hero-grid">
+  <article class="panel hero-card">
+    <div class="breadcrumb">
+      <a href={`${base}/`}>Curriculum</a>
+      <span>→</span>
+      <span>{data.module.title}</span>
+    </div>
+    <p class="eyebrow">Module overview</p>
+    <h1>{data.module.title}</h1>
+    <p class="hero-subtitle">{data.module.summary}</p>
+    <div class="action-row">
+      <span class="pill">{data.module.lessons.length} lessons</span>
+      <span class="pill">{getModuleProgress($progress.completedLessonIds, data.module.slug).completed}/{getModuleProgress($progress.completedLessonIds, data.module.slug).total} complete</span>
+      <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${data.module.lessons[0].slug}`}>Start module</a>
+    </div>
+  </article>
+
+  <article class="list-card module-sidebar-card">
+    <p class="eyebrow">How to navigate it</p>
+    <h3>Use this module like a guided drill</h3>
+    <ul>
+      <li>Scan the lesson summaries first so you know the progression before opening the first topic.</li>
+      <li>Use the “why it matters” snippets to prioritize the topics that are most likely to surface in interviews.</li>
+      <li>Save the case-study and practice sections for speaking answers out loud after reading the lesson once.</li>
+    </ul>
+  </article>
 </section>
 
 <section class="list-grid">
@@ -61,14 +73,38 @@
   {#each data.module.lessons as lesson}
     <article class="lesson-card">
       <a class="topic-card-link" href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}>
-        <div>
-          <p class="eyebrow">Lesson {lesson.order}</p>
-          <h3>{lesson.title}</h3>
+        <div class="lesson-card-heading">
+          <div>
+            <p class="eyebrow">Lesson {lesson.order}</p>
+            <h3>{lesson.title}</h3>
+          </div>
+          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : 'Open'}</span>
         </div>
         <p>{lesson.summary}</p>
+        <div class="lesson-detail-block">
+          <p class="eyebrow">Why it matters</p>
+          <p>{lesson.whyItMatters}</p>
+        </div>
+        <div class="lesson-detail-block">
+          <p class="eyebrow">What you will cover</p>
+          <div class="pill-row">
+            {#each lesson.sections.slice(0, 3) as section}
+              <span class="pill">{section.heading}</span>
+            {/each}
+          </div>
+        </div>
+        <div class="lesson-detail-block">
+          <p class="eyebrow">Good interview signal</p>
+          <ul class="lesson-preview-list">
+            {#each lesson.checklist.slice(0, 2) as item}
+              <li>{item}</li>
+            {/each}
+          </ul>
+        </div>
         <div class="card-meta">
           <span class="pill">{lesson.duration}</span>
-          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : 'Open'}</span>
+          <span class="pill">{lesson.interviewPrompts.length} prompts</span>
+          <span class="pill">{lesson.sections.length} sections</span>
         </div>
       </a>
     </article>
