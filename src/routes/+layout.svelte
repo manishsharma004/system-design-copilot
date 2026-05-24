@@ -15,6 +15,38 @@
   /** @type {Record<string, boolean>} */
   let expandedModules = {};
 
+  const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v1';
+
+  function loadSidebarState() {
+    try {
+      const raw = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          if (typeof parsed.desktopNavOpen === 'boolean') {
+            desktopNavOpen = parsed.desktopNavOpen;
+          }
+          if (parsed.expandedModules && typeof parsed.expandedModules === 'object') {
+            expandedModules = parsed.expandedModules;
+          }
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  function saveSidebarState() {
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({
+        desktopNavOpen,
+        expandedModules
+      }));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   const lessonTotal = allLessons.length;
   const moduleProgress = derived(progress, ($progress) =>
     Object.fromEntries(modules.map((module) => [module.slug, getModuleProgress($progress.completedLessonIds, module.slug)]))
@@ -31,11 +63,13 @@
       ...expandedModules,
       [moduleSlug]: !(expandedModules[moduleSlug] ?? false)
     };
+    saveSidebarState();
   }
 
   function toggleNavigation() {
     if (isDesktop) {
       desktopNavOpen = !desktopNavOpen;
+      saveSidebarState();
       return;
     }
 
@@ -47,6 +81,8 @@
   }
 
   onMount(() => {
+    loadSidebarState();
+
     const mediaQuery = window.matchMedia('(min-width: 960px)');
     /** @param {MediaQueryList | MediaQueryListEvent} event */
     const syncViewport = (event) => {
