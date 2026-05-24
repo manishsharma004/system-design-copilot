@@ -1,1 +1,0 @@
-import{c as e}from"./qx_x1-Id.js";function t(t,n){throw new e(t,n)}export{t};

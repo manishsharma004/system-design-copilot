@@ -104,7 +104,8 @@
         {#each steps as step, index}
           <li>
             <button class:active={index === currentStepIndex} class="practice-step-button" type="button" onclick={() => goToStep(index)}>
-              <div>
+              <div class="practice-step-copy">
+                <span class="practice-step-index">Step {index + 1}</span>
                 <strong>{step.title}</strong>
                 <p>{step.objective}</p>
               </div>
