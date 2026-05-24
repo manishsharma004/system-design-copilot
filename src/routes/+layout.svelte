@@ -149,7 +149,7 @@
 
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
     <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar">
-      <section class="sidebar-header panel sidebar-card">
+      <section class="sidebar-section sidebar-header">
         <div class="sidebar-header-row">
           <div>
             <p class="eyebrow">Curriculum explorer</p>
@@ -162,7 +162,7 @@
         <p class="muted">Browse one module at a time, keep the active lesson visible, and jump directly to the next useful topic.</p>
       </section>
 
-      <section class="panel sidebar-card sidebar-context-card">
+      <section class="sidebar-section sidebar-context-card">
         <div>
           <p class="eyebrow">You are here</p>
           <h3>{contextTitle}</h3>
@@ -185,14 +185,14 @@
         </div>
       </section>
 
-      <section class="panel sidebar-card sidebar-search">
+      <section class="sidebar-section sidebar-search">
         <label>
           <span class="eyebrow">Search lessons</span>
           <input bind:value={query} type="search" placeholder="Search modules and topics" />
         </label>
       </section>
 
-      <section class="panel sidebar-card sidebar-stats sidebar-stats-wide">
+      <section class="sidebar-section sidebar-stats sidebar-stats-wide">
         <article class="stat">
           <span class="eyebrow">Modules</span>
           <strong>{modules.length}</strong>
@@ -207,7 +207,7 @@
         </article>
       </section>
 
-      <section class="sidebar-card panel">
+      <section class="sidebar-section sidebar-menu-section">
         <div class="sidebar-section-heading">
           <div>
             <p class="eyebrow">Browse by module</p>
