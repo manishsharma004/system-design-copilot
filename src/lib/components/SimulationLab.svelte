@@ -9,30 +9,46 @@
   /** @type {any} */
   export let lesson
 
+  /** @type {any} */
+  let simulation = null
+  /** @type {Record<string, any>} */
+  let sessions = {}
+  /** @type {any} */
+  let session = null
+  /** @type {any} */
+  let compilePreview = null
+  /** @type {any} */
+  let activeApi = null
+  /** @type {any} */
+  let activeProfile = null
+  /** @type {any[]} */
+  let compatibleProfiles = []
   let activeApiId = ''
   let activeProfileId = ''
   let diagramText = ''
   let scriptText = ''
   let hydratedLessonId = ''
+  /** @type {any} */
   let latestRun = null
 
   $: simulation = lesson?.simulation ?? null
-  $: session = simulation ? $simulationSessions[lesson.id] ?? null : null
+  $: sessions = $simulationSessions
+  $: session = simulation ? sessions[lesson.id] ?? null : null
   $: compilePreview = simulation ? compileFlowGraph(diagramText || simulation.starterDiagram) : null
-  $: activeApi = simulation?.apis?.find((entry) => entry.id === activeApiId) ?? null
-  $: activeProfile = simulation?.workloadProfiles?.find((entry) => entry.id === activeProfileId) ?? null
-  $: compatibleProfiles = simulation?.workloadProfiles?.filter((entry) => entry.endpointId === activeApiId) ?? []
+  $: activeApi = simulation?.apis?.find((/** @type {any} */ entry) => entry.id === activeApiId) ?? null
+  $: activeProfile = simulation?.workloadProfiles?.find((/** @type {any} */ entry) => entry.id === activeProfileId) ?? null
+  $: compatibleProfiles = simulation?.workloadProfiles?.filter((/** @type {any} */ entry) => entry.endpointId === activeApiId) ?? []
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id
     activeApiId = session?.activeApiId ?? simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
-    activeProfileId = session?.activeProfileId ?? simulation.workloadProfiles?.find((entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
+    activeProfileId = session?.activeProfileId ?? simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
     diagramText = session?.diagramText ?? simulation.starterDiagram
     scriptText = session?.scriptText ?? simulation.scriptTemplate
     latestRun = session?.lastRun ?? null
   }
 
-  $: if (activeApiId && compatibleProfiles.length && !compatibleProfiles.some((entry) => entry.id === activeProfileId)) {
+  $: if (activeApiId && compatibleProfiles.length && !compatibleProfiles.some((/** @type {any} */ entry) => entry.id === activeProfileId)) {
     activeProfileId = compatibleProfiles[0].id
   }
 
@@ -62,7 +78,7 @@
   function resetSession() {
     if (!simulation) return
     activeApiId = simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
-    activeProfileId = simulation.workloadProfiles?.find((entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
+    activeProfileId = simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
     diagramText = simulation.starterDiagram
     scriptText = simulation.scriptTemplate
     latestRun = null
@@ -262,7 +278,7 @@
               {#if latestRun.findings.length}
                 <div class="simulation-findings">
                   {#each latestRun.findings as finding}
-                    <article class="simulation-note {finding.severity === 'high' ? 'danger' : ''}">
+                    <article class="simulation-note" class:danger={finding.severity === 'high'}>
                       <p class="eyebrow">{finding.severity} signal</p>
                       <h4>{finding.title}</h4>
                       <p>{finding.summary}</p>

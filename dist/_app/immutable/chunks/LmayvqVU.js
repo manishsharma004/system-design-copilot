@@ -1,1 +1,0 @@
-import{h as e}from"./DSvr2RHr.js";export{e as createInfoServices};

@@ -46,11 +46,14 @@ test('simulation engine returns metrics and recommendations for hot redirect tra
     scriptText: `failure('cache', { hitRate: 0.68, extraLatencyMs: 10 })`
   })
 
-  assert.equal(result.ok, true)
-  assert.equal(result.nodeMetrics.length >= 4, true)
-  assert.equal(result.overall.requestRps > 20000, true)
-  assert.equal(result.findings.length >= 1, true)
-  assert.equal(result.nodeMetrics.some((node) => node.id === 'primary' && node.utilization > 0.85), true)
+  if (!result.ok) {
+    assert.fail(result.errors.join(', '))
+  }
+  const successResult = /** @type {any} */ (result)
+  assert.equal(successResult.nodeMetrics.length >= 4, true)
+  assert.equal(successResult.overall.requestRps > 20000, true)
+  assert.equal(successResult.findings.length >= 1, true)
+  assert.equal(successResult.nodeMetrics.some((/** @type {any} */ node) => node.id === 'primary' && node.utilization > 0.85), true)
 })
 
 test('simulation engine blocks runs when the topology no longer supports the API path', () => {

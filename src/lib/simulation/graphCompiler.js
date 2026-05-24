@@ -1,3 +1,4 @@
+/** @type {Record<string, { latencyMs: number, capacityRps: number, queueCapacity: number, hitRate?: number }>} */
 const DEFAULT_NODE_BY_TYPE = {
   edge: { latencyMs: 4, capacityRps: 60000, queueCapacity: 0 },
   service: { latencyMs: 12, capacityRps: 20000, queueCapacity: 2000 },
@@ -8,6 +9,7 @@ const DEFAULT_NODE_BY_TYPE = {
 }
 
 const VALUE_PATTERN = /"[^"]*"|'[^']*'|[^\s]+/g
+const ATTRIBUTE_PATTERN = /([A-Za-z][\w-]*)=(".*?"|'.*?'|[^\s]+)/g
 
 /** @param {string} value */
 function parseValue(value) {
@@ -36,21 +38,26 @@ function formatLabel(id) {
     .join(' ')
 }
 
-/** @param {string[]} tokens */
-function parseAttributes(tokens) {
+/** @param {string} source */
+function parseAttributes(source) {
   /** @type {Record<string, string | number | boolean>} */
   const attributes = {}
-  for (const token of tokens) {
-    const separatorIndex = token.indexOf('=')
-    if (separatorIndex === -1) {
-      return { attributes, error: `Expected key=value pair, received "${token}"` }
-    }
-    const key = token.slice(0, separatorIndex)
-    const rawValue = token.slice(separatorIndex + 1)
-    if (!key) {
-      return { attributes, error: `Missing attribute name in "${token}"` }
-    }
+  const trimmed = source.trim()
+  if (!trimmed) {
+    return { attributes, error: '' }
+  }
+
+  let matchedText = ''
+  for (const match of trimmed.matchAll(ATTRIBUTE_PATTERN)) {
+    const [, key, rawValue] = match
     attributes[key] = parseValue(rawValue)
+    matchedText += match[0]
+  }
+
+  const normalizedSource = trimmed.replace(/\s+/g, '')
+  if (matchedText.replace(/\s+/g, '') !== normalizedSource) {
+    const invalid = trimmed.replace(ATTRIBUTE_PATTERN, '').trim()
+    return { attributes, error: `Expected key=value pairs in "${invalid || trimmed}"` }
   }
   return { attributes, error: '' }
 }
@@ -64,7 +71,7 @@ export function compileFlowGraph(diagramText) {
 
   /** @type {{ id: string, type: string, label: string, latencyMs: number, capacityRps: number, queueCapacity: number, hitRate?: number, errorRate: number, extraLatencyMs: number }[]} */
   const nodes = []
-  /** @type {{ from: string, to: string, async: boolean, label: string }} */
+  /** @type {{ from: string, to: string, async: boolean, label: string }[]} */
   const links = []
   const errors = []
   const warnings = []
@@ -75,7 +82,9 @@ export function compileFlowGraph(diagramText) {
     if (!tokens.length) continue
 
     if (tokens[0] === 'node') {
-      const id = tokens[1]
+      const match = line.match(/^node\s+([^\s]+)\s*(.*)$/)
+      const id = match?.[1]
+      const attributeSource = match?.[2] ?? ''
       if (!id) {
         errors.push(`Node declaration is missing an id: "${line}"`)
         continue
@@ -84,7 +93,7 @@ export function compileFlowGraph(diagramText) {
         errors.push(`Duplicate node id "${id}"`)
         continue
       }
-      const { attributes, error } = parseAttributes(tokens.slice(2))
+      const { attributes, error } = parseAttributes(attributeSource)
       if (error) {
         errors.push(`Invalid node "${id}": ${error}`)
         continue
@@ -107,15 +116,15 @@ export function compileFlowGraph(diagramText) {
     }
 
     if (tokens[0] === 'link') {
-      const from = tokens[1]
-      const arrowToken = tokens[2]
-      const to = arrowToken === '->' ? tokens[3] : tokens[2]
-      const attributeTokens = arrowToken === '->' ? tokens.slice(4) : tokens.slice(3)
+      const match = line.match(/^link\s+([^\s]+)\s+(?:->\s+)?([^\s]+)\s*(.*)$/)
+      const from = match?.[1]
+      const to = match?.[2]
+      const attributeSource = match?.[3] ?? ''
       if (!from || !to) {
         errors.push(`Link declaration is invalid: "${line}"`)
         continue
       }
-      const { attributes, error } = parseAttributes(attributeTokens)
+      const { attributes, error } = parseAttributes(attributeSource)
       if (error) {
         errors.push(`Invalid link "${from} -> ${to}": ${error}`)
         continue

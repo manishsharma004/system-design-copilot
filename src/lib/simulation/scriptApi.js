@@ -74,8 +74,11 @@ function parseObjectLiteral(objectLiteral) {
 
 /** @param {string} scriptText */
 export function parseSimulationScript(scriptText) {
+  /** @type {Record<string, Record<string, string | number | boolean>>} */
   const nodeOverrides = {}
+  /** @type {Record<string, Record<string, string | number | boolean>>} */
   const workloadOverrides = {}
+  /** @type {Record<string, Record<string, string | number | boolean>>} */
   const failureOverrides = {}
   const errors = []
 

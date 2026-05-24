@@ -1,6 +1,6 @@
-import { diagnoseSimulation } from './diagnostics'
-import { compileFlowGraph } from './graphCompiler'
-import { parseSimulationScript } from './scriptApi'
+import { diagnoseSimulation } from './diagnostics.js'
+import { compileFlowGraph } from './graphCompiler.js'
+import { parseSimulationScript } from './scriptApi.js'
 
 /** @param {number} value */
 function clamp01(value) {
@@ -65,6 +65,8 @@ function buildRuntimeNodes(nodes, nodeOverrides, failureOverrides) {
 function calculatePass(nodesById, api, workload, requestAmplification) {
   const baseRps = (Number(workload.rpm ?? 0) / 60) * requestAmplification
   const timeoutMs = Number(workload.timeoutMs ?? api.timeoutMs ?? 250)
+  const concurrency = Number(workload.concurrency ?? 0)
+  const payloadKb = Number(workload.payloadKb ?? api.payloadKb ?? 1)
   let latestCache = { hitRps: 0, missRps: 0, hitRate: 1 }
   const nodeAccumulator = new Map()
   let averageLatencyMs = 0
@@ -85,7 +87,8 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
     }
 
     const capacityRps = Math.max(1, Number(node.capacityRps ?? 1))
-    const utilization = stageRps / capacityRps
+    const concurrencyPressure = concurrency > 0 ? concurrency / capacityRps : 0
+    const utilization = stageRps / capacityRps + concurrencyPressure * 0.08 + Math.max(0, payloadKb - 1) * 0.015
     const overloadRatio = Math.max(0, utilization - 1)
     const baseLatencyMs = Number(node.latencyMs ?? 0) + Number(node.extraLatencyMs ?? 0)
     const queueDepth = round(Math.max(0, stageRps - capacityRps) * Math.max(1, timeoutMs / 40))
@@ -166,8 +169,8 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
 export function runSimulation(input) {
   const graph = compileFlowGraph(input.diagramText)
   const script = parseSimulationScript(input.scriptText)
-  const api = input.scenario.apis.find((entry) => entry.id === input.apiId) ?? null
-  const profile = input.scenario.workloadProfiles.find((entry) => entry.id === input.profileId) ?? null
+  const api = input.scenario.apis.find((/** @type {any} */ entry) => entry.id === input.apiId) ?? null
+  const profile = input.scenario.workloadProfiles.find((/** @type {any} */ entry) => entry.id === input.profileId) ?? null
   const errors = [...graph.errors, ...script.errors]
 
   if (!api) {

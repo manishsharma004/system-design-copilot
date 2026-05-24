@@ -2,9 +2,12 @@ import { browser } from '$app/environment'
 import { writable } from 'svelte/store'
 
 const STORAGE_KEY = 'system-design-copilot-simulation-v1'
+/** @typedef {Record<string, any>} SimulationState */
 
 function createSimulationStore() {
-  const { subscribe, set, update } = writable({})
+  /** @type {SimulationState} */
+  const initial = {}
+  const { subscribe, set, update } = writable(initial)
 
   if (browser) {
     try {
@@ -16,11 +19,11 @@ function createSimulationStore() {
         }
       }
     } catch {
-      set({})
+      set(initial)
     }
   }
 
-  /** @param {Record<string, any>} value */
+  /** @param {SimulationState} value */
   const persist = (value) => {
     if (browser) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value))

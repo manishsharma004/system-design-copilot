@@ -1,3 +1,4 @@
+/** @type {Record<string, any>} */
 export const simulationLessons = {
   'case-studies/url-shortener': {
     title: 'Simulation lab: URL shortener under load',
