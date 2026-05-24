@@ -256,3 +256,68 @@ export function buildSimulationScriptMetadata(scriptText) {
     }))
   }
 }
+
+/**
+ * @param {string} markdownText
+ */
+export function buildMarkdownMetadata(markdownText) {
+  const lines = splitLines(markdownText)
+  const previewItems = []
+  /** @type {{ line: number, message: string, severity: 'warning' | 'hint' }[]} */
+  const markers = []
+  let headingCount = 0
+  let bulletCount = 0
+  let fencedBlocks = 0
+
+  for (const { line, text } of lines) {
+    const trimmed = text.trim()
+    if (/^#{1,6}\s+/.test(trimmed)) {
+      headingCount += 1
+      previewItems.push({
+        line,
+        text: trimmed.replace(/^#+\s+/, ''),
+        hover: 'Section heading'
+      })
+    }
+    if (/^[-*]\s+/.test(trimmed)) {
+      bulletCount += 1
+    }
+    if (/^```/.test(trimmed)) {
+      fencedBlocks += 1
+    }
+  }
+
+  if (!markdownText.trim()) {
+    markers.push({
+      line: 1,
+      message: 'Start by adding at least one heading so the answer has a visible structure.',
+      severity: 'hint'
+    })
+  } else if (!headingCount) {
+    markers.push({
+      line: 1,
+      message: 'Add markdown headings to break the answer into interviewer-friendly sections.',
+      severity: 'warning'
+    })
+  }
+
+  if (fencedBlocks % 2 === 1) {
+    const lastFenceLine = [...lines].reverse().find((entry) => /^```/.test(entry.text.trim()))?.line ?? 1
+    markers.push({
+      line: lastFenceLine,
+      message: 'Close the unfinished fenced code block.',
+      severity: 'warning'
+    })
+  }
+
+  const wordCount = markdownText.trim() ? markdownText.trim().split(/\s+/).filter(Boolean).length : 0
+
+  return {
+    summary: `${headingCount} headings · ${bulletCount} bullets · ${wordCount} words`,
+    previewItems,
+    markers: markers.map((entry) => ({
+      ...entry,
+      severity: normalizeSeverity(entry.severity)
+    }))
+  }
+}

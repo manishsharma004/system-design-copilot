@@ -7,6 +7,11 @@
   import { progress } from '$lib/stores/progress';
   import PracticeWorkspace from '$lib/components/PracticeWorkspace.svelte';
   export let data;
+
+  /** @param {string} heading */
+  function sectionId(heading) {
+    return heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
 </script>
 
 <svelte:head>
@@ -29,6 +34,7 @@
     <div class="action-row">
       <span class="pill">{data.lesson.duration}</span>
       <span class="pill">{data.module.title}</span>
+      <span class="pill">{data.lesson.sections.length + 1} guided stops</span>
       <button
         class:done={$progress.completedLessonIds.includes(data.lesson.id)}
         class="lesson-toggle"
@@ -44,57 +50,102 @@
     <p class="eyebrow">Study map</p>
     <h3>What this lesson helps you explain</h3>
     <p>{data.lesson.whyItMatters}</p>
-    <div class="lesson-section-preview">
-      {#each data.lesson.sections.slice(0, 4) as section}
-        <div class="section-chip">
-          <strong>{section.heading}</strong>
+    <div class="lesson-anchor-grid compact">
+      <a class="section-chip" href="#lesson-framing">
+        <strong>Start here</strong>
+        <span>Frame the trade-off before diving into architecture.</span>
+      </a>
+      {#each data.lesson.sections as section, index}
+        <a class="section-chip" href={`#${sectionId(section.heading)}`}>
+          <strong>{index + 1}. {section.heading}</strong>
           <span>{section.bullets?.[0] ?? section.body}</span>
-        </div>
+        </a>
       {/each}
     </div>
-    {#if data.lesson.relatedLessons?.length}
-      <div class="lesson-detail-block">
-        <p class="eyebrow">Related topics</p>
-        <div class="link-stack">
-          {#each data.lesson.relatedLessons as relatedLesson}
-            <a class="nav-link" href={`${base}/module/${relatedLesson.moduleSlug}/lesson/${relatedLesson.slug}`}>
-              <strong>{relatedLesson.title}</strong>
-              <small>{relatedLesson.moduleTitle}</small>
-            </a>
-          {/each}
-        </div>
-      </div>
-    {/if}
   </article>
 </section>
 
-<section class="section-grid">
-  <div class="content-grid">
-    <article class="content-card">
-      <p class="eyebrow">Why it matters</p>
-      <h3>Interview framing</h3>
-      <p>{data.lesson.whyItMatters}</p>
+<section class="lesson-shell">
+  <div class="lesson-main-stack">
+    <article class="panel hero-card lesson-roadmap-card">
+      <div class="practice-card-header">
+        <div>
+          <p class="eyebrow">Guided walkthrough</p>
+          <h2>Move through the lesson in a clear interview order</h2>
+        </div>
+        <span class="pill">{data.lesson.sections.length + 1} steps</span>
+      </div>
+      <p class="practice-copy">Start with the framing, walk the concept in order, then use the right rail for prompts, pitfalls, and visual anchors.</p>
+      <div class="lesson-anchor-grid">
+        <a class="section-chip" href="#lesson-framing">
+          <strong>1. Interview framing</strong>
+          <span>{data.lesson.whyItMatters}</span>
+        </a>
+        {#each data.lesson.sections as section, index}
+          <a class="section-chip" href={`#${sectionId(section.heading)}`}>
+            <strong>{index + 2}. {section.heading}</strong>
+            <span>{section.bullets?.[0] ?? section.body}</span>
+          </a>
+        {/each}
+      </div>
     </article>
 
-    {#each data.lesson.sections as section}
-      <article class="content-card">
-        <p class="eyebrow">Study section</p>
-        <h3>{section.heading}</h3>
-        <p>{section.body}</p>
-        {#if section.bullets?.length}
-          <ul>
-            {#each section.bullets as bullet}
-              <li>{bullet}</li>
-            {/each}
-          </ul>
-        {/if}
+    <article class="panel hero-card lesson-step-panel" id="lesson-framing">
+      <div class="lesson-step-header">
+        <div class="lesson-step-badge">1</div>
+        <div>
+          <p class="eyebrow">Start with this framing</p>
+          <h2>Interview framing</h2>
+        </div>
+      </div>
+      <div class="lesson-step-grid">
+        <div class="lesson-step-copy">
+          <p>{data.lesson.whyItMatters}</p>
+        </div>
+        <div class="lesson-step-support">
+          <div class="practice-guidance compact">
+            <p class="eyebrow">What to say first</p>
+            <ul>
+              {#each data.lesson.checklist.slice(0, 3) as item}
+                <li>{item}</li>
+              {/each}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    {#each data.lesson.sections as section, index}
+      <article class="panel hero-card lesson-step-panel" id={sectionId(section.heading)}>
+        <div class="lesson-step-header">
+          <div class="lesson-step-badge">{index + 2}</div>
+          <div>
+            <p class="eyebrow">Study section</p>
+            <h2>{section.heading}</h2>
+          </div>
+        </div>
+        <div class="lesson-step-grid">
+          <div class="lesson-step-copy">
+            <p>{section.body}</p>
+          </div>
+          {#if section.bullets?.length}
+            <div class="practice-guidance compact lesson-step-support">
+              <p class="eyebrow">Call these points out explicitly</p>
+              <ul>
+                {#each section.bullets as bullet}
+                  <li>{bullet}</li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
       </article>
     {/each}
   </div>
 
-  <div class="content-grid">
+  <aside class="lesson-rail">
     {#if data.lesson.diagram}
-      <article class="diagram-card">
+      <article class="diagram-card lesson-rail-card">
         <p class="eyebrow">Reference diagram</p>
         <h3>Visual anchor</h3>
         <img src={`${base}${data.lesson.diagram.src}`} alt={data.lesson.diagram.alt} loading="lazy" />
@@ -103,7 +154,7 @@
       </article>
     {/if}
 
-    <article class="list-card">
+    <article class="list-card lesson-rail-card">
       <p class="eyebrow">Checklist</p>
       <h3>Things to say clearly</h3>
       <ul class="checklist">
@@ -113,7 +164,7 @@
       </ul>
     </article>
 
-    <article class="list-card">
+    <article class="list-card lesson-rail-card">
       <p class="eyebrow">Common pitfalls</p>
       <h3>What to avoid</h3>
       <ul class="pitfalls">
@@ -123,7 +174,7 @@
       </ul>
     </article>
 
-    <article class="list-card">
+    <article class="list-card lesson-rail-card">
       <p class="eyebrow">Interview prompts</p>
       <h3>Practice aloud</h3>
       <ul class="prompts">
@@ -132,7 +183,22 @@
         {/each}
       </ul>
     </article>
-  </div>
+
+    {#if data.lesson.relatedLessons?.length}
+      <article class="list-card lesson-rail-card">
+        <p class="eyebrow">Related topics</p>
+        <h3>Keep the thread going</h3>
+        <div class="link-stack">
+          {#each data.lesson.relatedLessons as relatedLesson}
+            <a class="nav-link" href={`${base}/module/${relatedLesson.moduleSlug}/lesson/${relatedLesson.slug}`}>
+              <strong>{relatedLesson.title}</strong>
+              <small>{relatedLesson.moduleTitle}</small>
+            </a>
+          {/each}
+        </div>
+      </article>
+    {/if}
+  </aside>
 </section>
 
 <LessonExplorer lesson={data.lesson} />

@@ -9,6 +9,7 @@
 
   let navOpen = false;
   let query = '';
+  let expandedModules = {};
 
   const lessonTotal = allLessons.length;
   const moduleProgress = derived(progress, ($progress) =>
@@ -19,6 +20,14 @@
   const moduleHref = (moduleSlug) => `${base}/module/${moduleSlug}`;
   /** @param {string} moduleSlug @param {string} lessonSlug */
   const lessonHref = (moduleSlug, lessonSlug) => `${base}/module/${moduleSlug}/lesson/${lessonSlug}`;
+
+  /** @param {string} moduleSlug */
+  function toggleModule(moduleSlug) {
+    expandedModules = {
+      ...expandedModules,
+      [moduleSlug]: !(expandedModules[moduleSlug] ?? false)
+    };
+  }
 
   $: pathname = $page.url.pathname;
   $: normalizedPathname = pathname !== homeHref && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
@@ -33,6 +42,13 @@
     : activeModule
       ? `${activeModule.lessons.length} lessons · ${activeModuleProgress?.completed ?? 0}/${activeModuleProgress?.total ?? 0} complete`
       : siteOverview.subtitle;
+  $: currentLessonIndex = activeModule && activeLesson
+    ? activeModule.lessons.findIndex((lesson) => lesson.slug === activeLesson.slug)
+    : -1;
+  $: previousLesson = currentLessonIndex > 0 ? activeModule.lessons[currentLessonIndex - 1] : null;
+  $: nextLesson = activeModule && currentLessonIndex > -1 && currentLessonIndex < activeModule.lessons.length - 1
+    ? activeModule.lessons[currentLessonIndex + 1]
+    : null;
   $: filteredModules = modules
     .map((module) => ({
       ...module,
@@ -42,6 +58,23 @@
       })
     }))
     .filter((module) => query.trim() ? module.lessons.length > 0 || `${module.title} ${module.summary}`.toLowerCase().includes(query.trim().toLowerCase()) : true);
+  $: visibleModules = filteredModules.map((module) => ({
+    ...module,
+    isExpanded: query.trim()
+      ? true
+      : expandedModules[module.slug] ?? module.slug === activeModule?.slug
+  }));
+
+  $: if (!Object.keys(expandedModules).length) {
+    expandedModules = Object.fromEntries(modules.map((module) => [module.slug, module.slug === activeModule?.slug]));
+  }
+
+  $: if (activeModule && !query.trim() && !expandedModules[activeModule.slug]) {
+    expandedModules = {
+      ...expandedModules,
+      [activeModule.slug]: true
+    };
+  }
 
   $: if (pathname) {
     navOpen = false;
@@ -80,17 +113,35 @@
       <section class="sidebar-header panel sidebar-card">
         <div class="sidebar-header-row">
           <div>
-            <p class="eyebrow">System design prep</p>
+            <p class="eyebrow">Curriculum explorer</p>
             <h2>{siteOverview.title}</h2>
           </div>
           <button class="sidebar-close" type="button" onclick={() => (navOpen = false)}>Close</button>
         </div>
+        <p class="muted">Browse one module at a time, keep the active lesson visible, and jump directly to the next useful topic.</p>
+      </section>
+
+      <section class="panel sidebar-card sidebar-context-card">
         <div>
-          <p class="eyebrow">Current focus</p>
+          <p class="eyebrow">You are here</p>
           <h3>{contextTitle}</h3>
         </div>
         <p class="muted">{contextSubtitle}</p>
-        <a class="action-link primary" href={homeHref}>Open curriculum home</a>
+        {#if activeModule}
+          <div class="sidebar-current-meta">
+            <span class="pill">{$moduleProgress[activeModule.slug]?.completed ?? 0} / {$moduleProgress[activeModule.slug]?.total ?? 0} complete</span>
+            <a class="action-link" href={moduleHref(activeModule.slug)}>{activeModule.title}</a>
+          </div>
+        {/if}
+        <div class="sidebar-quick-links">
+          <a class="action-link primary" href={homeHref}>Curriculum home</a>
+          {#if previousLesson}
+            <a class="action-link" href={lessonHref(activeModule.slug, previousLesson.slug)}>← {previousLesson.title}</a>
+          {/if}
+          {#if nextLesson}
+            <a class="action-link" href={lessonHref(activeModule.slug, nextLesson.slug)}>{nextLesson.title} →</a>
+          {/if}
+        </div>
       </section>
 
       <section class="panel sidebar-card sidebar-search">
@@ -100,10 +151,14 @@
         </label>
       </section>
 
-      <section class="panel sidebar-card sidebar-stats">
+      <section class="panel sidebar-card sidebar-stats sidebar-stats-wide">
         <article class="stat">
           <span class="eyebrow">Modules</span>
           <strong>{modules.length}</strong>
+        </article>
+        <article class="stat">
+          <span class="eyebrow">Lessons</span>
+          <strong>{lessonTotal}</strong>
         </article>
         <article class="stat">
           <span class="eyebrow">Progress</span>
@@ -111,29 +166,49 @@
         </article>
       </section>
 
-      {#if filteredModules.length}
-        {#each filteredModules as module}
-          <section class="nav-module">
-            <div>
-              <a class="nav-link {normalizedPathname === moduleHref(module.slug) ? 'active' : ''}" href={moduleHref(module.slug)}>
-                <strong>{module.title}</strong>
-                <small>{module.summary}</small>
-              </a>
-            </div>
-            <span class="pill">{$moduleProgress[module.slug]?.completed ?? 0} / {$moduleProgress[module.slug]?.total ?? 0} complete</span>
-            <div class="nav-links">
-              {#each module.lessons as lesson}
-                <a class="nav-link {normalizedPathname === lessonHref(module.slug, lesson.slug) ? 'active' : ''}" href={lessonHref(module.slug, lesson.slug)}>
-                  <strong>{lesson.title}</strong>
-                  <small>{lesson.summary}</small>
-                </a>
-              {/each}
-            </div>
-          </section>
-        {/each}
-      {:else}
-        <div class="empty-note">No lessons matched your search.</div>
-      {/if}
+      <section class="sidebar-card panel">
+        <div class="sidebar-section-heading">
+          <div>
+            <p class="eyebrow">Browse by module</p>
+            <h3>Open one thread at a time</h3>
+          </div>
+          <span class="pill">{visibleModules.length} shown</span>
+        </div>
+
+        {#if visibleModules.length}
+          <div class="sidebar-module-list">
+            {#each visibleModules as module}
+              <section class:active-module={module.slug === activeModule?.slug} class="nav-module explorer-module">
+                <button class="module-toggle" type="button" onclick={() => toggleModule(module.slug)}>
+                  <div class="module-toggle-copy">
+                    <strong>{module.title}</strong>
+                    <small>{module.summary}</small>
+                  </div>
+                  <div class="module-toggle-meta">
+                    <span class="pill">{$moduleProgress[module.slug]?.completed ?? 0} / {$moduleProgress[module.slug]?.total ?? 0}</span>
+                    <span class="module-toggle-label">{module.isExpanded ? 'Hide' : 'Show'}</span>
+                  </div>
+                </button>
+                {#if module.isExpanded}
+                  <div class="nav-links nav-links-dense">
+                    {#each module.lessons as lesson}
+                      <a class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)} class="nav-link nav-link-lesson" href={lessonHref(module.slug, lesson.slug)}>
+                        <div class="nav-link-row">
+                          <strong>{lesson.order}. {lesson.title}</strong>
+                          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Done' : 'Open'}</span>
+                        </div>
+                        <small>{lesson.summary}</small>
+                      </a>
+                    {/each}
+                  </div>
+                {/if}
+              </section>
+            {/each}
+          </div>
+        {:else}
+          <div class="empty-note">No lessons matched your search.</div>
+        {/if}
+      </section>
     </aside>
 
     <main class="page">

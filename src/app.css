@@ -107,9 +107,10 @@ img { display: block; max-width: 100%; }
   width: min(100%, 96rem);
   margin: 0 auto;
   padding: 1rem;
+  align-items: start;
 }
 
-.nav-toggle, .progress-chip, .action-link, .lesson-toggle, .reset-link, .sidebar-close {
+.nav-toggle, .progress-chip, .action-link, .lesson-toggle, .reset-link, .sidebar-close, .module-toggle, .practice-step-button {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -160,11 +161,11 @@ img { display: block; max-width: 100%; }
   box-shadow: var(--shadow);
 }
 
-.sidebar-card, .nav-module, .lesson-card, .content-card, .diagram-card, .list-card, .hero-card, .module-card {
+.sidebar-card, .nav-module, .lesson-card, .content-card, .diagram-card, .list-card, .hero-card, .module-card, .lesson-step-panel, .lesson-rail-card, .lesson-roadmap-card {
   padding: 1rem;
 }
 
-.sidebar-header, .sidebar-search, .sidebar-stats, .nav-module, .module-card, .lesson-card, .content-card, .list-card {
+.sidebar-header, .sidebar-search, .sidebar-stats, .nav-module, .module-card, .lesson-card, .content-card, .list-card, .sidebar-context-card, .lesson-roadmap-card, .lesson-step-panel, .lesson-rail-card {
   display: grid;
   gap: 0.75rem;
 }
@@ -189,6 +190,10 @@ img { display: block; max-width: 100%; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.sidebar-stats-wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .stat {
   border-radius: 1rem;
   background: var(--surface);
@@ -205,7 +210,12 @@ img { display: block; max-width: 100%; }
 }
 
 .nav-module { background: var(--surface); border-radius: 1rem; border: 1px solid var(--border); }
+.explorer-module.active-module {
+  border-color: var(--border-strong);
+  background: rgba(56, 189, 248, 0.08);
+}
 .nav-links { display: grid; gap: 0.45rem; }
+.nav-links-dense { margin-top: 0.5rem; }
 .nav-link {
   display: grid;
   gap: 0.15rem;
@@ -217,6 +227,52 @@ img { display: block; max-width: 100%; }
 .nav-link.active, .nav-link:hover { border-color: var(--border-strong); background: rgba(56, 189, 248, 0.12); }
 .nav-link strong { font-size: 0.95rem; }
 .nav-link small { color: var(--muted); }
+.nav-link-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.module-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.75rem;
+  text-align: left;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  min-height: 0;
+}
+
+.module-toggle-copy,
+.module-toggle-meta,
+.sidebar-current-meta,
+.sidebar-quick-links,
+.sidebar-section-heading,
+.sidebar-module-list,
+.lesson-main-stack,
+.lesson-rail,
+.lesson-step-copy,
+.lesson-step-support,
+.lesson-anchor-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.module-toggle-copy small,
+.module-toggle-label,
+.sidebar-context-card p,
+.sidebar-section-heading p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.module-toggle-meta {
+  justify-items: end;
+}
 
 .page {
   display: grid;
@@ -238,6 +294,55 @@ img { display: block; max-width: 100%; }
 .module-sidebar-card,
 .lesson-summary-card {
   align-content: start;
+}
+
+.lesson-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.lesson-roadmap-card {
+  gap: 1rem;
+}
+
+.lesson-anchor-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.lesson-anchor-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.lesson-step-panel {
+  gap: 1rem;
+}
+
+.lesson-step-header {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+}
+
+.lesson-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.lesson-step-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.lesson-step-copy p,
+.sidebar-context-card .muted {
+  margin: 0;
 }
 
 .lesson-card-heading {
@@ -494,6 +599,26 @@ img { display: block; max-width: 100%; }
     width: min(32rem, 34vw);
     padding: 1.25rem;
   }
+  .layout {
+    grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .sidebar {
+    position: sticky;
+    inset: auto;
+    top: 5.8rem;
+    width: auto;
+    max-height: calc(100vh - 6.75rem);
+    transform: none;
+    z-index: 1;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: none;
+  }
+  .sidebar-close,
+  .nav-toggle {
+    display: none;
+  }
   .topbar-progress {
     display: inline-flex;
   }
@@ -510,6 +635,18 @@ img { display: block; max-width: 100%; }
   .list-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .track-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-grid { grid-template-columns: 1.2fr 0.8fr; }
+  .lesson-shell {
+    grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+    align-items: start;
+  }
+  .lesson-rail {
+    position: sticky;
+    top: 5.8rem;
+  }
+  .lesson-step-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+    align-items: start;
+  }
 }
 
 
@@ -555,10 +692,21 @@ button:disabled, .action-link[disabled] {
 
 .practice-step-list li {
   color: var(--muted);
+  list-style: none;
 }
 
-.practice-step-list li.active {
-  color: var(--text);
+.practice-step-button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.practice-step-button.active {
+  border-color: var(--border-strong);
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .practice-card-header {
@@ -574,6 +722,13 @@ button:disabled, .action-link[disabled] {
   padding-left: 1.1rem;
   display: grid;
   gap: 0.55rem;
+}
+
+.practice-guidance.compact {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1rem;
 }
 
 .practice-nav {

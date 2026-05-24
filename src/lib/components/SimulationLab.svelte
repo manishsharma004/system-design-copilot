@@ -6,7 +6,9 @@
   import {
     FLOW_GRAPH_LANGUAGE,
     buildFlowGraphMetadata,
-    buildSimulationScriptMetadata
+    buildSimulationScriptMetadata,
+    flowGraphCompletions,
+    simulationScriptCompletions
   } from '$lib/editor/exerciseMetadata'
   import { simulationSessions } from '$lib/stores/simulation'
   import { compileFlowGraph } from '$lib/simulation/graphCompiler'
@@ -63,6 +65,18 @@
       language: 'typescript',
       value: scriptText
     }
+  ]
+  $: editorSnippetActions = [
+    ...flowGraphCompletions.map((item) => ({
+      label: item.label,
+      insertText: item.insertText,
+      fileId: 'diagram'
+    })),
+    ...simulationScriptCompletions.map((item) => ({
+      label: item.label,
+      insertText: item.insertText,
+      fileId: 'script'
+    }))
   ]
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
@@ -206,6 +220,7 @@
           <CodeEditor
             files={editorFiles}
             minHeight="25rem"
+            helperDescription="Edit the topology and override script with quick inserts, inline diagnostics, and visible structure signals."
             previewItemsByFile={{
               diagram: diagramMetadata.previewItems,
               script: scriptMetadata.previewItems
@@ -219,6 +234,7 @@
               script: scriptMetadata.summary
             }}
             runtimeHints={browserRuntimes}
+            snippetActions={editorSnippetActions}
             on:fileschange={syncEditorFiles}
           />
           {#if compilePreview?.errors?.length}

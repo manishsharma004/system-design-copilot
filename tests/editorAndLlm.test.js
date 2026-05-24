@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildMarkdownMetadata,
   buildFlowGraphMetadata,
   buildSimulationScriptMetadata
 } from '../src/lib/editor/exerciseMetadata.js'
@@ -31,6 +32,20 @@ test('simulation script metadata surfaces overrides and errors', () => {
 
   assert.equal(metadata.previewItems.length, 1)
   assert.equal(metadata.markers.some((marker) => marker.message.includes('Unsupported script line')), true)
+})
+
+test('markdown metadata surfaces structure and unfinished code fences', () => {
+  const metadata = buildMarkdownMetadata(`
+## Requirements
+- read path
+
+\`\`\`ts
+const answer = true
+`)
+
+  assert.equal(metadata.summary.includes('1 headings'), true)
+  assert.equal(metadata.previewItems[0].text, 'Requirements')
+  assert.equal(metadata.markers.some((marker) => marker.message.includes('Close the unfinished fenced code block.')), true)
 })
 
 test('llm request builders cover openai and templated custom providers', () => {
