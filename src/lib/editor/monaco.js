@@ -8,6 +8,7 @@ import {
 
 let initialized = false
 let monacoPromise
+export const MONACO_THEME = 'system-design-copilot-dark'
 
 /**
  * @param {any} monaco
@@ -51,6 +52,50 @@ function registerMarkdownSupport(monaco) {
       return {
         suggestions: toSnippetSuggestions(markdownCompletions, monaco)
       }
+    }
+  })
+}
+
+/**
+ * @param {any} monaco
+ */
+function registerTheme(monaco) {
+  monaco.editor.defineTheme(MONACO_THEME, {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: 'C586C0' },
+      { token: 'attribute.name', foreground: '9CDCFE' },
+      { token: 'type.identifier', foreground: '4EC9B0' },
+      { token: 'string', foreground: 'CE9178' },
+      { token: 'number', foreground: 'B5CEA8' },
+      { token: 'comment', foreground: '6A9955' }
+    ],
+    colors: {
+      'editor.background': '#11131A',
+      'editor.foreground': '#E6EDF7',
+      'editorLineNumber.foreground': '#5E677D',
+      'editorLineNumber.activeForeground': '#C9D4EE',
+      'editorLineNumber.dimmedForeground': '#4B5368',
+      'editorCursor.foreground': '#89B4FA',
+      'editor.selectionBackground': '#264F78',
+      'editor.inactiveSelectionBackground': '#20324C',
+      'editor.lineHighlightBackground': '#171B25',
+      'editorIndentGuide.background1': '#242A37',
+      'editorIndentGuide.activeBackground1': '#384058',
+      'editorBracketMatch.background': '#2A3346',
+      'editorBracketMatch.border': '#4C6FFF',
+      'editorSuggestWidget.background': '#161922',
+      'editorSuggestWidget.border': '#31384A',
+      'editorSuggestWidget.selectedBackground': '#252D3C',
+      'editorHoverWidget.background': '#161922',
+      'editorHoverWidget.border': '#31384A',
+      'editorWidget.background': '#161922',
+      'editorWidget.border': '#31384A',
+      'quickInput.background': '#161922',
+      'quickInput.foreground': '#E6EDF7',
+      'quickInputList.focusBackground': '#252D3C',
+      'quickInputTitle.background': '#1C2230'
     }
   })
 }
@@ -124,10 +169,16 @@ async function initialize() {
   if (initialized && monacoPromise) return monacoPromise
 
   monacoPromise = (async () => {
-    /** @type {any} */
-    const monaco = await import('monaco-editor/esm/vs/editor/editor.api.js')
+    const [monaco] = await Promise.all([
+      import('monaco-editor/esm/vs/editor/editor.api.js'),
+      import('monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js'),
+      import('monaco-editor/esm/vs/language/typescript/monaco.contribution.js'),
+      import('monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js'),
+      import('monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js')
+    ])
     ensureWorkerEnvironment(monaco)
     if (!initialized) {
+      registerTheme(monaco)
       registerMarkdownSupport(monaco)
       registerFlowGraphLanguage(monaco)
       registerTypeScriptSupport(monaco)

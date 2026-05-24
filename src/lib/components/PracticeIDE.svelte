@@ -125,6 +125,29 @@
     if (!savedAt) return 'Not saved yet';
     return `Saved ${new Date(savedAt).toLocaleString()}`;
   }
+
+  $: commandActions = [
+    {
+      id: 'save-practice-answer',
+      label: 'Practice: Save current answer',
+      run: saveCurrent
+    },
+    {
+      id: 'previous-practice-step',
+      label: 'Practice: Previous step',
+      run: goToPrevious
+    },
+    {
+      id: 'next-practice-step',
+      label: 'Practice: Next step',
+      run: goToNext
+    },
+    {
+      id: 'clear-practice-answers',
+      label: 'Practice: Clear lesson answers',
+      run: clearLessonAnswers
+    }
+  ];
 </script>
 
 <section class="practice-ide-section">
@@ -174,6 +197,7 @@
     markersByFile={{ answer: draftMetadata.markers }}
     summaryByFile={{ answer: draftMetadata.summary }}
     snippetActions={editorSnippetActions}
+    {commandActions}
     {previewContent}
     on:fileschange={handleEditorChange}
     on:fileselect={handleFileSelect}
