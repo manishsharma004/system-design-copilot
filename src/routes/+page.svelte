@@ -21,7 +21,7 @@
       </div>
       <div class="action-row">
         <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
-        <span class="pill">Mobile-friendly, multi-page navigation</span>
+        <span class="pill">Interactive practice labs with saved drafts</span>
         <span class="pill">Static build ready for Pages</span>
       </div>
     </div>
