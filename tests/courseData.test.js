@@ -8,8 +8,26 @@ import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
 
 test('site overview describes the expanded curriculum', () => {
   assert.match(siteOverview.title, /System Design Copilot/);
+  assert.ok(siteOverview.heroGuidance);
   assert.ok(siteOverview.studyTracks.length >= 4);
   assert.ok(siteOverview.studyLoop.length >= 4);
+  assert.ok(siteOverview.studyMapSections.length >= 3);
+  assert.ok(siteOverview.recommendedReading.length >= 3);
+  siteOverview.studyTracks.forEach((track) => {
+    assert.ok(track.bestFor);
+    assert.ok(track.cadence);
+    assert.ok(track.outcome);
+    assert.ok(track.steps.length >= 4);
+    track.steps.forEach((step) => {
+      assert.ok(step.title);
+      assert.ok(step.detail);
+    });
+  });
+  siteOverview.studyLoop.forEach((step) => {
+    assert.ok(step.title);
+    assert.ok(step.summary);
+    assert.ok(step.coachNote);
+  });
 });
 
 test('curriculum covers a complete prep path', () => {

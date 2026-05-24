@@ -285,6 +285,17 @@ img { display: block; max-width: 100%; }
   padding: 1.2rem;
 }
 
+.hero-primary-card,
+.study-loop-card,
+.study-track-card,
+.home-detail-card,
+.study-loop-list,
+.study-section-list,
+.reading-list {
+  display: grid;
+  gap: 1rem;
+}
+
 .hero-grid, .module-grid, .lesson-grid, .content-grid, .list-grid, .track-grid, .section-grid {
   display: grid;
   gap: 1rem;
@@ -299,6 +310,20 @@ img { display: block; max-width: 100%; }
 .hero-subtitle, .prose, .content-card p, .diagram-card p, .module-card p, .lesson-card p, .footer-copy, .list-card li, .breadcrumb a, .breadcrumb span {
   color: var(--muted);
   line-height: 1.7;
+}
+
+.hero-guidance,
+.study-loop-step p,
+.study-loop-step span,
+.study-step-card p,
+.study-section-card p,
+.reading-card span {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.hero-guidance {
+  margin: 0;
 }
 
 .action-row, .breadcrumb, .lesson-meta, .card-meta {
@@ -352,6 +377,68 @@ img { display: block; max-width: 100%; }
 .module-card li, .lesson-card li, .list-card li, .checklist li, .pitfalls li, .prompts li {
   color: var(--muted);
   line-height: 1.6;
+}
+
+.hero-highlight-grid,
+.study-track-meta {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.study-loop-step,
+.study-step-card,
+.study-section-card,
+.reading-card {
+  display: grid;
+  gap: 0.55rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.study-loop-step strong,
+.study-step-card strong,
+.study-section-card strong,
+.reading-card strong {
+  font-size: 1rem;
+}
+
+.study-loop-step span,
+.reading-card span {
+  font-size: 0.92rem;
+}
+
+.study-loop-card h2,
+.study-track-card h2,
+.home-detail-card h2,
+.curriculum-map-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.study-track-heading,
+.curriculum-map-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.study-step-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reading-author {
+  margin: 0.2rem 0 0;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .topic-card-link {
@@ -416,11 +503,12 @@ img { display: block; max-width: 100%; }
     align-items: start;
   }
   .hero-grid { grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.85fr); }
+  .home-hero-grid { grid-template-columns: minmax(0, 1.18fr) minmax(22rem, 0.98fr); align-items: stretch; }
   .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .list-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .track-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .track-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-grid { grid-template-columns: 1.2fr 0.8fr; }
 }
 

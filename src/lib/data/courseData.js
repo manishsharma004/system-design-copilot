@@ -2,57 +2,180 @@ export const siteOverview = {
   "title": "System Design Copilot",
   "subtitle": "A deeper system design interview prep curriculum with topic guides, building blocks, trade-offs, case studies, and interactive practice labs.",
   "description": "Study foundations, distributed systems building blocks, architecture patterns, storage, caching, reliability, security, and end-to-end design drills in a mobile-friendly SvelteKit site with locally saved practice answers.",
+  "heroGuidance": "Treat the map like a progression from framing to trade-offs. The best interview answers do not list components at random; they move from requirements and estimates into a clear baseline, then spend the remaining time defending the hardest decisions.",
   "studyTracks": [
     {
       "title": "Interview sprint",
-      "summary": "Use the lesson checklists and case studies to rehearse the order of an interview answer in 7 to 10 days.",
+      "summary": "Use the lesson checklists, module summaries, and case studies to rehearse the order of an interview answer in a compressed 7 to 10 day window.",
+      "bestFor": "You already know the building blocks and need sharper pacing, better whiteboard structure, and cleaner trade-off narration.",
+      "cadence": "Two focused sessions per day: one topic review and one timed case-study walkthrough.",
+      "outcome": "By the end of the sprint you should be able to open with requirements, estimate scale, name the baseline architecture, and justify one deep-dive choice without wandering.",
       "steps": [
-        "Clarify requirements",
-        "Estimate scale",
-        "Draw the critical path",
-        "Deep dive into one risky area",
-        "Close with trade-offs and operations"
+        {
+          "title": "Clarify the prompt",
+          "detail": "Start each practice round by naming actors, core use cases, hard constraints, and what success means for the first version."
+        },
+        {
+          "title": "Estimate before designing",
+          "detail": "Turn the prompt into peak QPS, storage growth, and latency budgets so every later choice feels grounded instead of improvised."
+        },
+        {
+          "title": "Draw one clean baseline",
+          "detail": "Prefer a simple read path and write path that you can explain in under two minutes before layering in caches, queues, or replicas."
+        },
+        {
+          "title": "Deep dive into the highest-risk area",
+          "detail": "Pick the bottleneck that most changes the architecture, such as fan-out, consistency, hot partitions, or global traffic management."
+        },
+        {
+          "title": "Close with trade-offs and operations",
+          "detail": "End by naming failure modes, observability needs, and the next scaling lever so the answer sounds production-minded."
+        }
       ]
     },
     {
       "title": "Deep understanding",
-      "summary": "Move module by module to build intuition for when each component is useful and what it costs operationally.",
+      "summary": "Move module by module to build intuition for when each component is useful, where it breaks down, and what it costs to operate.",
+      "bestFor": "You want durable intuition rather than memorized templates, especially for replication, partitioning, queues, caches, and consistency trade-offs.",
+      "cadence": "Three to five lessons per week with time to redraw diagrams and explain the lesson back in your own words.",
+      "outcome": "You should leave each module with a mental model of the critical path, the main failure modes, and the reason one pattern beats another for a given workload.",
       "steps": [
-        "Read the lesson summary",
-        "Study the diagram",
-        "Review failure modes",
-        "Answer the interview prompts",
-        "Mark the lesson complete after you can explain it aloud"
+        {
+          "title": "Read for the mental model",
+          "detail": "Focus on what problem the component solves, what assumptions it makes, and how it changes latency, durability, or coordination."
+        },
+        {
+          "title": "Study the diagram slowly",
+          "detail": "Use the visual path to explain where requests enter, where state lives, and how data is replicated or recovered."
+        },
+        {
+          "title": "Review failure modes",
+          "detail": "Ask what happens during partial outages, stale reads, retries, hot keys, or region failure so the lesson becomes operational knowledge."
+        },
+        {
+          "title": "Answer the interview prompts aloud",
+          "detail": "Speaking through the prompt is where weak understanding shows up, so use the prompts as explanation drills instead of reading checks."
+        },
+        {
+          "title": "Mark complete only after recall",
+          "detail": "A lesson is truly learned when you can reconstruct the idea, the trade-offs, and a concrete example without looking at the page."
+        }
       ]
     },
     {
       "title": "System walkthrough practice",
-      "summary": "Use the case-study module to simulate whiteboard conversations and connect multiple lessons together.",
+      "summary": "Use the case-study module to simulate whiteboard conversations and connect multiple lessons into one coherent end-to-end design.",
+      "bestFor": "You need to practice stitching requirements, APIs, storage, scaling, and resilience into a single narrative instead of discussing topics in isolation.",
+      "cadence": "One full case study every few days, followed by a short retrospective on what you skipped or overdesigned.",
+      "outcome": "You learn to transition between subsystems naturally, defend interfaces between them, and keep the conversation tied to user-facing goals.",
       "steps": [
-        "Pick a product prompt",
-        "State assumptions",
-        "Choose storage and edge patterns",
-        "Add scaling and resilience controls",
-        "Compare alternatives"
+        {
+          "title": "Pick a product prompt with real constraints",
+          "detail": "Choose something with a recognizable workload such as feeds, search, chat, ledgers, or link redirection so trade-offs feel concrete."
+        },
+        {
+          "title": "State assumptions before drawing",
+          "detail": "Call out expected scale, freshness requirements, abuse risks, and whether the first version optimizes for speed of delivery or long-term scale."
+        },
+        {
+          "title": "Choose storage and traffic patterns",
+          "detail": "Map each access pattern to the right storage model, caching layer, and edge strategy instead of defaulting everything to one database."
+        },
+        {
+          "title": "Add scaling and resilience controls",
+          "detail": "Introduce queues, partitioning, replication, retries, and rate limits only where the workload justifies the operational cost."
+        },
+        {
+          "title": "Compare alternatives at the end",
+          "detail": "Show maturity by naming the design you rejected, why it was tempting, and under what future conditions it would become the better choice."
+        }
       ]
     },
     {
       "title": "Interactive answer drafting",
       "summary": "Open the practice lab inside each lesson, save your answer locally, and move through prompts one step at a time like a mock interview.",
+      "bestFor": "You learn best by writing. This path works well when you need repeatable answer templates and want to compare early drafts against stronger ones later.",
+      "cadence": "Short, frequent reps: draft one prompt, save it, revisit it the next day, and tighten the structure rather than writing everything from scratch.",
+      "outcome": "Your answers become more deliberate: clearer opening assumptions, better component ordering, and stronger final trade-off summaries.",
       "steps": [
-        "Open a lesson practice lab",
-        "Write a draft for the active prompt",
-        "Save the answer locally",
-        "Move to the next interview or design prompt",
-        "Return later and continue from your saved notes"
+        {
+          "title": "Open a lesson practice lab",
+          "detail": "Start with a lesson you recently studied so the prompt tests recall instead of introducing a completely new idea."
+        },
+        {
+          "title": "Write the first draft quickly",
+          "detail": "Aim for structure before polish: requirements, scale, architecture, bottleneck, and trade-offs are more important than perfect wording."
+        },
+        {
+          "title": "Save the answer and move on",
+          "detail": "Treat the locally saved draft as a checkpoint, not a final submission, so you can compare how your thinking evolves over time."
+        },
+        {
+          "title": "Advance to the next prompt",
+          "detail": "Switching between interview prompts forces you to generalize the lesson instead of memorizing a single canned explanation."
+        },
+        {
+          "title": "Return later and revise",
+          "detail": "The second pass is where you usually add better trade-offs, cleaner interfaces, and stronger operational details."
+        }
       ]
     }
   ],
   "studyLoop": [
-    "Start from user-visible requirements and failure expectations.",
-    "Quantify the read path, write path, and growth curve before choosing tools.",
-    "Use diagrams to explain where latency, state, and replication live.",
-    "Practice trade-offs, bottlenecks, and rollback plans out loud."
+    {
+      "title": "Frame the user and the failure",
+      "summary": "Begin with the user journey, the request that matters most, and the failure you cannot afford. This keeps the design anchored to behavior instead of drifting into infrastructure trivia.",
+      "coachNote": "A system design answer becomes convincing when every later choice can be traced back to one explicit user promise."
+    },
+    {
+      "title": "Quantify the shape of the workload",
+      "summary": "Estimate read volume, write volume, object size, and growth curve before selecting storage, caching, or asynchronous pipelines. Numbers do not need to be perfect, but they should be directionally strong enough to eliminate unrealistic options.",
+      "coachNote": "Designing without rough numbers usually leads to generic diagrams that are hard to defend under follow-up questions."
+    },
+    {
+      "title": "Sketch one baseline before optimizing",
+      "summary": "Draw the simplest credible request path first. A clean baseline gives the interviewer something concrete to react to and gives you a stable place to introduce scale, durability, and resiliency improvements.",
+      "coachNote": "Good interview pacing comes from delaying optimizations until the first bottleneck is visible."
+    },
+    {
+      "title": "Deep dive where the trade-off is sharpest",
+      "summary": "Spend the extra time on the decision that most changes correctness, latency, or operational cost, such as replication strategy, fan-out design, or partitioning model.",
+      "coachNote": "Depth matters more than breadth once the baseline is clear; one defended decision is better than a dozen unexamined components."
+    }
+  ],
+  "studyMapSections": [
+    {
+      "title": "Build the foundations first",
+      "summary": "Start with requirements, estimation, latency budgets, CAP-style trade-offs, DNS, and load balancing. These lessons create the language you will use everywhere else, especially when interviewers push on scale, consistency, and failure handling."
+    },
+    {
+      "title": "Layer in state and coordination",
+      "summary": "Once the request path is clear, move into storage, caching, replication, queues, and distributed-systems topics. This is the middle of the map where most architectures succeed or fail because it determines where truth lives and how work is coordinated."
+    },
+    {
+      "title": "Practice product-shaped systems",
+      "summary": "Finish by applying the building blocks to feeds, chat, search, file delivery, payments, and the case studies. The goal is not to memorize a canonical answer, but to recognize recurring patterns and adapt them to the constraints of each product."
+    }
+  ],
+  "recommendedReading": [
+    {
+      "title": "Designing Data-Intensive Applications",
+      "author": "Martin Kleppmann",
+      "focus": "Best for replication, consistency, storage engines, logs, streams, and the operational trade-offs behind distributed data systems.",
+      "whyItFits": "Use it when you want deeper intuition for why databases, event streams, and coordination mechanisms behave the way they do."
+    },
+    {
+      "title": "System Design Interview",
+      "author": "Alex Xu and Sahn Lam",
+      "focus": "Best for interview pacing, common product prompts, and learning how to structure a design answer under time pressure.",
+      "whyItFits": "Use it alongside the case studies when you want to rehearse the shape of an interview conversation, not just the technology choices."
+    },
+    {
+      "title": "Fundamentals of Software Architecture",
+      "author": "Mark Richards and Neal Ford",
+      "focus": "Best for architecture characteristics, trade-off analysis, and the vocabulary that helps you explain why a design is optimized for one quality attribute over another.",
+      "whyItFits": "Use it when you want stronger language for balancing scalability, maintainability, deployability, cost, and team complexity."
+    }
   ],
   "sourceAttribution": {
     "name": "The System Design Primer",

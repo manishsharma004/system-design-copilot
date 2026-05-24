@@ -10,11 +10,12 @@
 </svelte:head>
 
 <section class="hero panel">
-  <div class="hero-grid">
-    <div class="hero-card">
+  <div class="hero-grid home-hero-grid">
+    <div class="hero-card hero-primary-card">
       <p class="eyebrow">Complete curriculum</p>
       <h1 class="hero-title">Study system design in the order interviews actually reward.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
+      <p class="hero-guidance">{siteOverview.heroGuidance}</p>
       <div class="action-row">
         <a class="action-link primary" href={`${base}/module/${modules[0].slug}`}>Start with {modules[0].title}</a>
         <a class="action-link" href={`${base}/module/${modules[modules.length - 1].slug}`}>Jump to case studies</a>
@@ -24,37 +25,108 @@
         <span class="pill">Interactive practice labs with saved drafts</span>
         <span class="pill">Reveal sample answers and interview-ready code on demand</span>
       </div>
-    </div>
-    <div class="hero-card">
-      <p class="eyebrow">Study loop</p>
-      <ul>
-        {#each siteOverview.studyLoop as step}
-          <li>{step}</li>
+      <div class="hero-highlight-grid">
+        {#each siteOverview.studyMapSections as section}
+          <article class="section-chip">
+            <strong>{section.title}</strong>
+            <span>{section.summary}</span>
+          </article>
         {/each}
-      </ul>
+      </div>
     </div>
+    <article class="hero-card study-loop-card">
+      <p class="eyebrow">Session loop</p>
+      <h2>Use the same four-part rhythm in every practice session.</h2>
+      <div class="study-loop-list">
+        {#each siteOverview.studyLoop as step}
+          <article class="study-loop-step">
+            <strong>{step.title}</strong>
+            <p>{step.summary}</p>
+            <span>{step.coachNote}</span>
+          </article>
+        {/each}
+      </div>
+    </article>
   </div>
 </section>
 
-<section class="track-grid">
+<section class="track-grid study-track-grid">
   {#each siteOverview.studyTracks as track}
-    <article class="module-card">
-      <p class="eyebrow">{track.title}</p>
+    <article class="module-card study-track-card">
+      <div class="study-track-heading">
+        <div>
+          <p class="eyebrow">Study path</p>
+          <h2>{track.title}</h2>
+        </div>
+        <div class="card-meta">
+          <span class="pill">{track.steps.length} detailed steps</span>
+        </div>
+      </div>
       <p>{track.summary}</p>
-      <ul>
-        {#each track.steps as step}
-          <li>{step}</li>
+      <div class="study-track-meta">
+        <article class="section-chip">
+          <strong>Best for</strong>
+          <span>{track.bestFor}</span>
+        </article>
+        <article class="section-chip">
+          <strong>Cadence</strong>
+          <span>{track.cadence}</span>
+        </article>
+        <article class="section-chip">
+          <strong>What success looks like</strong>
+          <span>{track.outcome}</span>
+        </article>
+      </div>
+      <ol class="study-step-list">
+        {#each track.steps as step, index}
+          <li class="study-step-card">
+            <span class="pill">Step {index + 1}</span>
+            <strong>{step.title}</strong>
+            <p>{step.detail}</p>
+          </li>
         {/each}
-      </ul>
+      </ol>
     </article>
   {/each}
 </section>
 
+<section class="section-grid home-reference-grid">
+  <article class="hero-card home-detail-card">
+    <p class="eyebrow">How the map builds depth</p>
+    <h2>Move from design vocabulary to product-shaped systems.</h2>
+    <div class="study-section-list">
+      {#each siteOverview.studyMapSections as section}
+        <article class="study-section-card">
+          <strong>{section.title}</strong>
+          <p>{section.summary}</p>
+        </article>
+      {/each}
+    </div>
+  </article>
+  <article class="hero-card home-detail-card">
+    <p class="eyebrow">Helpful design books</p>
+    <h2>Use these references to deepen the lessons, not replace practice.</h2>
+    <div class="reading-list">
+      {#each siteOverview.recommendedReading as book}
+        <article class="reading-card">
+          <div>
+            <strong>{book.title}</strong>
+            <p class="reading-author">{book.author}</p>
+          </div>
+          <p>{book.focus}</p>
+          <span>{book.whyItFits}</span>
+        </article>
+      {/each}
+    </div>
+  </article>
+</section>
+
 <section class="panel hero-card">
-  <div class="action-row" style="justify-content: space-between; align-items: end;">
+  <div class="curriculum-map-header">
     <div>
       <p class="eyebrow">Curriculum map</p>
       <h2>Modules and lesson progress</h2>
+      <p class="hero-subtitle">Each module adds a new design muscle: estimation, interfaces, storage, distributed coordination, reliability, security, and finally full case-study synthesis.</p>
     </div>
     <button class="reset-link" type="button" onclick={() => progress.reset()}>Reset progress</button>
   </div>
