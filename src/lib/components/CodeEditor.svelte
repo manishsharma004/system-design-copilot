@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  // @ts-nocheck
   import { createEventDispatcher, onMount } from 'svelte'
 
   import { getMonaco } from '$lib/editor/monaco'

@@ -182,22 +182,19 @@ export function buildFlowGraphMetadata(diagramText) {
     }
   }
 
-  /** @type {{ line: number, message: string, severity: 'error' | 'warning' | 'hint' }[]} */
+  /** @type {{ line: number, message: string, severity: 'error' | 'warning' }[]} */
   const markers = [
     ...graph.errors.map((message) => ({
       line: mapFlowGraphMessageToLine(message, nodeLines, linkLines),
       message,
-      severity: 'error'
+      severity: /** @type {'error'} */ ('error')
     })),
     ...graph.warnings.map((message) => ({
       line: mapFlowGraphMessageToLine(message, nodeLines, linkLines),
       message,
-      severity: 'warning'
+      severity: /** @type {'warning'} */ ('warning')
     }))
-  ].map((entry) => ({
-    ...entry,
-    severity: normalizeSeverity(entry.severity)
-  }))
+  ]
 
   return {
     summary: `${graph.nodes.length} nodes · ${graph.links.length} links`,
@@ -216,7 +213,7 @@ export function buildSimulationScriptMetadata(scriptText) {
   const script = parseSimulationScript(scriptText)
   const lines = splitLines(scriptText)
   const previewItems = []
-  /** @type {{ line: number, message: string, severity: 'error' | 'warning' | 'hint' }[]} */
+  /** @type {{ line: number, message: string, severity: 'error' }[]} */
   const markers = []
 
   for (const { line, text } of lines) {

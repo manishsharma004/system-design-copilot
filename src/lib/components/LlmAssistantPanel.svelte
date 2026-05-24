@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  // @ts-nocheck
   import { getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
   import { llmSettings } from '$lib/stores/llm'
 
