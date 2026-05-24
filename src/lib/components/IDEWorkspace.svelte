@@ -15,6 +15,8 @@
   export let runtimeHints = []
   /** @type {any[]} */
   export let snippetActions = []
+  /** @type {any[]} */
+  export let commandActions = []
   export let readOnly = false
   export let minHeight = '100%'
   /** @type {'preview' | 'results' | 'terminal' | null} */
@@ -181,6 +183,7 @@
           {summaryByFile}
           {runtimeHints}
           {snippetActions}
+          {commandActions}
           on:change={handleEditorChange}
           on:fileschange={handleFilesChange}
           on:tabchange={handleTabChange}

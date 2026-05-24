@@ -1,9 +1,9 @@
 <svelte:options runes={false} />
 <script>
   // @ts-nocheck
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
 
-  import { getMonaco } from '$lib/editor/monaco'
+  import { getMonaco, MONACO_THEME } from '$lib/editor/monaco'
 
   export let value = ''
   export let readOnly = false
@@ -18,9 +18,12 @@
   export let summaryByFile = {}
   export let runtimeHints = []
   export let snippetActions = []
+  export let commandActions = []
 
   const dispatch = createEventDispatcher()
 
+  /** @type {HTMLDivElement | undefined} */
+  let shell
   /** @type {HTMLDivElement | undefined} */
   let host
   let editor
@@ -30,6 +33,11 @@
   let internalActiveFileId = ''
   let wordWrapEnabled = true
   let copyState = ''
+  let actionDisposables = []
+  let commandPaletteOpen = false
+  let commandQuery = ''
+  let commandInput
+  let editorActive = false
   /** @type {Map<string, import('monaco-editor').editor.ITextModel>} */
   let models = new Map()
   /** @type {Map<string, string[]>} */
@@ -56,8 +64,22 @@
   $: wordCount = currentText.trim() ? currentText.trim().split(/\s+/).filter(Boolean).length : 0
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
   $: showTabbar = normalizedFiles.length > 1
-  $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length || runtimeHints?.length)
+  $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length || runtimeHints?.length || commandActions.length)
   $: helperVisible = Boolean(currentMarkers.length || currentPreviewItems.length)
+  $: paletteCommands = [
+    {
+      id: 'toggle-word-wrap',
+      label: wordWrapEnabled ? 'Editor: Disable word wrap' : 'Editor: Enable word wrap',
+      run: toggleWordWrap
+    },
+    {
+      id: 'copy-current-file',
+      label: 'Editor: Copy current file',
+      run: copyCurrentFile
+    },
+    ...commandActions
+  ]
+  $: filteredPaletteCommands = paletteCommands.filter((action) => action.label.toLowerCase().includes(commandQuery.trim().toLowerCase()))
 
   /**
    * @param {string} name
@@ -237,6 +259,19 @@
     editor?.updateOptions({ wordWrap: wordWrapEnabled ? 'on' : 'off' })
   }
 
+  async function openCommandPalette() {
+    commandPaletteOpen = true
+    commandQuery = ''
+    await tick()
+    commandInput?.focus()
+  }
+
+  function closeCommandPalette() {
+    commandPaletteOpen = false
+    commandQuery = ''
+    editor?.focus()
+  }
+
   async function copyCurrentFile() {
     if (!currentText || !navigator?.clipboard) return
     await navigator.clipboard.writeText(currentText)
@@ -257,8 +292,110 @@
     updateFileValue(targetFileId, nextValue)
   }
 
+  async function runPaletteCommand(action) {
+    if (!action) return
+    await action.run?.({
+      activeFileId: resolvedActiveFileId,
+      file: currentFile
+    })
+    closeCommandPalette()
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handlePaletteKeydown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeCommandPalette()
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      runPaletteCommand(filteredPaletteCommands[0])
+    }
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleBackdropKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+      event.preventDefault()
+      closeCommandPalette()
+    }
+  }
+
+  /** @param {Event} event */
+  function syncEditorActivity(event) {
+    editorActive = Boolean(shell?.contains(/** @type {Node | null} */ (event.target)))
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleGlobalKeydown(event) {
+    const isPaletteShortcut = ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'p') || event.key === 'F1'
+    if (isPaletteShortcut && editorActive) {
+      event.preventDefault()
+      openCommandPalette()
+      return
+    }
+    if (event.key === 'Escape' && commandPaletteOpen) {
+      event.preventDefault()
+      closeCommandPalette()
+    }
+  }
+
+  function registerEditorActions() {
+    if (!editor || !monaco) return
+
+    for (const disposable of actionDisposables) {
+      disposable.dispose()
+    }
+    actionDisposables = []
+
+    actionDisposables.push(
+      editor.addAction({
+        id: 'system-design-copilot.open-command-palette',
+        label: 'Open command palette',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyP, monaco.KeyCode.F1],
+        run: async () => {
+          await openCommandPalette()
+        }
+      })
+    )
+    actionDisposables.push(
+      editor.addAction({
+        id: 'system-design-copilot.toggle-word-wrap',
+        label: 'Toggle word wrap',
+        run: async () => {
+          toggleWordWrap()
+        }
+      })
+    )
+    actionDisposables.push(
+      editor.addAction({
+        id: 'system-design-copilot.copy-current-file',
+        label: 'Copy current file',
+        run: async () => {
+          await copyCurrentFile()
+        }
+      })
+    )
+
+    for (const action of commandActions) {
+      actionDisposables.push(
+        editor.addAction({
+          id: `system-design-copilot.${action.id}`,
+          label: action.label,
+          run: async () => {
+            await runPaletteCommand(action)
+          }
+        })
+      )
+    }
+  }
+
   onMount(() => {
     let disposed = false
+    document.addEventListener('pointerdown', syncEditorActivity, true)
+    document.addEventListener('focusin', syncEditorActivity, true)
+    document.addEventListener('keydown', handleGlobalKeydown, true)
 
     ;(async () => {
       monaco = await getMonaco()
@@ -268,9 +405,15 @@
         value,
         language,
         readOnly,
+        theme: MONACO_THEME,
         automaticLayout: true,
         minimap: { enabled: true, maxColumn: 80, renderCharacters: false },
         scrollBeyondLastLine: false,
+        lineNumbers: 'on',
+        lineNumbersMinChars: 4,
+        glyphMargin: false,
+        folding: true,
+        contextmenu: true,
         fontSize: 13,
         lineHeight: 20,
         fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
@@ -321,11 +464,18 @@
       })
 
       ready = true
+      registerEditorActions()
       syncModelsFromProps()
     })()
 
     return () => {
       disposed = true
+      document.removeEventListener('pointerdown', syncEditorActivity, true)
+      document.removeEventListener('focusin', syncEditorActivity, true)
+      document.removeEventListener('keydown', handleGlobalKeydown, true)
+      for (const disposable of actionDisposables) {
+        disposable.dispose()
+      }
       for (const model of models.values()) {
         model.dispose()
       }
@@ -340,9 +490,13 @@
   $: if (ready && currentFile) {
     applyMetadata(currentFile.id)
   }
+
+  $: if (ready) {
+    registerEditorActions()
+  }
 </script>
 
-<div class="code-editor-shell">
+<div class="code-editor-shell" bind:this={shell}>
   {#if showTabbar}
     <div class="code-editor-tabbar">
       <div class="code-editor-tabs" role="tablist" aria-label="Open files">
@@ -388,6 +542,14 @@
         </div>
       {/if}
 
+      {#if commandActions.length}
+        <div class="code-editor-runtime-row command-row">
+          <button class="code-editor-palette-button" type="button" onclick={openCommandPalette} title="Open command palette">
+            Ctrl/Cmd+Shift+P
+          </button>
+        </div>
+      {/if}
+
       {#if runtimeHints?.length}
         <div class="code-editor-runtime-row">
           {#each runtimeHints as runtime}
@@ -395,6 +557,47 @@
               {runtime.kind === 'wasm' ? 'WASM' : 'Browser'} · {runtime.label}
             </span>
           {/each}
+        </div>
+      {/if}
+
+      {#if commandPaletteOpen}
+        <div
+          class="code-editor-palette-backdrop"
+          role="button"
+          tabindex="0"
+          aria-label="Close command palette"
+          onclick={closeCommandPalette}
+          onkeydown={handleBackdropKeydown}
+        >
+          <div
+            class="code-editor-palette"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            tabindex="-1"
+            onclick={(event) => event.stopPropagation()}
+            onkeydown={(event) => event.stopPropagation()}
+          >
+            <input
+              bind:this={commandInput}
+              bind:value={commandQuery}
+              class="code-editor-palette-input"
+              type="text"
+              placeholder="Type a command"
+              onkeydown={handlePaletteKeydown}
+            />
+            <div class="code-editor-palette-list">
+              {#if filteredPaletteCommands.length}
+                {#each filteredPaletteCommands as action}
+                  <button class="code-editor-palette-item" type="button" onclick={() => runPaletteCommand(action)}>
+                    {action.label}
+                  </button>
+                {/each}
+              {:else}
+                <p class="code-editor-palette-empty">No commands match.</p>
+              {/if}
+            </div>
+          </div>
         </div>
       {/if}
     </div>
@@ -448,6 +651,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
     border-radius: 0.75rem;
     border: 1px solid #2f3340;
     background: #11131a;
@@ -589,6 +793,88 @@
     border-color: #696cff;
     background: rgba(105, 108, 255, 0.16);
     color: #e0e7ff;
+  }
+
+  .code-editor-palette-button {
+    border-radius: 0.45rem;
+    border: 1px solid #303647;
+    background: #1a1f2b;
+    color: #d4dcf3;
+    min-height: 28px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.72rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .code-editor-palette-button:hover {
+    border-color: #696cff;
+    background: #21283a;
+  }
+
+  .command-row {
+    margin-left: auto;
+  }
+
+  .code-editor-palette-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: start center;
+    padding: 1rem;
+    background: rgba(8, 11, 17, 0.58);
+    backdrop-filter: blur(6px);
+  }
+
+  .code-editor-palette {
+    width: min(32rem, 100%);
+    display: grid;
+    gap: 0.5rem;
+    border-radius: 0.85rem;
+    border: 1px solid #31384a;
+    background: #161922;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  .code-editor-palette-input {
+    border: none;
+    border-bottom: 1px solid #252d3c;
+    background: transparent;
+    color: #eef2ff;
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+    outline: none;
+  }
+
+  .code-editor-palette-list {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.35rem;
+    max-height: 16rem;
+    overflow: auto;
+  }
+
+  .code-editor-palette-item {
+    border: none;
+    border-radius: 0.6rem;
+    background: transparent;
+    color: #d7def1;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    min-height: 0;
+  }
+
+  .code-editor-palette-item:hover {
+    background: #252d3c;
+  }
+
+  .code-editor-palette-empty {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    color: #8f96ab;
+    font-size: 0.8rem;
   }
 
   .monaco-host {

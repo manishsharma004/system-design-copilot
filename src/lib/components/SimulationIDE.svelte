@@ -210,6 +210,24 @@
     if (value === undefined || value === null) return '—'
     return Intl.NumberFormat('en-US', { maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value)
   }
+
+  $: commandActions = [
+    {
+      id: 'run-simulation',
+      label: 'Simulation: Run current scenario',
+      run: runCurrentSimulation
+    },
+    {
+      id: 'save-simulation',
+      label: 'Simulation: Save current scenario',
+      run: saveSession
+    },
+    {
+      id: 'reset-simulation',
+      label: 'Simulation: Reset current scenario',
+      run: resetSession
+    }
+  ]
 </script>
 
 {#if simulation}
@@ -268,6 +286,7 @@
       }}
       runtimeHints={browserRuntimes}
       snippetActions={editorSnippetActions}
+      {commandActions}
       previewContent={compilePreview?.mermaid || latestRun?.mermaid ? 'diagram' : null}
       resultsContent={resultsText}
       on:fileschange={syncEditorFiles}
