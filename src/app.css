@@ -556,6 +556,12 @@ button:disabled, .action-link[disabled] {
 .topic-lab,
 .topic-lab-layout,
 .topic-panel-grid,
+.simulation-lab,
+.simulation-layout,
+.simulation-stack,
+.simulation-findings,
+.simulation-metric-grid,
+.simulation-node-grid,
 .topic-option-list,
 .topic-detail-card,
 .topic-case-study,
@@ -617,6 +623,51 @@ button:disabled, .action-link[disabled] {
   background: rgba(56, 189, 248, 0.12);
 }
 
+.simulation-editor-card code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #bfdbfe;
+}
+
+.simulation-note,
+.simulation-node-card {
+  display: grid;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.simulation-note.danger {
+  border-color: rgba(251, 113, 133, 0.5);
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.simulation-note h3,
+.simulation-note h4,
+.simulation-node-card strong {
+  margin: 0;
+}
+
+.simulation-note p,
+.simulation-note li,
+.simulation-node-card li {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.simulation-note ul,
+.simulation-node-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.simulation-metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
 .topic-option span {
   color: var(--muted);
   line-height: 1.5;
@@ -676,6 +727,11 @@ button:disabled, .action-link[disabled] {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   }
 
+  .simulation-layout {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
+  }
+
   .topic-panel-grid {
     grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
     align-items: start;
@@ -688,5 +744,9 @@ button:disabled, .action-link[disabled] {
 
   .topic-step-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .simulation-node-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

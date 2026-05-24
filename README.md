@@ -1,7 +1,7 @@
 
 # system-design-copilot
 
-Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site. The lesson workspace now includes a structured in-browser editor, reveal-on-demand sample answers, Mermaid-powered interactive diagrams, and decision labs that compare real design choices for core topics and case studies.
+Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site. The lesson workspace now includes a structured in-browser editor, reveal-on-demand sample answers, Mermaid-powered interactive diagrams, decision labs that compare real design choices, and a browser-only simulation lab for authored case-study scenarios.
 
 ## Run locally
 

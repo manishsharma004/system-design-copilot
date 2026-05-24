@@ -2,6 +2,7 @@
 import { error } from '@sveltejs/kit';
 import { allLessons, getLessonBySlug, getModuleBySlug, lessonIndex, modules } from '$lib/data/courseData';
 import { getInteractiveLesson } from '$lib/data/interactiveLessons';
+import { getSimulationLesson } from '$lib/data/simulationLessons';
 
 export const prerender = true;
 
@@ -25,7 +26,8 @@ export function load({ params }) {
     lesson: {
       ...lesson,
       relatedLessons,
-      interactive: getInteractiveLesson(lesson.id)
+      interactive: getInteractiveLesson(lesson.id),
+      simulation: getSimulationLesson(lesson.id)
     },
     previousLesson: lessonPosition > 0 ? module.lessons[lessonPosition - 1] : null,
     nextLesson: lessonPosition < module.lessons.length - 1 ? module.lessons[lessonPosition + 1] : null
