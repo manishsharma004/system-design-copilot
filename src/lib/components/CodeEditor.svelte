@@ -61,10 +61,16 @@
   $: currentText = currentFile?.value ?? value ?? ''
   $: lineCount = currentText ? currentText.split('\n').length : 1
   $: wordCount = currentText.trim() ? currentText.trim().split(/\s+/).filter(Boolean).length : 0
+  $: charCount = currentText.length
+  $: fileSizeKb = (new TextEncoder().encode(currentText).length / 1024).toFixed(1)
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
   $: showTabbar = normalizedFiles.length > 1
   $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length)
   $: helperVisible = Boolean(currentMarkers.length || currentPreviewItems.length)
+  let cursorLine = 1
+  let cursorColumn = 1
+  let minimapEnabled = true
+  let fontSize = 13
   $: paletteCommands = [
     {
       id: 'toggle-word-wrap',
@@ -75,6 +81,36 @@
       id: 'copy-current-file',
       label: 'Editor: Copy current file',
       run: copyCurrentFile
+    },
+    {
+      id: 'go-to-line',
+      label: 'Editor: Go to line...',
+      run: goToLine
+    },
+    {
+      id: 'toggle-minimap',
+      label: minimapEnabled ? 'Editor: Hide minimap' : 'Editor: Show minimap',
+      run: toggleMinimap
+    },
+    {
+      id: 'increase-font-size',
+      label: 'Editor: Increase font size',
+      run: increaseFontSize
+    },
+    {
+      id: 'decrease-font-size',
+      label: 'Editor: Decrease font size',
+      run: decreaseFontSize
+    },
+    {
+      id: 'format-document',
+      label: 'Editor: Format document',
+      run: formatDocument
+    },
+    {
+      id: 'find-replace',
+      label: 'Editor: Find and replace',
+      run: openFindReplace
     },
     ...commandActions
   ]
@@ -280,6 +316,41 @@
     }, 1200)
   }
 
+  function goToLine() {
+    if (!editor || !monaco) return
+    const lineNumber = prompt('Go to line:')
+    if (!lineNumber) return
+    const line = Math.max(1, Math.min(Number(lineNumber) || 1, lineCount))
+    editor.setPosition({ lineNumber: line, column: 1 })
+    editor.revealLineInCenter(line)
+    editor.focus()
+  }
+
+  function toggleMinimap() {
+    minimapEnabled = !minimapEnabled
+    editor?.updateOptions({ minimap: { enabled: minimapEnabled } })
+  }
+
+  function increaseFontSize() {
+    fontSize = Math.min(24, fontSize + 1)
+    editor?.updateOptions({ fontSize })
+  }
+
+  function decreaseFontSize() {
+    fontSize = Math.max(10, fontSize - 1)
+    editor?.updateOptions({ fontSize })
+  }
+
+  function formatDocument() {
+    if (!editor) return
+    editor.getAction('editor.action.formatDocument')?.run()
+  }
+
+  function openFindReplace() {
+    if (!editor) return
+    editor.getAction('editor.action.startFindReplaceAction')?.run()
+  }
+
   /** @param {{ insertText: string, fileId?: string }} action */
   function insertSnippet(action) {
     const targetFileId = action.fileId ?? currentFile?.id
@@ -376,6 +447,16 @@
         }
       })
     )
+    actionDisposables.push(
+      editor.addAction({
+        id: 'system-design-copilot.go-to-line',
+        label: 'Go to line',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG],
+        run: async () => {
+          goToLine()
+        }
+      })
+    )
 
     for (const action of commandActions) {
       actionDisposables.push(
@@ -462,6 +543,11 @@
         emitModelChange()
       })
 
+      editor.onDidChangeCursorPosition((event) => {
+        cursorLine = event.position.lineNumber
+        cursorColumn = event.position.column
+      })
+
       ready = true
       registerEditorActions()
       syncModelsFromProps()
@@ -521,6 +607,9 @@
         <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()} title="Copy file">
           {copyState || '📋'}
         </button>
+        <button class="code-editor-control" type="button" onclick={openCommandPalette} title="Command palette (Ctrl+Shift+P)">
+          ⌘
+        </button>
       </div>
     </div>
   {/if}
@@ -553,8 +642,8 @@
 
   <div class:editor-hidden={!ready} class="monaco-host" style={`min-height: ${minHeight};`} bind:this={host}></div>
 
-  {#if helperVisible}
-    <div class="code-editor-status-bar">
+  <div class="code-editor-status-bar">
+    <div class="code-editor-status-left">
       {#each currentMarkers.slice(0, 3) as marker}
         <span class="code-editor-status-item warning">⚠ Line {marker.line}: {marker.message}</span>
       {/each}
@@ -562,7 +651,15 @@
         <span class="code-editor-status-item info">● Line {item.line}: {item.text}</span>
       {/each}
     </div>
-  {/if}
+    <div class="code-editor-status-right">
+      <span class="code-editor-status-item">Ln {cursorLine}, Col {cursorColumn}</span>
+      <span class="code-editor-status-item">{lineCount} lines</span>
+      <span class="code-editor-status-item">{fileSizeKb} KB</span>
+      {#if currentFile?.language}
+        <span class="code-editor-status-item">{currentFile.language}</span>
+      {/if}
+    </div>
+  </div>
 
   {#if commandPaletteOpen}
     <div
@@ -823,6 +920,20 @@
     background: #151821;
     border-top: 1px solid #252a35;
     min-height: 1.6rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .code-editor-status-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+  }
+
+  .code-editor-status-right {
+    display: flex;
+    gap: 0.75rem;
     align-items: center;
   }
 

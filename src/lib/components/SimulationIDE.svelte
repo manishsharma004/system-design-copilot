@@ -101,7 +101,7 @@
     }))
   ]
   $: explorerNodes = buildExplorerNodes()
-  $: resultsText = buildResultsText(latestRun)
+  $: resultsText = buildResultsText(latestRun) ?? 'Click ▶ Run to execute the simulation and see metrics here.'
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id

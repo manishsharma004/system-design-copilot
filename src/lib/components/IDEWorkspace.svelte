@@ -34,6 +34,7 @@
   let bottomPanelCollapsed = false
   /** @type {Set<string>} */
   let expandedFolders = new Set(['root', 'src'])
+  let previousResultsContent = resultsContent
 
   $: internalActiveFileId = activeFileId || files[0]?.id || ''
   $: panelTabs = [
@@ -43,6 +44,12 @@
   ]
   $: if (panelTabs.length && !activePanel) {
     activePanel = /** @type {'preview' | 'results' | 'terminal'} */ (panelTabs[0].id)
+  }
+  // Auto-expand bottom panel and switch to results when new results arrive
+  $: if (resultsContent && resultsContent !== previousResultsContent) {
+    previousResultsContent = resultsContent
+    bottomPanelCollapsed = false
+    activePanel = 'results'
   }
   $: hasSidePanel = previewContent !== null
   $: hasBottomPanel = resultsContent !== null || terminalContent !== null
