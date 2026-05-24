@@ -1,7 +1,13 @@
 <svelte:options runes={false} />
 <script>
   import CodeEditor from '$lib/components/CodeEditor.svelte'
+  import { listBrowserRuntimes } from '$lib/browserRuntimes'
   import MermaidDiagram from '$lib/components/MermaidDiagram.svelte'
+  import {
+    FLOW_GRAPH_LANGUAGE,
+    buildFlowGraphMetadata,
+    buildSimulationScriptMetadata
+  } from '$lib/editor/exerciseMetadata'
   import { simulationSessions } from '$lib/stores/simulation'
   import { compileFlowGraph } from '$lib/simulation/graphCompiler'
   import { runSimulation } from '$lib/simulation/engine'
@@ -30,14 +36,34 @@
   let hydratedLessonId = ''
   /** @type {any} */
   let latestRun = null
+  let editorFiles = []
+  let browserRuntimes = listBrowserRuntimes()
 
   $: simulation = lesson?.simulation ?? null
   $: sessions = $simulationSessions
   $: session = simulation ? sessions[lesson.id] ?? null : null
   $: compilePreview = simulation ? compileFlowGraph(diagramText || simulation.starterDiagram) : null
+  $: diagramMetadata = buildFlowGraphMetadata(diagramText || simulation?.starterDiagram || '')
+  $: scriptMetadata = buildSimulationScriptMetadata(scriptText || simulation?.scriptTemplate || '')
   $: activeApi = simulation?.apis?.find((/** @type {any} */ entry) => entry.id === activeApiId) ?? null
   $: activeProfile = simulation?.workloadProfiles?.find((/** @type {any} */ entry) => entry.id === activeProfileId) ?? null
   $: compatibleProfiles = simulation?.workloadProfiles?.filter((/** @type {any} */ entry) => entry.endpointId === activeApiId) ?? []
+  $: editorFiles = [
+    {
+      id: 'diagram',
+      label: 'topology.flow',
+      filename: 'topology.flow',
+      language: FLOW_GRAPH_LANGUAGE,
+      value: diagramText
+    },
+    {
+      id: 'script',
+      label: 'overrides.ts',
+      filename: 'overrides.ts',
+      language: 'typescript',
+      value: scriptText
+    }
+  ]
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id
@@ -83,6 +109,13 @@
     scriptText = simulation.scriptTemplate
     latestRun = null
     simulationSessions.clearSession(lesson.id)
+  }
+
+  /** @param {CustomEvent<{ files: { id: string, value: string }[] }>} event */
+  function syncEditorFiles(event) {
+    const nextFiles = event.detail.files ?? []
+    diagramText = nextFiles.find((file) => file.id === 'diagram')?.value ?? diagramText
+    scriptText = nextFiles.find((file) => file.id === 'script')?.value ?? scriptText
   }
 
   /** @param {number | undefined} value */
@@ -164,13 +197,30 @@
         <article class="content-card simulation-editor-card">
           <div class="practice-card-header">
             <div>
-              <p class="eyebrow">Editable flow graph</p>
-              <h3>Constrained topology input</h3>
+              <p class="eyebrow">Exercise workspace</p>
+              <h3>Multi-file topology and override editor</h3>
             </div>
             <span class="pill">{compilePreview?.nodes?.length ?? 0} nodes</span>
           </div>
-          <p class="practice-copy">Use <code>node</code> and <code>link</code> lines to shape the system before you simulate it.</p>
-          <CodeEditor bind:value={diagramText} minHeight="18rem" />
+          <p class="practice-copy">Use file tabs, code completion, inline previews, and diagnostics to tune the topology and scripted overrides without leaving the browser.</p>
+          <CodeEditor
+            files={editorFiles}
+            minHeight="25rem"
+            previewItemsByFile={{
+              diagram: diagramMetadata.previewItems,
+              script: scriptMetadata.previewItems
+            }}
+            markersByFile={{
+              diagram: diagramMetadata.markers,
+              script: scriptMetadata.markers
+            }}
+            summaryByFile={{
+              diagram: diagramMetadata.summary,
+              script: scriptMetadata.summary
+            }}
+            runtimeHints={browserRuntimes}
+            on:fileschange={syncEditorFiles}
+          />
           {#if compilePreview?.errors?.length}
             <div class="simulation-note danger">
               <p class="eyebrow">Topology issues</p>
@@ -181,12 +231,15 @@
               </ul>
             </div>
           {/if}
-          {#if compilePreview?.warnings?.length}
+          {#if compilePreview?.warnings?.length || scriptMetadata.markers.length}
             <div class="simulation-note">
               <p class="eyebrow">Compiler notes</p>
               <ul>
                 {#each compilePreview.warnings as warning}
                   <li>{warning}</li>
+                {/each}
+                {#each scriptMetadata.markers as marker}
+                  <li>{marker.message}</li>
                 {/each}
               </ul>
             </div>
@@ -196,13 +249,21 @@
         <article class="content-card simulation-editor-card">
           <div class="practice-card-header">
             <div>
-              <p class="eyebrow">Scripted overrides</p>
-              <h3>Inject load and failures</h3>
+              <p class="eyebrow">Built-in runtime adapters</p>
+              <h3>Browser and WebAssembly execution targets</h3>
             </div>
             <span class="pill">No eval</span>
           </div>
-          <p class="practice-copy">Use <code>workload()</code>, <code>node()</code>, and <code>failure()</code> calls to nudge the model without leaving the browser.</p>
-          <CodeEditor bind:value={scriptText} minHeight="14rem" />
+          <p class="practice-copy">The simulator runs its DSL interpreters in-browser today and now exposes adapter slots for WebAssembly-backed runtimes like Pyodide or custom interpreters.</p>
+          <div class="simulation-node-grid">
+            {#each browserRuntimes as runtime}
+              <article class="simulation-node-card">
+                <strong>{runtime.label}</strong>
+                <p>{runtime.summary}</p>
+                <span class="pill">{runtime.available ? 'Available now' : 'Register adapter'}</span>
+              </article>
+            {/each}
+          </div>
           <div class="topic-detail-section">
             <h4>Good first experiments</h4>
             <ul>
