@@ -6,8 +6,11 @@
   import { allLessons, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import { derived } from 'svelte/store';
+  import { onMount } from 'svelte';
 
   let navOpen = false;
+  let desktopNavOpen = true;
+  let isDesktop = false;
   let query = '';
   /** @type {Record<string, boolean>} */
   let expandedModules = {};
@@ -29,6 +32,35 @@
       [moduleSlug]: !(expandedModules[moduleSlug] ?? false)
     };
   }
+
+  function toggleNavigation() {
+    if (isDesktop) {
+      desktopNavOpen = !desktopNavOpen;
+      return;
+    }
+
+    navOpen = !navOpen;
+  }
+
+  function closeNavigation() {
+    navOpen = false;
+  }
+
+  onMount(() => {
+    const mediaQuery = window.matchMedia('(min-width: 960px)');
+    /** @param {MediaQueryList | MediaQueryListEvent} event */
+    const syncViewport = (event) => {
+      isDesktop = event.matches;
+      if (event.matches) {
+        navOpen = false;
+      }
+    };
+
+    syncViewport(mediaQuery);
+    mediaQuery.addEventListener('change', syncViewport);
+
+    return () => mediaQuery.removeEventListener('change', syncViewport);
+  });
 
   $: pathname = $page.url.pathname;
   $: normalizedPathname = pathname !== homeHref && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
@@ -80,6 +112,8 @@
   $: if (pathname) {
     navOpen = false;
   }
+
+  $: sidebarVisible = isDesktop ? desktopNavOpen : navOpen;
 </script>
 
 <svelte:head>
@@ -87,7 +121,7 @@
   <meta name="description" content={siteOverview.description} />
 </svelte:head>
 
-<button aria-label="Close navigation" class:open={navOpen} class="backdrop" type="button" onclick={() => (navOpen = false)}></button>
+<button aria-label="Close navigation" class:open={!isDesktop && navOpen} class="backdrop" type="button" onclick={closeNavigation}></button>
 
 <div class="shell">
   <header class="topbar">
@@ -103,21 +137,27 @@
     </div>
     <div class="topbar-actions">
       <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
-      <button class="nav-toggle" type="button" onclick={() => (navOpen = !navOpen)}>
-        {navOpen ? 'Close' : 'Browse'} topics
+      <button class="nav-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
+        {#if isDesktop}
+          {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        {:else}
+          {navOpen ? 'Close topics' : 'Browse topics'}
+        {/if}
       </button>
     </div>
   </header>
 
-  <div class="layout">
-    <aside class:open={navOpen} class="sidebar">
+  <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
+    <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar">
       <section class="sidebar-header panel sidebar-card">
         <div class="sidebar-header-row">
           <div>
             <p class="eyebrow">Curriculum explorer</p>
             <h2>{siteOverview.title}</h2>
           </div>
-          <button class="sidebar-close" type="button" onclick={() => (navOpen = false)}>Close</button>
+          <button class="sidebar-close" type="button" onclick={toggleNavigation}>
+            {isDesktop ? 'Collapse' : 'Close'}
+          </button>
         </div>
         <p class="muted">Browse one module at a time, keep the active lesson visible, and jump directly to the next useful topic.</p>
       </section>
@@ -180,14 +220,22 @@
           <div class="sidebar-module-list">
             {#each visibleModules as module}
               <section class:active-module={module.slug === activeModule?.slug} class="nav-module explorer-module">
-                <button class="module-toggle" type="button" onclick={() => toggleModule(module.slug)}>
+                <button
+                  class="module-toggle"
+                  type="button"
+                  aria-expanded={module.isExpanded}
+                  onclick={() => toggleModule(module.slug)}
+                >
                   <div class="module-toggle-copy">
-                    <strong>{module.title}</strong>
-                    <small>{module.summary}</small>
+                    <span class="module-chevron" aria-hidden="true">{module.isExpanded ? '−' : '+'}</span>
+                    <div class="module-toggle-text">
+                      <strong>{module.title}</strong>
+                      <small>{module.summary}</small>
+                    </div>
                   </div>
                   <div class="module-toggle-meta">
                     <span class="pill">{$moduleProgress[module.slug]?.completed ?? 0} / {$moduleProgress[module.slug]?.total ?? 0}</span>
-                    <span class="module-toggle-label">{module.isExpanded ? 'Hide' : 'Show'}</span>
+                    <span class="module-toggle-label">{module.isExpanded ? 'Open' : 'Closed'}</span>
                   </div>
                 </button>
                 {#if module.isExpanded}
