@@ -16,7 +16,6 @@
   export let previewItemsByFile = {}
   export let markersByFile = {}
   export let summaryByFile = {}
-  export let runtimeHints = []
   export let snippetActions = []
   export let commandActions = []
 
@@ -64,7 +63,7 @@
   $: wordCount = currentText.trim() ? currentText.trim().split(/\s+/).filter(Boolean).length : 0
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
   $: showTabbar = normalizedFiles.length > 1
-  $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length || runtimeHints?.length || commandActions.length)
+  $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length)
   $: helperVisible = Boolean(currentMarkers.length || currentPreviewItems.length)
   $: paletteCommands = [
     {
@@ -541,65 +540,6 @@
           {/each}
         </div>
       {/if}
-
-      {#if commandActions.length}
-        <div class="code-editor-runtime-row command-row">
-          <button class="code-editor-palette-button" type="button" onclick={openCommandPalette} title="Open command palette">
-            Ctrl/Cmd+Shift+P
-          </button>
-        </div>
-      {/if}
-
-      {#if runtimeHints?.length}
-        <div class="code-editor-runtime-row">
-          {#each runtimeHints as runtime}
-            <span class:muted={!runtime.available} class="pill">
-              {runtime.kind === 'wasm' ? 'WASM' : 'Browser'} · {runtime.label}
-            </span>
-          {/each}
-        </div>
-      {/if}
-
-      {#if commandPaletteOpen}
-        <div
-          class="code-editor-palette-backdrop"
-          role="button"
-          tabindex="0"
-          aria-label="Close command palette"
-          onclick={closeCommandPalette}
-          onkeydown={handleBackdropKeydown}
-        >
-          <div
-            class="code-editor-palette"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Command palette"
-            tabindex="-1"
-            onclick={(event) => event.stopPropagation()}
-            onkeydown={(event) => event.stopPropagation()}
-          >
-            <input
-              bind:this={commandInput}
-              bind:value={commandQuery}
-              class="code-editor-palette-input"
-              type="text"
-              placeholder="Type a command"
-              onkeydown={handlePaletteKeydown}
-            />
-            <div class="code-editor-palette-list">
-              {#if filteredPaletteCommands.length}
-                {#each filteredPaletteCommands as action}
-                  <button class="code-editor-palette-item" type="button" onclick={() => runPaletteCommand(action)}>
-                    {action.label}
-                  </button>
-                {/each}
-              {:else}
-                <p class="code-editor-palette-empty">No commands match.</p>
-              {/if}
-            </div>
-          </div>
-        </div>
-      {/if}
     </div>
   {/if}
 
@@ -614,34 +554,54 @@
   <div class:editor-hidden={!ready} class="monaco-host" style={`min-height: ${minHeight};`} bind:this={host}></div>
 
   {#if helperVisible}
-    <div class="code-editor-helper-grid">
-      {#if currentPreviewItems.length}
-        <article class="code-editor-helper-card">
-          <p class="eyebrow">Signals</p>
-          <h4>What the editor found</h4>
-          <ul>
-            {#each currentPreviewItems.slice(0, 6) as item}
-              <li>
-                <strong>Line {item.line}:</strong> {item.text}
-              </li>
-            {/each}
-          </ul>
-        </article>
-      {/if}
+    <div class="code-editor-status-bar">
+      {#each currentMarkers.slice(0, 3) as marker}
+        <span class="code-editor-status-item warning">⚠ Line {marker.line}: {marker.message}</span>
+      {/each}
+      {#each currentPreviewItems.slice(0, 3) as item}
+        <span class="code-editor-status-item info">● Line {item.line}: {item.text}</span>
+      {/each}
+    </div>
+  {/if}
 
-      {#if currentMarkers.length}
-        <article class="code-editor-helper-card">
-          <p class="eyebrow">Diagnostics</p>
-          <h4>Things to fix or tighten</h4>
-          <ul>
-            {#each currentMarkers.slice(0, 6) as marker}
-              <li>
-                <strong>Line {marker.line}:</strong> {marker.message}
-              </li>
+  {#if commandPaletteOpen}
+    <div
+      class="code-editor-palette-backdrop"
+      role="button"
+      tabindex="0"
+      aria-label="Close command palette"
+      onclick={closeCommandPalette}
+      onkeydown={handleBackdropKeydown}
+    >
+      <div
+        class="code-editor-palette"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        tabindex="-1"
+        onclick={(event) => event.stopPropagation()}
+        onkeydown={(event) => event.stopPropagation()}
+      >
+        <input
+          bind:this={commandInput}
+          bind:value={commandQuery}
+          class="code-editor-palette-input"
+          type="text"
+          placeholder="Type a command"
+          onkeydown={handlePaletteKeydown}
+        />
+        <div class="code-editor-palette-list">
+          {#if filteredPaletteCommands.length}
+            {#each filteredPaletteCommands as action}
+              <button class="code-editor-palette-item" type="button" onclick={() => runPaletteCommand(action)}>
+                {action.label}
+              </button>
             {/each}
-          </ul>
-        </article>
-      {/if}
+          {:else}
+            <p class="code-editor-palette-empty">No commands match.</p>
+          {/if}
+        </div>
+      </div>
     </div>
   {/if}
 </div>
@@ -769,15 +729,6 @@
     gap: 0.3rem;
   }
 
-  .code-editor-runtime-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: flex-start;
-    align-items: center;
-    margin-left: auto;
-  }
-
   .code-editor-snippet {
     border-radius: 3px;
     border: 1px solid #303647;
@@ -793,27 +744,6 @@
     border-color: #696cff;
     background: rgba(105, 108, 255, 0.16);
     color: #e0e7ff;
-  }
-
-  .code-editor-palette-button {
-    border-radius: 0.45rem;
-    border: 1px solid #303647;
-    background: #1a1f2b;
-    color: #d4dcf3;
-    min-height: 28px;
-    padding: 0.3rem 0.65rem;
-    font-size: 0.72rem;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .code-editor-palette-button:hover {
-    border-color: #696cff;
-    background: #21283a;
-  }
-
-  .command-row {
-    margin-left: auto;
   }
 
   .code-editor-palette-backdrop {
@@ -885,42 +815,32 @@
     min-height: 18rem;
   }
 
-  .code-editor-helper-grid {
-    display: grid;
-    gap: 0.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    padding: 0.7rem 0.8rem 0.8rem;
+  .code-editor-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.3rem 0.75rem;
     background: #151821;
     border-top: 1px solid #252a35;
+    min-height: 1.6rem;
+    align-items: center;
   }
 
-  .code-editor-helper-card {
-    display: grid;
-    gap: 0.4rem;
-    border-radius: 0.6rem;
-    border: 1px solid #2a3040;
-    background: #11131a;
-    padding: 0.6rem 0.75rem;
-  }
-
-  .code-editor-helper-card h4 {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #cdd6f4;
-  }
-
-  .code-editor-helper-card p,
-  .code-editor-helper-card li {
+  .code-editor-status-item {
+    font-size: 0.72rem;
     color: #9aa3bc;
-    line-height: 1.5;
-    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 30rem;
   }
 
-  .code-editor-helper-card ul {
-    margin: 0;
-    padding-left: 1rem;
-    display: grid;
-    gap: 0.3rem;
+  .code-editor-status-item.warning {
+    color: #e5c07b;
+  }
+
+  .code-editor-status-item.info {
+    color: #89b4fa;
   }
 
   :global(.monaco-editor),

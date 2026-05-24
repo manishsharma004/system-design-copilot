@@ -232,7 +232,6 @@
               diagram: diagramMetadata.summary,
               script: scriptMetadata.summary
             }}
-            runtimeHints={browserRuntimes}
             snippetActions={editorSnippetActions}
             on:fileschange={syncEditorFiles}
           />

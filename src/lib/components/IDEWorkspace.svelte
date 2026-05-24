@@ -12,8 +12,6 @@
   export let markersByFile = {}
   export let summaryByFile = {}
   /** @type {any[]} */
-  export let runtimeHints = []
-  /** @type {any[]} */
   export let snippetActions = []
   /** @type {any[]} */
   export let commandActions = []
@@ -82,7 +80,7 @@
   }
 </script>
 
-<div class="ide-workspace">
+<div class="ide-workspace" class:explorer-collapsed={explorerCollapsed}>
   <div class="ide-activity-bar">
     <button
       class="ide-activity-icon"
@@ -181,7 +179,6 @@
           {previewItemsByFile}
           {markersByFile}
           {summaryByFile}
-          {runtimeHints}
           {snippetActions}
           {commandActions}
           on:change={handleEditorChange}
@@ -253,6 +250,11 @@
     border: 1px solid #2f3340;
     border-radius: 0.9rem;
     overflow: hidden;
+    resize: vertical;
+  }
+
+  .ide-workspace.explorer-collapsed {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .ide-activity-bar {

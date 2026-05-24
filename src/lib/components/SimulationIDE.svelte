@@ -1,7 +1,6 @@
 <svelte:options runes={false} />
 <script>
   import IDEWorkspace from '$lib/components/IDEWorkspace.svelte'
-  import { listBrowserRuntimes } from '$lib/browserRuntimes'
   import MermaidDiagram from '$lib/components/MermaidDiagram.svelte'
   import {
     FLOW_GRAPH_LANGUAGE,
@@ -39,7 +38,6 @@
   /** @type {any} */
   let latestRun = null
   let editorFiles = []
-  let browserRuntimes = listBrowserRuntimes()
 
   $: simulation = lesson?.simulation ?? null
   $: sessions = $simulationSessions
@@ -50,6 +48,9 @@
   $: activeApi = simulation?.apis?.find((/** @type {any} */ entry) => entry.id === activeApiId) ?? null
   $: activeProfile = simulation?.workloadProfiles?.find((/** @type {any} */ entry) => entry.id === activeProfileId) ?? null
   $: compatibleProfiles = simulation?.workloadProfiles?.filter((/** @type {any} */ entry) => entry.endpointId === activeApiId) ?? []
+  $: readmeContent = simulation ? `# ${simulation.title}\n\n${simulation.summary}\n\n## APIs\n${simulation.apis?.map((/** @type {any} */ a) => `- ${a.label}: ${a.method} ${a.path}`).join('\n') ?? ''}\n\n## Workload Profiles\n${simulation.workloadProfiles?.map((/** @type {any} */ p) => `- ${p.label} (${p.rps} rps)`).join('\n') ?? ''}` : ''
+  $: apiConfigContent = activeApi ? JSON.stringify(activeApi, null, 2) : '{}'
+  $: profileConfigContent = activeProfile ? JSON.stringify(activeProfile, null, 2) : '{}'
   $: editorFiles = [
     {
       id: 'diagram',
@@ -64,6 +65,27 @@
       filename: 'overrides.ts',
       language: 'typescript',
       value: scriptText
+    },
+    {
+      id: '_api_config',
+      label: `${activeApi?.label ?? 'api'}.json`,
+      filename: `${activeApi?.label ?? 'api'}.json`,
+      language: 'json',
+      value: apiConfigContent
+    },
+    {
+      id: '_profile_config',
+      label: `${activeProfile?.label ?? 'profile'}.json`,
+      filename: `${activeProfile?.label ?? 'profile'}.json`,
+      language: 'json',
+      value: profileConfigContent
+    },
+    {
+      id: '_readme',
+      label: 'README.md',
+      filename: 'README.md',
+      language: 'markdown',
+      value: readmeContent
     }
   ]
   $: editorSnippetActions = [
@@ -284,7 +306,6 @@
         diagram: diagramMetadata.summary,
         script: scriptMetadata.summary
       }}
-      runtimeHints={browserRuntimes}
       snippetActions={editorSnippetActions}
       {commandActions}
       previewContent={compilePreview?.mermaid || latestRun?.mermaid ? 'diagram' : null}

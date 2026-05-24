@@ -51,25 +51,10 @@
       <div>
         <p class="eyebrow">Interactive topic lab</p>
         <h2>{interactive.title}</h2>
-        <p class="practice-copy">{interactive.summary}</p>
-      </div>
-      <div class="topic-pill-group">
-        {#each interactive.takeaways ?? [] as takeaway}
-          <span class="pill">{takeaway}</span>
-        {/each}
       </div>
     </div>
 
     <div class="topic-lab-layout">
-      <article class="content-card">
-        <p class="eyebrow">How to explain it</p>
-        <h3>High-signal talking points</h3>
-        <ul>
-          {#each interactive.takeaways ?? [] as takeaway}
-            <li>{takeaway}</li>
-          {/each}
-        </ul>
-      </article>
       <MermaidDiagram diagram={interactive.mermaid} />
     </div>
 
