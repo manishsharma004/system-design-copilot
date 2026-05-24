@@ -45,40 +45,77 @@ img { display: block; max-width: 100%; }
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 50;
   display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem;
   background: rgba(2, 6, 23, 0.9);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
 }
 
+.topbar-main,
+.topbar-actions,
+.brand,
+.topbar-context {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.topbar-main,
+.topbar-actions {
+  align-items: center;
+}
+
+.topbar-main {
+  min-width: 0;
+}
+
 .brand {
-  display: grid;
+  flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
+}
+
+.topbar-context {
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--border);
+}
+
+.topbar-context strong {
+  font-size: 0.98rem;
+}
+
+.topbar-context span {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .brand strong { font-size: 1rem; }
 .brand span, .muted { color: var(--muted); }
-.nav-toggle, .progress-chip, .action-link, .lesson-toggle, .reset-link {
+
+.topbar-progress {
+  display: none;
+}
+
+.layout {
+  display: grid;
+  width: min(100%, 96rem);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.nav-toggle, .progress-chip, .action-link, .lesson-toggle, .reset-link, .sidebar-close {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   min-height: 44px;
   padding: 0.7rem 1rem;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  width: min(100%, 92rem);
-  margin: 0 auto;
-  padding: 1rem;
-  gap: 1rem;
 }
 
 .backdrop {
@@ -101,10 +138,10 @@ img { display: block; max-width: 100%; }
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: min(24rem, 86vw);
-  z-index: 40;
+  width: min(30rem, 92vw);
+  z-index: 60;
   transform: translateX(-100%);
-  transition: transform 0.2s ease;
+  transition: transform 0.24s ease;
   background: var(--panel-strong);
   border-right: 1px solid var(--border);
   padding: 1rem;
@@ -129,6 +166,13 @@ img { display: block; max-width: 100%; }
 
 .sidebar-header, .sidebar-search, .sidebar-stats, .nav-module, .module-card, .lesson-card, .content-card, .list-card {
   display: grid;
+  gap: 0.75rem;
+}
+
+.sidebar-header-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
   gap: 0.75rem;
 }
 
@@ -178,6 +222,61 @@ img { display: block; max-width: 100%; }
   display: grid;
   gap: 1rem;
   min-width: 0;
+}
+
+.module-hero-grid,
+.lesson-hero-grid,
+.lesson-section-preview,
+.link-stack,
+.lesson-preview-list,
+.lesson-detail-block,
+.pill-row {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.module-sidebar-card,
+.lesson-summary-card {
+  align-content: start;
+}
+
+.lesson-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.pill-row {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.lesson-preview-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.section-chip {
+  display: grid;
+  gap: 0.35rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.9rem 1rem;
+}
+
+.section-chip strong {
+  font-size: 0.95rem;
+}
+
+.section-chip span {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.link-stack .nav-link {
+  border-color: var(--border);
 }
 
 .hero {
@@ -287,24 +386,35 @@ img { display: block; max-width: 100%; }
   color: var(--muted);
 }
 
+@media (max-width: 719px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-main,
+  .topbar-actions {
+    justify-content: space-between;
+  }
+
+  .topbar-context {
+    display: none;
+  }
+}
+
 @media (min-width: 960px) {
-  .topbar { display: none; }
-  .layout {
-    width: min(100%, 96rem);
-    grid-template-columns: minmax(18rem, 23rem) minmax(0, 1fr);
-    align-items: start;
-    padding: 1.5rem;
-  }
   .sidebar {
-    position: sticky;
-    transform: none;
-    inset: auto;
-    width: auto;
-    z-index: auto;
-    max-height: calc(100vh - 2rem);
-    border-radius: var(--radius-xl);
+    width: min(32rem, 34vw);
+    padding: 1.25rem;
   }
-  .backdrop { display: none; }
+  .topbar-progress {
+    display: inline-flex;
+  }
+  .module-hero-grid,
+  .lesson-hero-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 0.7fr);
+    align-items: start;
+  }
   .hero-grid { grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.85fr); }
   .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lesson-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

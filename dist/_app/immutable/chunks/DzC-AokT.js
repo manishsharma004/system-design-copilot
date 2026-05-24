@@ -469,4 +469,106 @@ class FanoutWorker {
       await this.publishFeedUpdate(followerId, job.postId);
     }
   }
+}`}]},"case-studies/pastebin":{referenceSource:{label:`System Design Primer · Pastebin / Bit.ly`,url:`https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/pastebin/README.md`},solutionOverview:{summary:`Treat pastebin as two systems: a hot metadata lookup keyed by shortlink and a colder blob store for the paste body, with expiration and analytics pushed off the critical path.`,requirements:[`Store text pastes, optional expiration, and anonymous access behind a short URL.`,`Keep reads fast for popular links while serving large paste bodies reliably.`,`Collect analytics and delete expired content without slowing down the read path.`],estimates:[`At roughly 10 million pastes per month, metadata remains small while blob storage growth dominates over time.`,`A 10:1 read-heavy profile means caching popular shortlinks and paste bodies matters more than optimizing writes first.`,`Monthly analytics can be computed in batches because exact real-time counters are not user-critical.`],keyDecisions:[`Keep shortlink metadata in an indexed store and the paste body in object storage or a document store.`,`Use cache-aside reads for hot pastes and negative caching for expired or missing entries.`,`Run analytics and expiration cleanup asynchronously from events or access logs.`]},detailedSolution:[{heading:`1. Frame the data split clearly`,body:`The shortlink lookup and the paste payload have different performance characteristics, so explain them as separate concerns rather than shoving everything into one table.`,bullets:[`Store shortlink, created_at, expiration, and blob pointer as lightweight metadata.`,`Store the text body in object storage or a document store that handles larger payloads cheaply.`,`Call out abuse controls because anonymous content products invite spam and malware links.`]},{heading:`2. Optimize the read path and expiration behavior`,body:`Reads first resolve metadata, verify the paste is still valid, and then fetch the body. Hot reads belong in cache, not on the metadata store.`,bullets:[`Cache popular shortlinks and optionally the rendered paste body for ultra-hot entries.`,`Mark expired records before deleting them so readers get consistent behavior during cleanup.`,`Use negative caching for missing or expired pastes to reduce repeated misses.`]},{heading:`3. Keep analytics and cleanup asynchronous`,body:`Page views, monthly reports, and deletion sweeps are important, but they should not add latency to user-facing reads.`,bullets:[`Emit read events or aggregate access logs in the background.`,`Run scheduled sweeps that delete or archive expired metadata and blob objects.`,`Watch cache hit rate, read latency, expired-read frequency, and cleanup lag.`]}],sampleAnswer:[{heading:`Requirements and scope`,bullets:[`I would support create-paste, read-paste, expiration, and basic analytics, while leaving user accounts and document editing out of the MVP.`,`The system is anonymous and read-heavy, so I will optimize for low-latency reads and safe deletion behavior.`,`I will assume text-only payloads and eventual analytics updates.`]},{heading:`High-level design`,bullets:[`A write API validates the request, creates a shortlink, stores metadata in an indexed database, and writes the paste body to object storage.`,`A read API resolves the shortlink, checks expiration, fetches the body, and returns the content, using cache-aside for hot reads.`,`An async analytics pipeline aggregates access events and a cleanup worker removes expired content.`]},{heading:`Trade-offs and growth`,bullets:[`Keeping metadata separate from the body makes the hot path lightweight but introduces a second storage hop on cache misses.`,`Real-time counters are possible, but batch analytics are cheaper and usually sufficient for this product.`,`If read traffic spikes, I would add CDN or regional caches in front of the most popular pastes.`]}],interviewCode:[{title:`Paste metadata service`,filename:`paste-service.ts`,language:`ts`,description:`Shows the metadata lookup, blob storage indirection, and expiration guard on the read path.`,code:`type PasteRecord = {
+  code: string;
+  blobPath: string;
+  expiresAt: Date | null;
+};
+
+interface MetadataStore {
+  get(code: string): Promise<PasteRecord | null>;
+  save(record: PasteRecord): Promise<void>;
+}
+
+interface BlobStore {
+  put(path: string, body: string): Promise<void>;
+  get(path: string): Promise<string>;
+}
+
+class PasteService {
+  constructor(
+    private readonly metadata: MetadataStore,
+    private readonly blobs: BlobStore
+  ) {}
+
+  async readPaste(code: string): Promise<string | null> {
+    const record = await this.metadata.get(code);
+    if (!record) return null;
+    if (record.expiresAt && record.expiresAt.getTime() <= Date.now()) {
+      return null;
+    }
+    return this.blobs.get(record.blobPath);
+  }
+}`}]},"case-studies/mint":{referenceSource:{label:`System Design Primer · Mint.com`,url:`https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/mint/README.md`},solutionOverview:{summary:`A Mint-style design should lead with asynchronous account refresh, transaction categorization, monthly rollups, and security boundaries around sensitive credentials.`,requirements:[`Link financial accounts, extract transactions, and keep them refreshed for active users.`,`Categorize spending, compute monthly rollups, and support manual category overrides.`,`Generate budget recommendations and notifications without blocking ingest workflows.`],estimates:[`The workload is write-heavy because transactions arrive far more often than users open the dashboard.`,`Five billion transactions per month means raw event retention and derived monthly summaries should be separated early.`,`Notification freshness can lag slightly, which makes queues and workers a clean fit.`],keyDecisions:[`Queue account refresh jobs instead of extracting transactions from the user-facing request path.`,`Store raw transactions and recomputable categorization inputs separately from monthly aggregates.`,`Encrypt credentials and sensitive account data while keeping audit trails for failures and overrides.`]},detailedSolution:[{heading:`1. Make ingestion asynchronous`,body:`Linking an account should enqueue work, not wait for a full scrape of the upstream institution. That keeps the UX responsive and isolates unreliable third parties.`,bullets:[`Persist the linked account plus refresh metadata first.`,`Push extraction jobs onto a queue for initial and recurring syncs.`,`Retry with backoff because providers can be slow, rate-limited, or flaky.`]},{heading:`2. Separate raw facts from derived views`,body:`Raw transactions are the repairable source of truth, while categories and monthly spending are derived views that can be recomputed when logic changes.`,bullets:[`Keep a transaction ledger with timestamps, sellers, amounts, and account ownership.`,`Use a categorization service seeded from seller mappings and improved by manual overrides.`,`Materialize monthly spend and budget state into user-specific read models.`]},{heading:`3. Protect secrets and user trust`,body:`Financial aggregation is as much a security and reliability problem as a data-pipeline problem.`,bullets:[`Encrypt account credentials and access tokens at rest and in transit.`,`Audit refresh failures, stale accounts, and repeated override patterns.`,`Send budget alerts asynchronously so slow notification providers never block ingestion.`]}],sampleAnswer:[{heading:`Scope the system`,bullets:[`I would support account linking, transaction refresh, categorization, monthly rollups, and budget alerts.`,`I would leave rich analytics and advisor features out of the first version.`,`The risky parts are slow upstream institutions, sensitive credentials, and recomputing user-specific aggregates correctly.`]},{heading:`Architecture`,bullets:[`The write path stores account metadata and publishes refresh jobs to a queue.`,`Workers pull transactions, write the raw ledger, run categorization, and update monthly-spending tables or caches.`,`Notification workers send threshold alerts when spending approaches the saved budget.`]},{heading:`Trade-offs`,bullets:[`Async refresh improves UX and isolates provider failures, but users must accept that some dashboards are slightly stale.`,`Derived summaries make reads fast, but they require replay or backfill when category logic changes.`,`Security controls are non-negotiable, even if they add operational complexity.`]}],interviewCode:[{title:`Account refresh orchestration`,filename:`account-refresh.ts`,language:`ts`,description:`Illustrates the enqueue-first write path for linking and refreshing financial accounts.`,code:`type AccountLink = {
+  accountId: string;
+  userId: string;
+  provider: string;
+};
+
+interface RefreshQueue {
+  enqueue(job: { accountId: string; reason: 'initial' | 'manual' | 'scheduled' }): Promise<void>;
+}
+
+class AccountRefreshService {
+  constructor(private readonly queue: RefreshQueue) {}
+
+  async linkAccount(link: AccountLink): Promise<void> {
+    await this.queue.enqueue({ accountId: link.accountId, reason: 'initial' });
+  }
+
+  async refreshAccount(accountId: string): Promise<void> {
+    await this.queue.enqueue({ accountId, reason: 'manual' });
+  }
+}`}]},"case-studies/twitter":{referenceSource:{label:`System Design Primer · Twitter timeline and search`,url:`https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/twitter/README.md`},solutionOverview:{summary:`A strong Twitter answer separates tweet persistence, fan-out, timeline caching, and search indexing so the write path stays fast while downstream workloads scale independently.`,requirements:[`Support tweet creation, home timeline reads, user timeline reads, and keyword search.`,`Keep the product highly available despite massive read traffic and skewed follow graphs.`,`Handle notifications, media storage, and search indexing without blocking tweet writes.`],estimates:[`Read traffic dominates, but the fan-out multiplier makes tweet writes operationally expensive too.`,`Celebrity accounts break naive fan-out-on-write because a single post can target millions of followers.`,`Search and media storage deserve independent scaling because their growth curves differ from timelines.`],keyDecisions:[`Persist tweets durably first, then fan out and index them asynchronously.`,`Use push, pull, or hybrid fan-out based on follower count and cache behavior.`,`Serve active home timelines from memory while rebuilding cold timelines lazily.`]},detailedSolution:[{heading:`1. Keep tweet creation lightweight`,body:`The first API should store the tweet and hand off expensive work to downstream services. This keeps posting fast and isolates failures in notifications or search.`,bullets:[`Persist tweet metadata and media references in the authoritative store.`,`Publish fan-out, indexing, and notification jobs asynchronously.`,`Explain why the write path must not wait for every follower update.`]},{heading:`2. Differentiate timeline strategies`,body:`Home and user timelines are different workloads. User timelines can read more directly, but home timelines need caching or precomputation for active users.`,bullets:[`Keep recent home-timeline entries in a memory cache for active users.`,`Use multiget lookups for tweet details and user metadata at serve time.`,`Rebuild cold timelines on demand instead of storing everything forever in cache.`]},{heading:`3. Handle celebrity skew and search separately`,body:`Extremely popular accounts and keyword search both create scaling pressure that should not distort the core timeline design.`,bullets:[`Switch celebrity accounts to pull or hybrid fan-out strategies.`,`Index tweets asynchronously into a search cluster optimized for reads.`,`Track fan-out lag, search freshness, and cache hit rate as first-class metrics.`]}],sampleAnswer:[{heading:`Requirements`,bullets:[`I will cover posting tweets, user timelines, home timelines, and keyword search.`,`The main constraints are high read volume, huge follower skew, and the need to keep tweet creation fast.`,`I will leave advanced visibility rules and analytics out of the MVP unless asked.`]},{heading:`Design`,bullets:[`A write API stores the tweet, saves media externally, and publishes fan-out plus indexing events.`,`A timeline service serves cached home feeds for active users and falls back to durable stores on misses.`,`A search service indexes tweets asynchronously and serves keyword queries from a dedicated search cluster.`]},{heading:`Scaling trade-offs`,bullets:[`Push fan-out gives fast reads for normal users, but celebrity accounts may need pull or hybrid reads to avoid explosion on writes.`,`Caching active timelines makes reads fast, but cold users need feed reconstruction logic.`,`Separating search and media keeps the core tweet system simpler and easier to scale independently.`]}],interviewCode:[{title:`Tweet publication flow`,filename:`tweet-service.ts`,language:`ts`,description:`Shows durable tweet persistence plus asynchronous fan-out and indexing hooks.`,code:`type Tweet = {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: Date;
+};
+
+interface TweetStore {
+  save(tweet: Tweet): Promise<void>;
+}
+
+interface FanoutPublisher {
+  publish(tweet: Tweet): Promise<void>;
+}
+
+class TweetService {
+  constructor(
+    private readonly store: TweetStore,
+    private readonly fanout: FanoutPublisher
+  ) {}
+
+  async publishTweet(authorId: string, body: string): Promise<Tweet> {
+    const tweet: Tweet = { id: crypto.randomUUID(), authorId, body, createdAt: new Date() };
+    await this.store.save(tweet);
+    await this.fanout.publish(tweet);
+    return tweet;
+  }
+}`}]},"case-studies/sales-rank":{referenceSource:{label:`System Design Primer · Amazon sales rank`,url:`https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/sales_rank/README.md`},solutionOverview:{summary:`Sales rank is an aggregation problem: ingest transactions into durable logs, compute category windows offline or nearline, and serve a compact ranking table from cache.`,requirements:[`Calculate the top-selling products by category for the last week.`,`Serve ranking reads at very high volume with clear freshness guarantees.`,`Keep the aggregation pipeline isolated from the transactional sales path.`],estimates:[`One billion transactions per month makes raw log storage and aggregation cost more important than the serving table size.`,`Read traffic can be two orders of magnitude higher than writes, so the serving path should be tiny and cacheable.`,`Hourly updates are usually enough, which makes batch or nearline aggregation realistic.`],keyDecisions:[`Write raw transaction events to durable logs or object storage before ranking them.`,`Compute rolling windows in a batch or stream job and materialize results into a serving table.`,`Cache the hottest category pages and define freshness expectations explicitly.`]},detailedSolution:[{heading:`1. Start from append-only events`,body:`Sales-rank answers get stronger when they treat the aggregation input as immutable events rather than mutable counters.`,bullets:[`Capture category, product, quantity, and timestamp in the sales event stream.`,`Retain raw logs so jobs can be rerun after bugs or late data arrive.`,`Keep the checkout or sales system decoupled from ranking compute.`]},{heading:`2. Materialize ranked outputs`,body:`The heavy work belongs in MapReduce-style or streaming aggregations, while the read API should serve a small, precomputed result set.`,bullets:[`Aggregate quantity sold per product and category over the rolling window.`,`Sort or top-k rank inside the pipeline, then write results to a compact table.`,`Backfill or rerun windows when logs arrive late or corrections appear.`]},{heading:`3. Make freshness a product choice`,body:`Hourly or near-real-time freshness is a trade-off between compute cost and user value, so state the choice explicitly.`,bullets:[`Cache the hottest category results for ultra-fast reads.`,`Publish the update cadence so stakeholders know how fresh the rank is.`,`Watch job duration, ranking lag, cache hit rate, and error recovery time.`]}],sampleAnswer:[{heading:`Scope`,bullets:[`I am designing only the ranking feature, not the entire commerce platform.`,`The system needs to compute weekly top sellers by category and serve those lists quickly.`,`I will assume updates can happen hourly unless stricter freshness is required.`]},{heading:`Architecture`,bullets:[`Sales events flow into durable logs or object storage from the transactional system.`,`A ranking pipeline aggregates and sorts weekly totals by category, then writes the top results into a serving table.`,`The read API returns cached or precomputed lists so the user-facing path never scans raw transactions.`]},{heading:`Trade-offs`,bullets:[`Batch jobs are simpler and cheaper, while stream jobs improve freshness at the cost of more operational complexity.`,`The serving store is fast because it is tiny and precomputed, but it relies on the aggregation job being healthy.`,`Late-arriving transactions require reprocessing or correction logic, so I would keep raw events for replay.`]}],interviewCode:[{title:`Weekly sales aggregator`,filename:`sales-rank-aggregator.ts`,language:`ts`,description:`A compact windowed aggregation example for building category rankings from raw events.`,code:`type SaleEvent = {
+  categoryId: string;
+  productId: string;
+  quantity: number;
+};
+
+class SalesRankAggregator {
+  aggregate(events: SaleEvent[]): Map<string, Array<{ productId: string; quantity: number }>> {
+    const totals = new Map<string, Map<string, number>>();
+
+    for (const event of events) {
+      const categoryTotals = totals.get(event.categoryId) ?? new Map<string, number>();
+      categoryTotals.set(event.productId, (categoryTotals.get(event.productId) ?? 0) + event.quantity);
+      totals.set(event.categoryId, categoryTotals);
+    }
+
+    return new Map(
+      Array.from(totals.entries()).map(([categoryId, productTotals]) => [
+        categoryId,
+        Array.from(productTotals.entries())
+          .map(([productId, quantity]) => ({ productId, quantity }))
+          .sort((left, right) => right.quantity - left.quantity)
+      ])
+    );
+  }
 }`}]}};export{e as lessonEnhancements};

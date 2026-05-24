@@ -2612,11 +2612,11 @@ const rawModules = [
   {
     "slug": "case-studies",
     "title": "Case studies and interview drills",
-    "summary": "Apply the concepts to end-to-end systems that commonly appear in interviews and architecture reviews.",
+    "summary": "Work through the full primer-inspired set of product and architecture drills, from redirect services and paste storage to finance aggregation, timelines, and ranking pipelines.",
     "objectives": [
-      "Practice moving from requirements to a full design quickly",
-      "Use diagrams and trade-off language from earlier modules",
-      "Build confidence discussing bottlenecks, scaling steps, and failure modes"
+      "Practice moving from requirements and estimates to a full design quickly",
+      "Cover the complete set of high-signal primer case studies in one interview-ready module",
+      "Explain bottlenecks, scaling steps, failure modes, and operational trade-offs with confidence"
     ],
     "lessons": [
       {
@@ -2885,14 +2885,14 @@ const rawModules = [
       },
       {
         "slug": "scaling-playbook",
-        "title": "Case study: scaling playbook",
-        "summary": "Practice describing how a simple single-region web application evolves through caching, queueing, partitioning, and global distribution over multiple growth stages.",
+        "title": "Case study: scale-to-millions playbook",
+        "summary": "Practice describing how a simple application evolves from a single box to a multi-tier, cache-heavy, autoscaled system as traffic climbs.",
         "duration": "25-35 min",
         "whyItMatters": "Interviewers like this because it reveals whether you can tell a coherent architectural story instead of listing disconnected components.",
         "sections": [
           {
             "heading": "Stage architecture incrementally",
-            "body": "Start simple with a monolith and a single database, then introduce CDNs, load balancers, caches, read replicas, queues, and sharding as each bottleneck emerges.",
+            "body": "Start simple with a single server and relational store, then introduce object storage, separate databases, load balancers, caches, replicas, and autoscaling only when the bottleneck justifies it.",
             "bullets": [
               "Explain why each step happens at that stage",
               "Preserve migration paths between stages",
@@ -2910,7 +2910,7 @@ const rawModules = [
           },
           {
             "heading": "Tell the story clearly",
-            "body": "The most convincing designs present a baseline, then show the next 2 or 3 steps under growth and the signals that trigger each transition.",
+            "body": "The most convincing designs present a baseline, then show the next two or three steps under growth and the signals that trigger each transition.",
             "bullets": [
               "Name the bottleneck first",
               "Give one mitigation and one future risk",
@@ -2931,7 +2931,7 @@ const rawModules = [
         ],
         "interviewPrompts": [
           "What is the first scaling step for a successful monolith?",
-          "How would you explain the trigger for sharding?",
+          "How would you explain the trigger for read replicas or sharding?",
           "Why should scaling stories include operational maturity?"
         ],
         "diagram": {
@@ -2948,6 +2948,253 @@ const rawModules = [
         "moduleTitle": "Case studies and interview drills",
         "order": 5,
         "id": "case-studies/scaling-playbook"
+      },
+      {
+        "slug": "pastebin",
+        "title": "Case study: pastebin",
+        "summary": "Design a paste service that stores text blobs, serves reads quickly, handles expiration, and computes analytics without slowing the user-facing path.",
+        "duration": "30-40 min",
+        "whyItMatters": "Pastebin extends URL shortening with durable content storage, object retrieval, expiration workflows, and lightweight analytics pipelines.",
+        "sections": [
+          {
+            "heading": "Separate metadata from content",
+            "body": "Treat the short code lookup and the stored paste body as different concerns so the hot lookup path stays light while larger content lives in cheaper blob storage.",
+            "bullets": [
+              "Store shortlink, expiration, and object path metadata in a fast indexed table",
+              "Keep the actual paste body in object storage or a document store",
+              "Allow anonymous writes, but still budget for abuse controls and rate limits"
+            ]
+          },
+          {
+            "heading": "Read path and expiration",
+            "body": "A read first resolves the short code, checks expiration, and then fetches the object contents. Expiration and deleted content should fail consistently.",
+            "bullets": [
+              "Use a cache for hot metadata lookups and popular pastes",
+              "Mark expired entries before physical deletion so reads behave predictably",
+              "Negative-cache missing or expired pastes to reduce repeated misses"
+            ]
+          },
+          {
+            "heading": "Batch analytics and cleanup",
+            "body": "Page views and cleanup are useful, but they do not belong on the critical request path for a read-heavy paste service.",
+            "bullets": [
+              "Aggregate monthly views asynchronously from logs or events",
+              "Run background sweeps to expire and delete content",
+              "Observe read latency, cache hit rate, and cleanup backlog"
+            ]
+          }
+        ],
+        "checklist": [
+          "Model the shortlink lookup separately from paste-body storage.",
+          "Explain expiration checks and deletion behavior.",
+          "Move analytics and cleanup to asynchronous workflows.",
+          "Mention abuse, rate limiting, and content moderation constraints."
+        ],
+        "pitfalls": [
+          "Serving large paste bodies directly from a transactional metadata store.",
+          "Doing analytics writes synchronously on every page view.",
+          "Ignoring TTL sweeps, abuse handling, or popular-paste hot spots."
+        ],
+        "interviewPrompts": [
+          "Where would you store paste contents versus the shortlink metadata?",
+          "How would you delete expired pastes safely?",
+          "Why is batch analytics usually enough for this problem?"
+        ],
+        "diagram": null,
+        "related": [
+          "url-shortener",
+          "caching-layers"
+        ],
+        "moduleSlug": "case-studies",
+        "moduleTitle": "Case studies and interview drills",
+        "order": 6,
+        "id": "case-studies/pastebin"
+      },
+      {
+        "slug": "mint",
+        "title": "Case study: Mint-style budgeting app",
+        "summary": "Combine account linking, asynchronous transaction extraction, categorization, monthly rollups, and budget alerts in a system that handles sensitive financial data.",
+        "duration": "30-40 min",
+        "whyItMatters": "This case study combines queues, data pipelines, user-specific aggregates, and security expectations in one realistic product design.",
+        "sections": [
+          {
+            "heading": "Account linking and extraction",
+            "body": "Connecting financial accounts is infrequent but sensitive. Refresh jobs can be slow and failure-prone, so asynchronous extraction is the safest baseline.",
+            "bullets": [
+              "Persist account metadata separately from extracted transactions",
+              "Queue refresh jobs when users link or manually sync accounts",
+              "Retry carefully because upstream institutions rate-limit or fail unpredictably"
+            ]
+          },
+          {
+            "heading": "Categorization and rollups",
+            "body": "Raw transactions become useful only after categorization and monthly aggregation. Those derived views should be computed in pipelines, not on every page load.",
+            "bullets": [
+              "Use a seller-to-category mapping with manual overrides",
+              "Materialize monthly spending and budget summaries per user",
+              "Keep the raw ledger so categorization logic can be replayed later"
+            ]
+          },
+          {
+            "heading": "Security and notifications",
+            "body": "Financial products require careful secret handling, auditability, and graceful notification workflows when users approach or exceed budgets.",
+            "bullets": [
+              "Encrypt credentials and sensitive account data at rest and in transit",
+              "Send budget alerts asynchronously to avoid blocking ingest jobs",
+              "Track extraction failures, stale-account lag, and category override rates"
+            ]
+          }
+        ],
+        "checklist": [
+          "Make transaction extraction asynchronous and retry-aware.",
+          "Separate raw transactions from derived monthly spending views.",
+          "Explain how manual category overrides feed back into the system.",
+          "Call out security, encryption, and audit expectations explicitly."
+        ],
+        "pitfalls": [
+          "Refreshing every account synchronously from the user-facing request path.",
+          "Recomputing spending summaries by scanning the full transaction history on each read.",
+          "Treating financial credentials as ordinary application data."
+        ],
+        "interviewPrompts": [
+          "How would you refresh linked bank accounts without hurting the UX?",
+          "What should be stored as source-of-truth transactions versus derived summaries?",
+          "How do budget alerts and manual category overrides affect the design?"
+        ],
+        "diagram": null,
+        "related": [
+          "queues-and-streams",
+          "security-basics",
+          "relational-data-modeling"
+        ],
+        "moduleSlug": "case-studies",
+        "moduleTitle": "Case studies and interview drills",
+        "order": 7,
+        "id": "case-studies/mint"
+      },
+      {
+        "slug": "twitter",
+        "title": "Case study: Twitter timeline and search",
+        "summary": "Design tweet ingestion, fan-out, home timelines, user timelines, and search while dealing with huge read volume, celebrity skew, and asynchronous notifications.",
+        "duration": "35-45 min",
+        "whyItMatters": "Twitter is a classic interview problem because it forces you to explain fan-out trade-offs, caching, storage separation, and search indexing under extreme scale.",
+        "sections": [
+          {
+            "heading": "Tweet write path and fan-out",
+            "body": "Posting a tweet should feel fast, even though the downstream work is much larger. The write path should persist the tweet, enqueue fan-out, and decouple notifications from storage.",
+            "bullets": [
+              "Keep tweet creation fast with durable writes plus asynchronous fan-out",
+              "Use different strategies for normal users and celebrity accounts",
+              "Store media separately from tweet metadata"
+            ]
+          },
+          {
+            "heading": "Timeline reads",
+            "body": "Home timelines and user timelines have different access patterns. Home feeds often rely on cached or precomputed lists, while user timelines can read more directly from tweet storage.",
+            "bullets": [
+              "Cache recent home-timeline entries for active users",
+              "Limit timeline length in memory and rebuild cold feeds lazily",
+              "Use multiget-style reads for tweet and user metadata"
+            ]
+          },
+          {
+            "heading": "Search and operational skew",
+            "body": "Search indexing, notifications, and celebrity fan-out all create side effects that can dominate the architecture if they are not isolated well.",
+            "bullets": [
+              "Index tweets asynchronously in a search cluster",
+              "Handle celebrity tweets with pull or hybrid fan-out strategies",
+              "Track fan-out lag, cache hit rate, and index freshness"
+            ]
+          }
+        ],
+        "checklist": [
+          "Separate tweet creation from fan-out and search indexing.",
+          "Explain the difference between home and user timelines.",
+          "Handle celebrity skew explicitly.",
+          "Mention how search stays fresh without blocking writes."
+        ],
+        "pitfalls": [
+          "Trying to fan out synchronously to every follower on the write path.",
+          "Using one storage model for tweets, timelines, media, and search.",
+          "Ignoring cold-start rebuilds and cache eviction behavior."
+        ],
+        "interviewPrompts": [
+          "When would you push timelines versus pull them at read time?",
+          "How does a celebrity account change the fan-out design?",
+          "What part of the system would you scale first as reads explode?"
+        ],
+        "diagram": null,
+        "related": [
+          "queues-and-streams",
+          "search-autocomplete",
+          "caching-layers"
+        ],
+        "moduleSlug": "case-studies",
+        "moduleTitle": "Case studies and interview drills",
+        "order": 8,
+        "id": "case-studies/twitter"
+      },
+      {
+        "slug": "sales-rank",
+        "title": "Case study: sales rank by category",
+        "summary": "Compute and serve the top-selling items by category using transactional sales logs, rolling time windows, batch aggregation, and very hot read traffic.",
+        "duration": "30-40 min",
+        "whyItMatters": "This drill is great for discussing log ingestion, windowed aggregation, batch versus stream updates, and the split between analytical compute and read APIs.",
+        "sections": [
+          {
+            "heading": "Raw events and ranking windows",
+            "body": "Sales rank starts from transactional events. The ranking service should aggregate the last week's data by category and product without overloading the serving database.",
+            "bullets": [
+              "Capture product, category, quantity, and timestamp in append-only logs",
+              "Treat category membership as reference data that shapes the aggregation key",
+              "Recompute or incrementally update rankings on a clear cadence"
+            ]
+          },
+          {
+            "heading": "Aggregation pipeline",
+            "body": "Batch systems such as MapReduce fit the original primer solution, but the core interview signal is choosing an aggregation pipeline that keeps serving traffic isolated from heavy compute.",
+            "bullets": [
+              "Aggregate to per-category totals in offline or nearline jobs",
+              "Write the ranked results into a compact serving table or cache",
+              "Backfill or rerun jobs when upstream logs arrive late or are repaired"
+            ]
+          },
+          {
+            "heading": "Serving and freshness trade-offs",
+            "body": "Reads are extremely hot, so the serving layer should return small ranked lists from cache or precomputed tables while making freshness guarantees explicit.",
+            "bullets": [
+              "Cache the most-requested category rankings",
+              "Decide whether hourly, near-real-time, or daily freshness is required",
+              "Observe ranking lag, cache hit rate, and job completion health"
+            ]
+          }
+        ],
+        "checklist": [
+          "Separate raw transaction ingest from the ranking read path.",
+          "Explain the rolling window and aggregation cadence clearly.",
+          "Store precomputed ranking outputs in a serving-friendly shape.",
+          "Talk about late data, backfills, and ranking freshness."
+        ],
+        "pitfalls": [
+          "Computing rankings directly from the primary transaction database on every read.",
+          "Ignoring how products in multiple categories change the aggregation key.",
+          "Promising real-time freshness without discussing the cost."
+        ],
+        "interviewPrompts": [
+          "Would you use batch, stream, or hybrid aggregation for sales rank?",
+          "How do you serve a top-products page at very high read volume?",
+          "What happens when late or corrected transactions arrive?"
+        ],
+        "diagram": null,
+        "related": [
+          "capacity-estimation",
+          "relational-data-modeling",
+          "caching-layers"
+        ],
+        "moduleSlug": "case-studies",
+        "moduleTitle": "Case studies and interview drills",
+        "order": 9,
+        "id": "case-studies/sales-rank"
       }
     ]
   }
