@@ -1,6 +1,7 @@
 
 import { error } from '@sveltejs/kit';
 import { getLessonBySlug, getModuleBySlug, modules } from '$lib/data/courseData';
+import { getInteractiveLesson } from '$lib/data/interactiveLessons';
 
 export const prerender = true;
 
@@ -17,7 +18,10 @@ export function load({ params }) {
   const lessonIndex = module.lessons.findIndex((entry) => entry.slug === lesson.slug);
   return {
     module,
-    lesson,
+    lesson: {
+      ...lesson,
+      interactive: getInteractiveLesson(lesson.id)
+    },
     previousLesson: lessonIndex > 0 ? module.lessons[lessonIndex - 1] : null,
     nextLesson: lessonIndex < module.lessons.length - 1 ? module.lessons[lessonIndex + 1] : null
   };

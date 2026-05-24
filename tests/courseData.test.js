@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { allLessons, getLessonPracticeSteps, modules, siteOverview } from '../courseData.js';
+import { getInteractiveLesson } from '../src/lib/data/interactiveLessons.js';
 import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
 
 test('site overview describes the expanded curriculum', () => {
@@ -87,4 +88,24 @@ test('case studies include revealable solutions and code', async () => {
       assert.match(snippet.code, /class|function|type|interface/);
     });
   }
+});
+
+
+test('interactive lesson labs cover key topic and case-study deep dives', () => {
+  [
+    'data-storage/relational-data-modeling',
+    'data-storage/nosql-landscape',
+    'data-storage/storage-selection',
+    'case-studies/url-shortener',
+    'case-studies/scaling-playbook'
+  ].forEach((lessonId) => {
+    const interactive = getInteractiveLesson(lessonId);
+    assert.ok(interactive, `missing interactive lesson data for ${lessonId}`);
+    assert.ok(interactive.takeaways.length >= 3);
+    assert.ok(interactive.examples.length >= 2);
+    assert.ok(interactive.decisionGuide.options.length >= 3);
+    assert.ok(interactive.caseStudy.steps.length >= 3);
+    assert.ok(interactive.caseStudy.metrics.length >= 3);
+    assert.match(interactive.mermaid.code, /flowchart|graph/);
+  });
 });
