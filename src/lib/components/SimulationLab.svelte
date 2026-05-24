@@ -220,7 +220,6 @@
           <CodeEditor
             files={editorFiles}
             minHeight="25rem"
-            helperDescription="Edit the topology and override script with quick inserts, inline diagnostics, and visible structure signals."
             previewItemsByFile={{
               diagram: diagramMetadata.previewItems,
               script: scriptMetadata.previewItems

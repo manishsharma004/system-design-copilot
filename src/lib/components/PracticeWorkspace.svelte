@@ -165,7 +165,6 @@
           filename="answer.md"
           title="Answer draft"
           minHeight="20rem"
-          helperDescription="Use visible section cues, draft diagnostics, and quick inserts to shape a cleaner interview answer."
           snippetActions={editorSnippetActions}
           previewItemsByFile={{ __single__: draftMetadata.previewItems }}
           markersByFile={{ __single__: draftMetadata.markers }}
