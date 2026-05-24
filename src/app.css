@@ -332,7 +332,7 @@ button:disabled, .action-link[disabled] {
   cursor: not-allowed;
 }
 
-.practice-workspace, .practice-layout, .practice-outline, .practice-card, .practice-guidance, .practice-editor {
+.practice-workspace, .practice-layout, .practice-outline, .practice-card, .practice-guidance, .practice-editor, .practice-structure-panel, .practice-toolbar, .solution-code-list {
   display: grid;
   gap: 1rem;
 }
@@ -383,8 +383,62 @@ button:disabled, .action-link[disabled] {
   justify-content: space-between;
 }
 
+.practice-structure-panel {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.practice-structure-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.practice-toolbar {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.code-editor-shell {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.editor-hidden {
+  display: none;
+}
+
+.solution-overview-grid,
+.solution-answer-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.solution-code-card pre {
+  margin: 0;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 17, 31, 0.96);
+  padding: 1rem;
+}
+
+.solution-code-card code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #bfdbfe;
+}
+
 @media (min-width: 960px) {
   .practice-layout {
     grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.3fr);
+  }
+
+  .solution-overview-grid,
+  .solution-answer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

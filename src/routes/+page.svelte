@@ -22,7 +22,7 @@
       <div class="action-row">
         <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
         <span class="pill">Interactive practice labs with saved drafts</span>
-        <span class="pill">Static build ready for Pages</span>
+        <span class="pill">Reveal sample answers and interview-ready code on demand</span>
       </div>
     </div>
     <div class="hero-card">
