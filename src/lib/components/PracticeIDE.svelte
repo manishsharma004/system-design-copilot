@@ -174,7 +174,6 @@
     markersByFile={{ answer: draftMetadata.markers }}
     summaryByFile={{ answer: draftMetadata.summary }}
     snippetActions={editorSnippetActions}
-    helperDescription="Use visible section cues and quick inserts to shape a cleaner interview answer."
     {previewContent}
     on:fileschange={handleEditorChange}
     on:fileselect={handleFileSelect}
@@ -228,10 +227,10 @@
     gap: 0.75rem;
     justify-content: space-between;
     align-items: center;
-    padding: 0.6rem 0.85rem;
-    background: #252526;
-    border: 1px solid #333;
-    border-radius: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    background: linear-gradient(180deg, rgba(105, 108, 255, 0.08), rgba(17, 19, 26, 0.96));
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 0.8rem;
   }
 
   .practice-ide-steps {
@@ -246,9 +245,9 @@
     width: 28px;
     height: 28px;
     border-radius: 4px;
-    border: 1px solid #444;
-    background: #1e1e1e;
-    color: #999;
+    border: 1px solid #353c4f;
+    background: #161922;
+    color: #9aa3bc;
     font-size: 0.75rem;
     font-weight: 700;
     cursor: pointer;
@@ -256,20 +255,20 @@
   }
 
   .practice-ide-step-btn.active {
-    background: #094771;
-    border-color: #007acc;
-    color: #fff;
+    background: rgba(105, 108, 255, 0.22);
+    border-color: rgba(105, 108, 255, 0.65);
+    color: #eef2ff;
   }
 
   .practice-ide-step-btn.done {
-    border-color: #388a34;
-    color: #73c991;
+    border-color: rgba(113, 221, 55, 0.45);
+    color: #9be37a;
   }
 
   .practice-ide-step-btn.done.active {
-    background: #094771;
-    border-color: #007acc;
-    color: #fff;
+    background: rgba(105, 108, 255, 0.22);
+    border-color: rgba(105, 108, 255, 0.65);
+    color: #eef2ff;
   }
 
   .practice-ide-actions {
@@ -281,7 +280,7 @@
   .ide-nav-btn,
   .ide-reset-btn {
     border-radius: 0.375rem;
-    border: 1px solid #444;
+    border: 1px solid rgba(148, 163, 184, 0.18);
     padding: 0.35rem 0.7rem;
     font-size: 0.78rem;
     font-weight: 600;
@@ -302,12 +301,12 @@
   }
 
   .ide-nav-btn {
-    background: #333;
-    color: #ccc;
+    background: #1b1f2a;
+    color: #cfd5e9;
   }
 
   .ide-nav-btn:hover:not(:disabled) {
-    background: #444;
+    background: #2a3040;
   }
 
   .ide-reset-btn {
@@ -321,42 +320,56 @@
   }
 
   :global(.practice-preview-panel) {
-    color: #ccc;
-    font-size: 0.85rem;
-    line-height: 1.7;
+    display: grid;
+    gap: 0.85rem;
+    padding: 1.1rem 1.15rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background:
+      linear-gradient(180deg, rgba(105, 108, 255, 0.08), rgba(17, 19, 26, 0.98) 6rem),
+      #11131a;
+    color: #cfd5e9;
+    font-size: 0.9rem;
+    line-height: 1.75;
   }
 
   :global(.practice-preview-panel h3) {
-    margin: 0 0 0.5rem;
-    color: #fff;
-    font-size: 1rem;
+    margin: 0;
+    color: #eef2ff;
+    font-size: 1.05rem;
   }
 
   :global(.practice-preview-panel h4) {
-    margin: 1rem 0 0.3rem;
-    color: #89b4fa;
-    font-size: 0.85rem;
+    margin: 0.35rem 0 0;
+    color: #9fb3ff;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
   }
 
   :global(.practice-preview-panel p) {
-    margin: 0 0 0.5rem;
-    color: #a6adc8;
+    margin: 0;
+    color: #bcc5de;
   }
 
   :global(.practice-preview-panel ul) {
     margin: 0;
-    padding-left: 1.2rem;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.4rem;
   }
 
   :global(.practice-preview-panel li) {
-    color: #a6adc8;
-    margin-bottom: 0.3rem;
+    color: #bcc5de;
+    margin-bottom: 0;
   }
 
   :global(.practice-preview-prompt) {
-    color: #cdd6f4 !important;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(105, 108, 255, 0.22);
+    background: rgba(105, 108, 255, 0.08);
+    color: #eef2ff !important;
     font-weight: 500;
   }
 </style>

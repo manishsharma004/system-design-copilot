@@ -268,7 +268,6 @@
       }}
       runtimeHints={browserRuntimes}
       snippetActions={editorSnippetActions}
-      helperDescription="Edit the topology and override script with quick inserts, inline diagnostics, and visible structure signals."
       previewContent={compilePreview?.mermaid || latestRun?.mermaid ? 'diagram' : null}
       resultsContent={resultsText}
       on:fileschange={syncEditorFiles}
@@ -343,11 +342,11 @@
   }
 
   .simulation-ide-select select {
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    background: #232333;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: #161922;
     color: #cfd3ec;
-    border-radius: 0.375rem;
-    padding: 0.4rem 0.6rem;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.82rem;
     min-width: 120px;
   }
@@ -360,9 +359,9 @@
   .ide-run-btn,
   .ide-save-btn,
   .ide-reset-btn {
-    border-radius: 0.375rem;
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    padding: 0.45rem 0.85rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    padding: 0.5rem 0.9rem;
     font-size: 0.82rem;
     font-weight: 600;
     min-height: 32px;
@@ -379,7 +378,7 @@
   }
 
   .ide-save-btn {
-    background: rgba(105, 108, 255, 0.12);
+    background: rgba(105, 108, 255, 0.14);
     color: #cfd3ec;
   }
 

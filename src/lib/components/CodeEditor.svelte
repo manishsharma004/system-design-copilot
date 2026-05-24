@@ -18,7 +18,6 @@
   export let summaryByFile = {}
   export let runtimeHints = []
   export let snippetActions = []
-  export let helperDescription = ''
 
   const dispatch = createEventDispatcher()
 
@@ -56,7 +55,9 @@
   $: lineCount = currentText ? currentText.split('\n').length : 1
   $: wordCount = currentText.trim() ? currentText.trim().split(/\s+/).filter(Boolean).length : 0
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
-  $: helperVisible = Boolean(currentSummary || currentMarkers.length || currentPreviewItems.length || scopedSnippetActions.length)
+  $: showTabbar = normalizedFiles.length > 1
+  $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length || runtimeHints?.length)
+  $: helperVisible = Boolean(currentMarkers.length || currentPreviewItems.length)
 
   /**
    * @param {string} name
@@ -342,60 +343,60 @@
 </script>
 
 <div class="code-editor-shell">
-  <!-- VS Code style tabs -->
-  <div class="code-editor-tabbar">
-    <div class="code-editor-tabs" role="tablist" aria-label="Open files">
-      {#each normalizedFiles as file}
-        <button
-          class:active={file.id === resolvedActiveFileId}
-          class="code-editor-tab"
-          type="button"
-          onclick={() => activateFile(file.id)}
-        >
-          <span class="tab-icon">{file.language === 'typescript' ? '📘' : file.language === 'javascript' ? '📒' : file.language === 'markdown' ? '📝' : '🔷'}</span>
-          <span class="tab-label">{file.label ?? file.filename ?? file.id}</span>
-          {#if file.id === resolvedActiveFileId && currentText !== (file.value ?? '')}
-            <span class="tab-modified">●</span>
-          {/if}
+  {#if showTabbar}
+    <div class="code-editor-tabbar">
+      <div class="code-editor-tabs" role="tablist" aria-label="Open files">
+        {#each normalizedFiles as file}
+          <button
+            class:active={file.id === resolvedActiveFileId}
+            class="code-editor-tab"
+            type="button"
+            onclick={() => activateFile(file.id)}
+          >
+            <span class="tab-icon">{file.language === 'typescript' ? '📘' : file.language === 'javascript' ? '📒' : file.language === 'markdown' ? '📝' : '🔷'}</span>
+            <span class="tab-label">{file.label ?? file.filename ?? file.id}</span>
+            {#if file.id === resolvedActiveFileId && currentText !== (file.value ?? '')}
+              <span class="tab-modified">●</span>
+            {/if}
+          </button>
+        {/each}
+      </div>
+      <div class="code-editor-actions">
+        <button class="code-editor-control" type="button" onclick={toggleWordWrap} title={wordWrapEnabled ? 'Word wrap on' : 'Word wrap off'}>
+          {wordWrapEnabled ? '↩' : '→'}
         </button>
-      {/each}
-    </div>
-    <div class="code-editor-actions">
-      <button class="code-editor-control" type="button" onclick={toggleWordWrap} title={wordWrapEnabled ? 'Word wrap on' : 'Word wrap off'}>
-        {wordWrapEnabled ? '↩' : '→'}
-      </button>
-      <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()} title="Copy file">
-        {copyState || '📋'}
-      </button>
-    </div>
-  </div>
-
-  <!-- Breadcrumb bar -->
-  <div class="code-editor-breadcrumb">
-    <span class="breadcrumb-item">{currentFile?.filename ?? filename}</span>
-    {#if currentSummary}
-      <span class="breadcrumb-sep">·</span>
-      <span class="breadcrumb-item muted">{currentSummary}</span>
-    {/if}
-  </div>
-
-  {#if scopedSnippetActions.length}
-    <div class="code-editor-snippets">
-      {#each scopedSnippetActions as action}
-        <button class="code-editor-snippet" type="button" onclick={() => insertSnippet(action)}>
-          {action.label}
+        <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()} title="Copy file">
+          {copyState || '📋'}
         </button>
-      {/each}
+      </div>
     </div>
   {/if}
 
-  {#if runtimeHints?.length}
-    <div class="code-editor-runtime-row">
-      {#each runtimeHints as runtime}
-        <span class:muted={!runtime.available} class="pill">
-          {runtime.kind === 'wasm' ? 'WASM' : 'Browser'} · {runtime.label}
-        </span>
-      {/each}
+  {#if showToolbar}
+    <div class="code-editor-toolbar">
+      {#if currentSummary}
+        <p class="code-editor-summary">{currentSummary}</p>
+      {/if}
+
+      {#if scopedSnippetActions.length}
+        <div class="code-editor-snippets">
+          {#each scopedSnippetActions as action}
+            <button class="code-editor-snippet" type="button" onclick={() => insertSnippet(action)}>
+              {action.label}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      {#if runtimeHints?.length}
+        <div class="code-editor-runtime-row">
+          {#each runtimeHints as runtime}
+            <span class:muted={!runtime.available} class="pill">
+              {runtime.kind === 'wasm' ? 'WASM' : 'Browser'} · {runtime.label}
+            </span>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -411,14 +412,6 @@
 
   {#if helperVisible}
     <div class="code-editor-helper-grid">
-      {#if currentSummary}
-        <article class="code-editor-helper-card">
-          <p class="eyebrow">Snapshot</p>
-          <h4>Current file summary</h4>
-          <p>{currentSummary}</p>
-        </article>
-      {/if}
-
       {#if currentPreviewItems.length}
         <article class="code-editor-helper-card">
           <p class="eyebrow">Signals</p>
@@ -455,9 +448,9 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-radius: 0.5rem;
-    border: 1px solid #333;
-    background: #1e1e1e;
+    border-radius: 0.75rem;
+    border: 1px solid #2f3340;
+    background: #11131a;
     height: 100%;
   }
 
@@ -465,9 +458,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #252526;
-    min-height: 35px;
-    border-bottom: 1px solid #333;
+    background: #171922;
+    min-height: 2.5rem;
+    border-bottom: 1px solid #252a35;
   }
 
   .code-editor-tabs {
@@ -478,8 +471,8 @@
 
   .code-editor-actions {
     display: flex;
-    gap: 0.25rem;
-    padding: 0 0.5rem;
+    gap: 0.35rem;
+    padding: 0 0.6rem;
     align-items: center;
   }
 
@@ -488,11 +481,11 @@
     align-items: center;
     gap: 0.35rem;
     border: none;
-    border-right: 1px solid #252526;
-    background: #2d2d2d;
-    color: #969696;
-    min-height: 35px;
-    padding: 0 0.85rem;
+    border-right: 1px solid #20242f;
+    background: #1c1f29;
+    color: #8f96ab;
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
     font-size: 0.8rem;
     font-weight: 400;
     cursor: pointer;
@@ -502,15 +495,15 @@
   }
 
   .code-editor-tab.active {
-    background: #1e1e1e;
-    color: #fff;
-    border-bottom: 1px solid #1e1e1e;
+    background: #11131a;
+    color: #eef2ff;
+    border-bottom: 1px solid #11131a;
     margin-bottom: -1px;
   }
 
   .code-editor-tab:hover:not(.active) {
-    background: #2a2d2e;
-    color: #ccc;
+    background: #202531;
+    color: #cdd5ea;
   }
 
   .tab-icon {
@@ -527,36 +520,28 @@
     margin-left: 0.25rem;
   }
 
-  .code-editor-breadcrumb {
+  .code-editor-toolbar {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.2rem 0.75rem;
-    background: #1e1e1e;
-    border-bottom: 1px solid #2d2d2d;
-    font-size: 0.75rem;
-    color: #a9a9a9;
-    min-height: 22px;
+    padding: 0.55rem 0.8rem;
+    background: #151821;
+    border-bottom: 1px solid #252a35;
   }
 
-  .breadcrumb-item {
-    color: #ccc;
-  }
-
-  .breadcrumb-item.muted {
-    color: #666;
-    font-style: italic;
-  }
-
-  .breadcrumb-sep {
-    color: #555;
+  .code-editor-summary {
+    margin: 0;
+    color: #9aa3bc;
+    font-size: 0.76rem;
+    line-height: 1.4;
   }
 
   .code-editor-control {
     border-radius: 3px;
     border: none;
     background: transparent;
-    color: #858585;
+    color: #7f879e;
     width: 24px;
     height: 24px;
     display: flex;
@@ -570,17 +555,14 @@
   }
 
   .code-editor-control:hover {
-    color: #fff;
-    background: #37373d;
+    color: #eef2ff;
+    background: #2a3040;
   }
 
   .code-editor-snippets {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
-    padding: 0.35rem 0.75rem;
-    background: #252526;
-    border-bottom: 1px solid #333;
   }
 
   .code-editor-runtime-row {
@@ -589,16 +571,14 @@
     gap: 0.5rem;
     justify-content: flex-start;
     align-items: center;
-    padding: 0.3rem 0.75rem;
-    background: #252526;
-    border-bottom: 1px solid #333;
+    margin-left: auto;
   }
 
   .code-editor-snippet {
     border-radius: 3px;
-    border: 1px solid #444;
-    background: rgba(105, 108, 255, 0.06);
-    color: #a6adc8;
+    border: 1px solid #303647;
+    background: rgba(105, 108, 255, 0.08);
+    color: #b8c0da;
     min-height: 24px;
     padding: 0.2rem 0.5rem;
     font-size: 0.72rem;
@@ -607,8 +587,8 @@
 
   .code-editor-snippet:hover {
     border-color: #696cff;
-    background: rgba(105, 108, 255, 0.12);
-    color: #cdd6f4;
+    background: rgba(105, 108, 255, 0.16);
+    color: #e0e7ff;
   }
 
   .monaco-host {
@@ -623,17 +603,17 @@
     display: grid;
     gap: 0.5rem;
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    padding: 0.5rem 0.75rem;
-    background: #252526;
-    border-top: 1px solid #333;
+    padding: 0.7rem 0.8rem 0.8rem;
+    background: #151821;
+    border-top: 1px solid #252a35;
   }
 
   .code-editor-helper-card {
     display: grid;
     gap: 0.4rem;
-    border-radius: 4px;
-    border: 1px solid #333;
-    background: #1e1e1e;
+    border-radius: 0.6rem;
+    border: 1px solid #2a3040;
+    background: #11131a;
     padding: 0.6rem 0.75rem;
   }
 
@@ -645,7 +625,7 @@
 
   .code-editor-helper-card p,
   .code-editor-helper-card li {
-    color: #858585;
+    color: #9aa3bc;
     line-height: 1.5;
     font-size: 0.8rem;
   }
@@ -660,7 +640,7 @@
   :global(.monaco-editor),
   :global(.monaco-editor .margin),
   :global(.monaco-editor .monaco-editor-background) {
-    background: #1e1e1e !important;
+    background: #11131a !important;
   }
 
   :global(.monaco-editor .suggest-widget),

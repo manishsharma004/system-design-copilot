@@ -15,7 +15,6 @@
   export let runtimeHints = []
   /** @type {any[]} */
   export let snippetActions = []
-  export let helperDescription = ''
   export let readOnly = false
   export let minHeight = '100%'
   /** @type {'preview' | 'results' | 'terminal' | null} */
@@ -34,7 +33,7 @@
   let explorerCollapsed = false
   let bottomPanelCollapsed = false
   /** @type {Set<string>} */
-  let expandedFolders = new Set(['root'])
+  let expandedFolders = new Set(['root', 'src'])
 
   $: internalActiveFileId = activeFileId || files[0]?.id || ''
   $: panelTabs = [
@@ -82,7 +81,6 @@
 </script>
 
 <div class="ide-workspace">
-  <!-- Activity Bar (leftmost icon strip) -->
   <div class="ide-activity-bar">
     <button
       class="ide-activity-icon"
@@ -95,28 +93,14 @@
         <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
       </svg>
     </button>
-    <button
-      class="ide-activity-icon"
-      type="button"
-      title="Search"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="11" cy="11" r="8" />
-        <path d="M21 21l-4.35-4.35" />
-      </svg>
-    </button>
   </div>
 
-  <!-- Explorer Sidebar -->
   {#if !explorerCollapsed}
     <aside class="ide-explorer">
-      <div class="ide-explorer-header">
-        <span>{explorerTitle}</span>
-      </div>
-
       <div class="ide-explorer-section">
         <button class="ide-explorer-section-title" type="button" onclick={() => toggleFolder('root')}>
           <span class="ide-chevron">{expandedFolders.has('root') ? '▼' : '▶'}</span>
+          <span class="ide-explorer-label">{explorerTitle}</span>
           <strong>{projectName}</strong>
         </button>
 
@@ -184,17 +168,14 @@
     </aside>
   {/if}
 
-  <!-- Main Editor Area -->
   <div class="ide-main">
     <div class="ide-editor-area" class:has-side-panel={hasSidePanel}>
-      <!-- Editor Pane -->
       <div class="ide-editor-pane">
         <CodeEditor
           {files}
           activeFileId={internalActiveFileId}
           {readOnly}
           {minHeight}
-          {helperDescription}
           {previewItemsByFile}
           {markersByFile}
           {summaryByFile}
@@ -206,16 +187,9 @@
         />
       </div>
 
-      <!-- Side Preview Panel (like Mermaid Preview in screenshot) -->
       {#if hasSidePanel && previewContent}
         <div class="ide-side-panel">
-          <div class="ide-panel-tabs">
-            <div class="ide-panel-tab active">
-              <span>Preview</span>
-            </div>
-            <button class="ide-panel-close" type="button" onclick={() => (previewContent = null)}>×</button>
-          </div>
-          <div class="ide-panel-content">
+          <div class="ide-panel-content ide-preview-content">
             <slot name="preview">
               {#if typeof previewContent === 'string'}
                 <div class="ide-preview-text">{@html previewContent}</div>
@@ -230,7 +204,6 @@
       {/if}
     </div>
 
-    <!-- Bottom Panel (Results / Terminal) -->
     {#if hasBottomPanel && !bottomPanelCollapsed}
       <div class="ide-bottom-panel">
         <div class="ide-panel-tabs">
@@ -264,44 +237,30 @@
         </div>
       </div>
     {/if}
-
-    <!-- Status Bar -->
-    <div class="ide-status-bar">
-      <div class="ide-status-left">
-        <span class="ide-status-item">
-          {files.find(f => f.id === internalActiveFileId)?.language ?? 'plaintext'}
-        </span>
-      </div>
-      <div class="ide-status-right">
-        <span class="ide-status-item">UTF-8</span>
-        <span class="ide-status-item">LF</span>
-      </div>
-    </div>
   </div>
 </div>
 
 <style>
   .ide-workspace {
     display: grid;
-    grid-template-columns: auto auto 1fr;
-    height: calc(100vh - 4rem);
-    min-height: 600px;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 0.5rem;
+    grid-template-columns: auto minmax(14rem, 18rem) minmax(0, 1fr);
+    height: clamp(34rem, 70vh, 48rem);
+    min-height: 34rem;
+    background: #11131a;
+    border: 1px solid #2f3340;
+    border-radius: 0.9rem;
     overflow: hidden;
   }
 
-  /* Activity Bar */
   .ide-activity-bar {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
+    gap: 0.45rem;
     width: 48px;
-    background: #333333;
-    border-right: 1px solid #252526;
-    padding-top: 0.25rem;
+    background: #161922;
+    border-right: 1px solid #252a35;
+    padding-top: 0.6rem;
   }
 
   .ide-activity-icon {
@@ -312,79 +271,77 @@
     height: 48px;
     border: none;
     background: transparent;
-    color: #858585;
+    color: #7f879e;
     transition: color 0.1s;
     padding: 0;
     min-height: 0;
-    border-radius: 0;
+    border-radius: 0.7rem;
     border-left: 2px solid transparent;
   }
 
   .ide-activity-icon:hover {
-    color: #fff;
+    color: #eef2ff;
+    background: rgba(105, 108, 255, 0.08);
   }
 
   .ide-activity-icon.active {
-    color: #fff;
-    border-left-color: #fff;
+    color: #eef2ff;
+    border-left-color: #696cff;
+    background: rgba(105, 108, 255, 0.12);
   }
 
-  /* Explorer Sidebar */
   .ide-explorer {
-    width: 240px;
-    background: #252526;
-    border-right: 1px solid #333;
+    background: #161922;
+    border-right: 1px solid #252a35;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
   }
 
-  .ide-explorer-header {
-    padding: 0.6rem 1rem;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #bbb;
-    border-bottom: 1px solid #333;
-  }
-
   .ide-explorer-section {
     display: flex;
     flex-direction: column;
+    padding: 0.6rem;
   }
 
   .ide-explorer-section-title {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.4rem 0.6rem;
-    border: none;
-    background: #2d2d2d;
-    color: #ccc;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #2d3342;
+    background: #1b1f2a;
+    color: #d8def0;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     min-height: 0;
-    border-radius: 0;
+    border-radius: 0.75rem;
     cursor: pointer;
   }
 
   .ide-explorer-section-title:hover {
-    background: #37373d;
+    background: #202531;
+  }
+
+  .ide-explorer-label {
+    color: #8d95ab;
+    margin-right: 0.25rem;
   }
 
   .ide-explorer-tree {
     display: flex;
     flex-direction: column;
+    gap: 0.15rem;
+    padding-top: 0.6rem;
   }
 
   .ide-chevron {
     font-size: 0.55rem;
     width: 1rem;
     text-align: center;
-    color: #858585;
+    color: #7f879e;
   }
 
   .ide-tree-item {
@@ -394,10 +351,10 @@
     padding: 0.2rem 0.5rem 0.2rem 1.2rem;
     border: none;
     background: transparent;
-    color: #ccc;
+    color: #cfd5e9;
     font-size: 0.82rem;
-    min-height: 22px;
-    border-radius: 0;
+    min-height: 2rem;
+    border-radius: 0.55rem;
     cursor: pointer;
     text-align: left;
   }
@@ -407,12 +364,12 @@
   }
 
   .ide-tree-item:hover {
-    background: #2a2d2e;
+    background: #1f2430;
   }
 
   .ide-tree-item.active {
-    background: #094771;
-    color: #fff;
+    background: rgba(105, 108, 255, 0.18);
+    color: #eef2ff;
   }
 
   .ide-file-icon {
@@ -433,7 +390,6 @@
     letter-spacing: 0.02em;
   }
 
-  /* Main Editor Area */
   .ide-main {
     display: flex;
     flex-direction: column;
@@ -471,12 +427,11 @@
     min-height: 0;
   }
 
-  /* Side Panel (Preview) */
   .ide-side-panel {
     display: flex;
     flex-direction: column;
-    border-left: 1px solid #333;
-    background: #1e1e1e;
+    border-left: 1px solid #252a35;
+    background: #0f1118;
     min-width: 0;
     overflow: hidden;
   }
@@ -484,8 +439,8 @@
   .ide-panel-tabs {
     display: flex;
     align-items: center;
-    background: #252526;
-    border-bottom: 1px solid #333;
+    background: #161922;
+    border-bottom: 1px solid #252a35;
     min-height: 35px;
     padding: 0 0.5rem;
     gap: 0;
@@ -498,7 +453,7 @@
     padding: 0.4rem 0.75rem;
     border: none;
     background: transparent;
-    color: #969696;
+    color: #8f96ab;
     font-size: 0.78rem;
     min-height: 35px;
     border-radius: 0;
@@ -507,12 +462,12 @@
   }
 
   .ide-panel-tab.active {
-    color: #fff;
-    border-bottom-color: #fff;
+    color: #eef2ff;
+    border-bottom-color: #696cff;
   }
 
   .ide-panel-tab:hover:not(.active) {
-    color: #ccc;
+    color: #cfd5e9;
   }
 
   .ide-panel-close {
@@ -524,7 +479,7 @@
     margin-left: auto;
     border: none;
     background: transparent;
-    color: #858585;
+    color: #7f879e;
     font-size: 1rem;
     padding: 0;
     min-height: 0;
@@ -533,20 +488,25 @@
   }
 
   .ide-panel-close:hover {
-    background: #37373d;
-    color: #fff;
+    background: #2a3040;
+    color: #eef2ff;
   }
 
   .ide-panel-content {
     flex: 1;
     overflow: auto;
-    padding: 0.75rem;
+    padding: 0.85rem;
   }
 
-  /* Bottom Panel */
+  .ide-preview-content {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 4rem),
+      #0f1118;
+  }
+
   .ide-bottom-panel {
-    border-top: 1px solid #333;
-    background: #1e1e1e;
+    border-top: 1px solid #252a35;
+    background: #11131a;
     max-height: 280px;
     min-height: 120px;
     display: flex;
@@ -562,7 +522,7 @@
 
   .ide-terminal-output {
     margin: 0;
-    color: #ccc;
+    color: #cfd5e9;
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.82rem;
     line-height: 1.5;
@@ -570,35 +530,25 @@
   }
 
   .ide-preview-text {
-    color: #ccc;
+    color: #cfd5e9;
     font-size: 0.85rem;
     line-height: 1.6;
   }
 
-  /* Status Bar */
-  .ide-status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0.75rem;
-    height: 22px;
-    background: #007acc;
-    color: #fff;
-    font-size: 0.7rem;
+  .ide-side-panel :global(.diagram-card) {
+    height: 100%;
+    border: 1px solid #252a35;
+    background: #11131a;
+    box-shadow: none;
   }
 
-  .ide-status-left,
-  .ide-status-right {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+  .ide-side-panel :global(.mermaid-output) {
+    border-radius: 0.75rem;
+    background: #0b0d13;
+    border: 1px solid #222735;
+    padding: 1rem;
   }
 
-  .ide-status-item {
-    white-space: nowrap;
-  }
-
-  /* Responsive */
   @media (max-width: 768px) {
     .ide-workspace {
       grid-template-columns: 1fr;
