@@ -109,6 +109,7 @@ node('primary', { capacityRps: 6200, latencyMs: 24 })`,
   }
 }
 
+/** @type {Record<string, any>} */
 const moduleBlueprints = {
   foundations: {
     title: 'Foundations under pressure',
@@ -730,7 +731,7 @@ function buildRecommendationThemes(lesson) {
 
 /** @param {any} lesson */
 function buildGeneratedSimulationLesson(lesson) {
-  const blueprint = moduleBlueprints[lesson.moduleSlug] ?? moduleBlueprints.foundations
+  const blueprint = /** @type {any} */ (moduleBlueprints[lesson.moduleSlug] ?? moduleBlueprints.foundations)
   const firstApi = blueprint.apis[0]
   const firstProfile = blueprint.workloadProfiles[1] ?? blueprint.workloadProfiles[0]
   const primaryNodeId = /primary/.test(blueprint.diagram)
@@ -747,11 +748,11 @@ function buildGeneratedSimulationLesson(lesson) {
     whyItMatters: buildWhyItMatters(lesson),
     starterDiagram: blueprint.diagram,
     apiNotes: buildApiNotes(lesson),
-    apis: blueprint.apis.map((api) => ({
+    apis: blueprint.apis.map((/** @type {any} */ api) => ({
       ...api,
       summary: `${api.summary} Frame it around ${lesson.title.toLowerCase()}.`
     })),
-    workloadProfiles: blueprint.workloadProfiles.map((profile) => ({
+    workloadProfiles: blueprint.workloadProfiles.map((/** @type {any} */ profile) => ({
       ...profile,
       description: `${profile.description} Use it to stress ${slugToLabel(lesson.slug).toLowerCase()}.`
     })),

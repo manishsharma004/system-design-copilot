@@ -9,6 +9,7 @@
 
   let navOpen = false;
   let query = '';
+  /** @type {Record<string, boolean>} */
   let expandedModules = {};
 
   const lessonTotal = allLessons.length;
@@ -45,7 +46,7 @@
   $: currentLessonIndex = activeModule && activeLesson
     ? activeModule.lessons.findIndex((lesson) => lesson.slug === activeLesson.slug)
     : -1;
-  $: previousLesson = currentLessonIndex > 0 ? activeModule.lessons[currentLessonIndex - 1] : null;
+  $: previousLesson = activeModule && currentLessonIndex > 0 ? activeModule.lessons[currentLessonIndex - 1] : null;
   $: nextLesson = activeModule && currentLessonIndex > -1 && currentLessonIndex < activeModule.lessons.length - 1
     ? activeModule.lessons[currentLessonIndex + 1]
     : null;
@@ -136,10 +137,10 @@
         <div class="sidebar-quick-links">
           <a class="action-link primary" href={homeHref}>Curriculum home</a>
           {#if previousLesson}
-            <a class="action-link" href={lessonHref(activeModule.slug, previousLesson.slug)}>← {previousLesson.title}</a>
+            <a class="action-link" href={lessonHref(activeModule?.slug ?? '', previousLesson.slug)}>← {previousLesson.title}</a>
           {/if}
           {#if nextLesson}
-            <a class="action-link" href={lessonHref(activeModule.slug, nextLesson.slug)}>{nextLesson.title} →</a>
+            <a class="action-link" href={lessonHref(activeModule?.slug ?? '', nextLesson.slug)}>{nextLesson.title} →</a>
           {/if}
         </div>
       </section>
