@@ -342,41 +342,42 @@
 </script>
 
 <div class="code-editor-shell">
-  <div class="code-editor-toolbar">
-    <div class="code-editor-overview">
-      <strong>{currentFile?.label ?? title}</strong>
-      <span>{helperDescription || `Edit ${currentFile?.filename ?? filename} with completion, diagnostics, and inline cues.`}</span>
+  <!-- VS Code style tabs -->
+  <div class="code-editor-tabbar">
+    <div class="code-editor-tabs" role="tablist" aria-label="Open files">
+      {#each normalizedFiles as file}
+        <button
+          class:active={file.id === resolvedActiveFileId}
+          class="code-editor-tab"
+          type="button"
+          onclick={() => activateFile(file.id)}
+        >
+          <span class="tab-icon">{file.language === 'typescript' ? '📘' : file.language === 'javascript' ? '📒' : file.language === 'markdown' ? '📝' : '🔷'}</span>
+          <span class="tab-label">{file.label ?? file.filename ?? file.id}</span>
+          {#if file.id === resolvedActiveFileId && currentText !== (file.value ?? '')}
+            <span class="tab-modified">●</span>
+          {/if}
+        </button>
+      {/each}
     </div>
     <div class="code-editor-actions">
-      <span class="pill">{lineCount} lines · {wordCount} words</span>
-      <button class="code-editor-control" type="button" onclick={toggleWordWrap}>
-        {wordWrapEnabled ? 'Wrap on' : 'Wrap off'}
+      <button class="code-editor-control" type="button" onclick={toggleWordWrap} title={wordWrapEnabled ? 'Word wrap on' : 'Word wrap off'}>
+        {wordWrapEnabled ? '↩' : '→'}
       </button>
-      <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()}>
-        {copyState || 'Copy'}
+      <button class="code-editor-control" type="button" onclick={copyCurrentFile} disabled={!currentText.trim()} title="Copy file">
+        {copyState || '📋'}
       </button>
     </div>
   </div>
 
-  {#if normalizedFiles.length > 1}
-    <div class="code-editor-header">
-      <div class="code-editor-tabs" role="tablist" aria-label="Open exercise files">
-        {#each normalizedFiles as file}
-          <button
-            class:active={file.id === resolvedActiveFileId}
-            class="code-editor-tab"
-            type="button"
-            onclick={() => activateFile(file.id)}
-          >
-            {file.label ?? file.filename ?? file.id}
-          </button>
-        {/each}
-      </div>
-      {#if currentSummary}
-        <span class="pill">{currentSummary}</span>
-      {/if}
-    </div>
-  {/if}
+  <!-- Breadcrumb bar -->
+  <div class="code-editor-breadcrumb">
+    <span class="breadcrumb-item">{currentFile?.filename ?? filename}</span>
+    {#if currentSummary}
+      <span class="breadcrumb-sep">·</span>
+      <span class="breadcrumb-item muted">{currentSummary}</span>
+    {/if}
+  </div>
 
   {#if scopedSnippetActions.length}
     <div class="code-editor-snippets">
@@ -451,72 +452,135 @@
 
 <style>
   .code-editor-shell {
-    display: grid;
-    gap: 0;
-    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    background: #1e1e2e;
+    border-radius: 0.5rem;
+    border: 1px solid #333;
+    background: #1e1e1e;
+    height: 100%;
   }
 
-  .code-editor-toolbar {
+  .code-editor-tabbar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    padding: 0.45rem 0.75rem;
-    background: #181825;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-  }
-
-  .code-editor-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .code-editor-overview {
-    display: grid;
-    gap: 0.15rem;
-  }
-
-  .code-editor-overview strong {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #cdd6f4;
-  }
-
-  .code-editor-overview span {
-    color: #6c7086;
-    font-size: 0.75rem;
-    line-height: 1.4;
-  }
-
-  .code-editor-header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0;
-    align-items: center;
-    background: #181825;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-    padding: 0;
+    background: #252526;
+    min-height: 35px;
+    border-bottom: 1px solid #333;
   }
 
   .code-editor-tabs {
     display: flex;
-    flex-wrap: wrap;
+    overflow-x: auto;
     gap: 0;
+  }
+
+  .code-editor-actions {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+    align-items: center;
+  }
+
+  .code-editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    border-right: 1px solid #252526;
+    background: #2d2d2d;
+    color: #969696;
+    min-height: 35px;
+    padding: 0 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    cursor: pointer;
+    border-radius: 0;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  .code-editor-tab.active {
+    background: #1e1e1e;
+    color: #fff;
+    border-bottom: 1px solid #1e1e1e;
+    margin-bottom: -1px;
+  }
+
+  .code-editor-tab:hover:not(.active) {
+    background: #2a2d2e;
+    color: #ccc;
+  }
+
+  .tab-icon {
+    font-size: 0.75rem;
+  }
+
+  .tab-label {
+    font-size: 0.8rem;
+  }
+
+  .tab-modified {
+    color: #e8e8e8;
+    font-size: 0.65rem;
+    margin-left: 0.25rem;
+  }
+
+  .code-editor-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.75rem;
+    background: #1e1e1e;
+    border-bottom: 1px solid #2d2d2d;
+    font-size: 0.75rem;
+    color: #a9a9a9;
+    min-height: 22px;
+  }
+
+  .breadcrumb-item {
+    color: #ccc;
+  }
+
+  .breadcrumb-item.muted {
+    color: #666;
+    font-style: italic;
+  }
+
+  .breadcrumb-sep {
+    color: #555;
+  }
+
+  .code-editor-control {
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+    color: #858585;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    padding: 0;
+    min-height: 0;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+  }
+
+  .code-editor-control:hover {
+    color: #fff;
+    background: #37373d;
   }
 
   .code-editor-snippets {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    padding: 0.4rem 0.75rem;
-    background: #181825;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    gap: 0.3rem;
+    padding: 0.35rem 0.75rem;
+    background: #252526;
+    border-bottom: 1px solid #333;
   }
 
   .code-editor-runtime-row {
@@ -525,69 +589,30 @@
     gap: 0.5rem;
     justify-content: flex-start;
     align-items: center;
-    padding: 0.35rem 0.75rem;
-    background: #181825;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-  }
-
-  .code-editor-tab {
-    border-radius: 0;
-    border: none;
-    border-right: 1px solid rgba(148, 163, 184, 0.08);
-    background: #11111b;
-    color: #6c7086;
-    min-height: 34px;
-    padding: 0.4rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: background 0.12s ease, color 0.12s ease;
-  }
-
-  .code-editor-tab.active {
-    background: #1e1e2e;
-    color: #cdd6f4;
-    border-bottom: 2px solid #696cff;
-    border-right: 1px solid rgba(148, 163, 184, 0.08);
-  }
-
-  .code-editor-tab:hover:not(.active) {
-    background: #1e1e2e;
-    color: #a6adc8;
-  }
-
-  .code-editor-control {
-    border-radius: 0.25rem;
-    border: none;
-    background: transparent;
-    color: #6c7086;
-    min-height: 28px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    transition: color 0.12s ease, background 0.12s ease;
-  }
-
-  .code-editor-control:hover {
-    color: #cdd6f4;
-    background: rgba(105, 108, 255, 0.12);
+    padding: 0.3rem 0.75rem;
+    background: #252526;
+    border-bottom: 1px solid #333;
   }
 
   .code-editor-snippet {
-    border-radius: 0.25rem;
-    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 3px;
+    border: 1px solid #444;
     background: rgba(105, 108, 255, 0.06);
     color: #a6adc8;
-    min-height: 28px;
-    padding: 0.25rem 0.6rem;
-    font-size: 0.75rem;
+    min-height: 24px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.72rem;
+    cursor: pointer;
   }
 
   .code-editor-snippet:hover {
-    border-color: rgba(105, 108, 255, 0.4);
+    border-color: #696cff;
     background: rgba(105, 108, 255, 0.12);
     color: #cdd6f4;
   }
 
   .monaco-host {
+    flex: 1;
     overflow: hidden;
     border-radius: 0;
     border: none;
@@ -599,16 +624,16 @@
     gap: 0.5rem;
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
     padding: 0.5rem 0.75rem;
-    background: #181825;
-    border-top: 1px solid rgba(148, 163, 184, 0.08);
+    background: #252526;
+    border-top: 1px solid #333;
   }
 
   .code-editor-helper-card {
     display: grid;
     gap: 0.4rem;
-    border-radius: 0.375rem;
-    border: 1px solid rgba(148, 163, 184, 0.08);
-    background: #1e1e2e;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #1e1e1e;
     padding: 0.6rem 0.75rem;
   }
 
@@ -620,7 +645,7 @@
 
   .code-editor-helper-card p,
   .code-editor-helper-card li {
-    color: #6c7086;
+    color: #858585;
     line-height: 1.5;
     font-size: 0.8rem;
   }
@@ -635,13 +660,13 @@
   :global(.monaco-editor),
   :global(.monaco-editor .margin),
   :global(.monaco-editor .monaco-editor-background) {
-    background: #1e1e2e !important;
+    background: #1e1e1e !important;
   }
 
   :global(.monaco-editor .suggest-widget),
   :global(.monaco-editor .monaco-hover) {
-    border-radius: 0.375rem !important;
-    border: 1px solid rgba(148, 163, 184, 0.12) !important;
+    border-radius: 4px !important;
+    border: 1px solid #454545 !important;
   }
 
   :global(.monaco-inline-preview) {
