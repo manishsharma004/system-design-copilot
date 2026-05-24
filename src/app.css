@@ -289,7 +289,6 @@ img { display: block; max-width: 100%; }
 
 @media (min-width: 960px) {
   .topbar { display: none; }
-  .shell { grid-template-columns: minmax(18rem, 23rem) minmax(0, 1fr); }
   .layout {
     width: min(100%, 96rem);
     grid-template-columns: minmax(18rem, 23rem) minmax(0, 1fr);
@@ -439,6 +438,145 @@ button:disabled, .action-link[disabled] {
 
   .solution-overview-grid,
   .solution-answer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+.topic-lab,
+.topic-lab-layout,
+.topic-panel-grid,
+.topic-option-list,
+.topic-detail-card,
+.topic-case-study,
+.topic-step-grid,
+.topic-step-card,
+.topic-detail-section,
+.mermaid-card,
+.mermaid-output,
+.mermaid-fallback {
+  display: grid;
+  gap: 1rem;
+}
+
+.topic-lab-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.topic-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.topic-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.topic-tab,
+.topic-option {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.topic-tab {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+}
+
+.topic-option {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  text-align: left;
+}
+
+.topic-tab.active,
+.topic-option.active {
+  border-color: var(--border-strong);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.topic-option span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.topic-detail-section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.topic-detail-section p,
+.topic-detail-section li,
+.topic-step-card p,
+.mermaid-fallback p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.topic-detail-card ul,
+.topic-step-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.mermaid-card {
+  align-content: start;
+}
+
+.mermaid-output {
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 17, 31, 0.96);
+  padding: 1rem;
+}
+
+.mermaid-output svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-fallback pre {
+  margin: 0;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 17, 31, 0.96);
+  padding: 1rem;
+  color: #bfdbfe;
+}
+
+@media (min-width: 960px) {
+  .topic-lab-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .topic-panel-grid {
+    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+
+  .topic-case-study {
+    grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.6fr);
+    align-items: start;
+  }
+
+  .topic-step-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

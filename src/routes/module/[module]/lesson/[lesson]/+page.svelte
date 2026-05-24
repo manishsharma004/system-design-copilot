@@ -2,6 +2,7 @@
 <script>
   import { base } from '$app/paths';
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
+  import LessonExplorer from '$lib/components/LessonExplorer.svelte';
   import { progress } from '$lib/stores/progress';
   import PracticeWorkspace from '$lib/components/PracticeWorkspace.svelte';
   export let data;
@@ -103,6 +104,8 @@
     </article>
   </div>
 </section>
+
+<LessonExplorer lesson={data.lesson} />
 
 <PracticeWorkspace lesson={data.lesson} />
 <LessonSolutionPanel lesson={data.lesson} />
