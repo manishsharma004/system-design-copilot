@@ -3,6 +3,8 @@
   import { base } from '$app/paths';
   import { completedLessonCount, progress } from '$lib/stores/progress';
   import { getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
+
+  const featuredModules = modules.slice(0, 3);
 </script>
 
 <svelte:head>
@@ -13,12 +15,33 @@
   <div class="hero-grid home-hero-grid">
     <div class="hero-card hero-primary-card">
       <p class="eyebrow">Complete curriculum</p>
+      <div class="hero-kicker-row">
+        <span class="pill">Self-paced SvelteKit guide</span>
+        <span class="pill">48 lessons across 9 modules</span>
+      </div>
       <h1 class="hero-title">Study system design in the order interviews actually reward.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
       <p class="hero-guidance">{siteOverview.heroGuidance}</p>
       <div class="action-row">
         <a class="action-link primary" href={`${base}/module/${modules[0].slug}`}>Start with {modules[0].title}</a>
         <a class="action-link" href={`${base}/module/${modules[modules.length - 1].slug}`}>Jump to case studies</a>
+      </div>
+      <div class="hero-stat-strip">
+        <article class="hero-stat-card">
+          <span class="eyebrow">Modules</span>
+          <strong>{modules.length}</strong>
+          <p>Ordered from estimation and core building blocks through full case studies.</p>
+        </article>
+        <article class="hero-stat-card">
+          <span class="eyebrow">Lessons</span>
+          <strong>{allLessons.length}</strong>
+          <p>Short, specific topics designed to sharpen one interview decision at a time.</p>
+        </article>
+        <article class="hero-stat-card">
+          <span class="eyebrow">Progress</span>
+          <strong>{$completedLessonCount}/{allLessons.length}</strong>
+          <p>Saved locally so you can move between modules without losing your place.</p>
+        </article>
       </div>
       <div class="action-row">
         <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
@@ -36,7 +59,16 @@
     </div>
     <article class="hero-card study-loop-card">
       <p class="eyebrow">Session loop</p>
+      <div class="hero-orbit">
+        <div class="hero-orbit-ring hero-orbit-ring-outer"></div>
+        <div class="hero-orbit-ring hero-orbit-ring-inner"></div>
+        <div class="hero-orbit-core">
+          <strong>Practice</strong>
+          <span>Frame, estimate, sketch, defend</span>
+        </div>
+      </div>
       <h2>Use the same four-part rhythm in every practice session.</h2>
+      <p class="hero-note">The goal is not to collect diagrams. It is to build a repeatable answer shape that stays coherent under follow-up pressure.</p>
       <div class="study-loop-list">
         {#each siteOverview.studyLoop as step}
           <article class="study-loop-step">
@@ -48,6 +80,44 @@
       </div>
     </article>
   </div>
+</section>
+
+<section class="section-grid hero-featured-grid">
+  <article class="hero-card home-detail-card">
+    <p class="eyebrow">Fastest way in</p>
+    <h2>Three strong entry points, depending on how you need to practice.</h2>
+    <div class="hero-featured-modules">
+      {#each featuredModules as module, index}
+        <a class="featured-module-card" href={`${base}/module/${module.slug}`}>
+          <div class="featured-module-header">
+            <span class="pill">0{index + 1}</span>
+            <span class="eyebrow">{module.lessons.length} lessons</span>
+          </div>
+          <h3>{module.title}</h3>
+          <p>{module.summary}</p>
+          <span class="featured-module-link">Open module</span>
+        </a>
+      {/each}
+    </div>
+  </article>
+  <article class="hero-card home-detail-card home-commitment-card">
+    <p class="eyebrow">What changes when this clicks</p>
+    <h2>Answers stop sounding like component lists and start sounding like design decisions.</h2>
+    <div class="study-section-list compact-list">
+      <article class="study-section-card emphasis-card">
+        <strong>Requirement-first structure</strong>
+        <p>You open with scope, workload, and correctness constraints instead of jumping straight to Kafka, caches, and databases.</p>
+      </article>
+      <article class="study-section-card emphasis-card">
+        <strong>Clear baseline architecture</strong>
+        <p>You can explain one request path end to end before discussing scale levers, failure isolation, and regional expansion.</p>
+      </article>
+      <article class="study-section-card emphasis-card">
+        <strong>Sharper trade-off language</strong>
+        <p>You get faster at defending choices around consistency, cost, complexity, and operational risk when the interviewer pushes deeper.</p>
+      </article>
+    </div>
+  </article>
 </section>
 
 <section class="track-grid study-track-grid">

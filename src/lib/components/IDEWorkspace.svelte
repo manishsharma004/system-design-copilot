@@ -1,6 +1,6 @@
 <svelte:options runes={false} />
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onDestroy } from 'svelte'
   import CodeEditor from '$lib/components/CodeEditor.svelte'
 
   /** @type {any[]} */
@@ -32,6 +32,13 @@
 
   let explorerCollapsed = false
   let bottomPanelCollapsed = false
+  let explorerWidth = 272
+  let sidePanelWidth = 360
+  let bottomPanelHeight = 220
+  let workspaceEl
+  let mainEl
+  let editorAreaEl
+  let activeResizeCleanup = null
   /** @type {Set<string>} */
   let expandedFolders = new Set(['root', 'src'])
   let previousResultsContent = resultsContent
@@ -85,9 +92,78 @@
     internalActiveFileId = event.detail.fileId
     dispatch('tabchange', event.detail)
   }
+
+  /** @param {number} value @param {number} min @param {number} max */
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max)
+  }
+
+  /** @param {'explorer' | 'side' | 'bottom'} kind @param {PointerEvent} event */
+  function startResize(kind, event) {
+    if (window.matchMedia('(max-width: 768px)').matches) return
+
+    event.preventDefault()
+
+    const startX = event.clientX
+    const startY = event.clientY
+    const workspaceRect = workspaceEl?.getBoundingClientRect()
+    const editorAreaRect = editorAreaEl?.getBoundingClientRect()
+    const mainRect = mainEl?.getBoundingClientRect()
+    const startExplorerWidth = explorerWidth
+    const startSidePanelWidth = sidePanelWidth
+    const startBottomPanelHeight = bottomPanelHeight
+    const handle = /** @type {HTMLElement | null} */ (event.currentTarget)
+
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = kind === 'bottom' ? 'ns-resize' : 'ew-resize'
+
+    const onMove = (moveEvent) => {
+      if (kind === 'explorer' && workspaceRect) {
+        const nextWidth = startExplorerWidth + (moveEvent.clientX - startX)
+        explorerWidth = clamp(nextWidth, 180, Math.max(180, workspaceRect.width - 420))
+      }
+
+      if (kind === 'side' && editorAreaRect) {
+        const nextWidth = startSidePanelWidth - (moveEvent.clientX - startX)
+        sidePanelWidth = clamp(nextWidth, 240, Math.max(240, editorAreaRect.width - 320))
+      }
+
+      if (kind === 'bottom' && mainRect) {
+        const nextHeight = startBottomPanelHeight - (moveEvent.clientY - startY)
+        bottomPanelHeight = clamp(nextHeight, 120, Math.max(120, mainRect.height - 140))
+      }
+    }
+
+    const stopResize = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', stopResize)
+      window.removeEventListener('pointercancel', stopResize)
+      document.body.style.userSelect = ''
+      document.body.style.cursor = ''
+      handle?.classList.remove('dragging')
+      activeResizeCleanup = null
+    }
+
+    activeResizeCleanup?.()
+    handle?.classList.add('dragging')
+    activeResizeCleanup = stopResize
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', stopResize)
+    window.addEventListener('pointercancel', stopResize)
+  }
+
+  onDestroy(() => {
+    activeResizeCleanup?.()
+  })
 </script>
 
-<div class="ide-workspace" class:explorer-collapsed={explorerCollapsed}>
+<div
+  class="ide-workspace"
+  class:explorer-collapsed={explorerCollapsed}
+  style={`--explorer-width: ${explorerWidth}px; --side-panel-width: ${sidePanelWidth}px; --bottom-panel-height: ${bottomPanelHeight}px;`}
+  bind:this={workspaceEl}
+>
   <div class="ide-activity-bar">
     <button
       class="ide-activity-icon"
@@ -173,10 +249,16 @@
         {/if}
       </div>
     </aside>
+    <button
+      aria-label="Resize explorer"
+      class="ide-resize-handle ide-resize-handle-vertical"
+      type="button"
+      onpointerdown={(event) => startResize('explorer', event)}
+    ></button>
   {/if}
 
-  <div class="ide-main">
-    <div class="ide-editor-area" class:has-side-panel={hasSidePanel}>
+  <div class="ide-main" bind:this={mainEl}>
+    <div class="ide-editor-area" class:has-side-panel={hasSidePanel} bind:this={editorAreaEl}>
       <div class="ide-editor-pane">
         <CodeEditor
           {files}
@@ -195,6 +277,12 @@
       </div>
 
       {#if hasSidePanel && previewContent}
+        <button
+          aria-label="Resize preview panel"
+          class="ide-resize-handle ide-resize-handle-vertical"
+          type="button"
+          onpointerdown={(event) => startResize('side', event)}
+        ></button>
         <div class="ide-side-panel">
           <div class="ide-panel-content ide-preview-content">
             <slot name="preview">
@@ -213,6 +301,12 @@
 
     {#if hasBottomPanel && !bottomPanelCollapsed}
       <div class="ide-bottom-panel">
+        <button
+          aria-label="Resize bottom panel"
+          class="ide-resize-handle ide-resize-handle-horizontal"
+          type="button"
+          onpointerdown={(event) => startResize('bottom', event)}
+        ></button>
         <div class="ide-panel-tabs">
           {#each panelTabs.filter(t => t.id !== 'preview') as tab}
             <button
@@ -250,12 +344,12 @@
 <style>
   .ide-workspace {
     display: grid;
-    grid-template-columns: auto minmax(14rem, 18rem) minmax(0, 1fr);
+    grid-template-columns: auto var(--explorer-width, 17rem) 6px minmax(0, 1fr);
     height: clamp(34rem, 70vh, 48rem);
     min-height: 34rem;
     background: #11131a;
     border: 1px solid #2f3340;
-    border-radius: 0.9rem;
+    border-radius: 0.5rem;
     overflow: hidden;
     resize: vertical;
   }
@@ -287,7 +381,7 @@
     transition: color 0.1s;
     padding: 0;
     min-height: 0;
-    border-radius: 0.7rem;
+    border-radius: 0.4rem;
     border-left: 2px solid transparent;
   }
 
@@ -329,7 +423,7 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     min-height: 0;
-    border-radius: 0.75rem;
+    border-radius: 0.4rem;
     cursor: pointer;
   }
 
@@ -366,7 +460,7 @@
     color: #cfd5e9;
     font-size: 0.82rem;
     min-height: 2rem;
-    border-radius: 0.55rem;
+    border-radius: 0.35rem;
     cursor: pointer;
     text-align: left;
   }
@@ -418,7 +512,7 @@
   }
 
   .ide-editor-area.has-side-panel {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) 6px minmax(15rem, var(--side-panel-width, 22.5rem));
   }
 
   .ide-editor-pane {
@@ -495,7 +589,7 @@
     font-size: 1rem;
     padding: 0;
     min-height: 0;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
   }
 
@@ -519,11 +613,65 @@
   .ide-bottom-panel {
     border-top: 1px solid #252a35;
     background: #11131a;
-    max-height: 280px;
+    height: var(--bottom-panel-height, 220px);
+    max-height: none;
     min-height: 120px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+  }
+
+  .ide-resize-handle {
+    position: relative;
+    border: none;
+    padding: 0;
+    min-height: 0;
+    min-width: 0;
+    background: transparent;
+    cursor: default;
+  }
+
+  .ide-resize-handle::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    border-radius: 999px;
+    background: rgba(95, 106, 125, 0.5);
+    transition: background 0.16s ease, opacity 0.16s ease;
+    opacity: 0.9;
+  }
+
+  .ide-resize-handle:hover::after,
+  .ide-resize-handle:focus-visible::after,
+  .ide-resize-handle.dragging::after {
+    background: rgba(137, 180, 250, 0.92);
+  }
+
+  .ide-resize-handle-vertical {
+    width: 6px;
+    cursor: ew-resize;
+  }
+
+  .ide-resize-handle-vertical::after {
+    width: 2px;
+    height: 100%;
+  }
+
+  .ide-resize-handle-horizontal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
+    z-index: 2;
+  }
+
+  .ide-resize-handle-horizontal::after {
+    width: 100%;
+    height: 2px;
   }
 
   .ide-bottom-content {
@@ -578,6 +726,10 @@
 
     .ide-editor-area.has-side-panel {
       grid-template-columns: 1fr;
+    }
+
+    .ide-resize-handle {
+      display: none;
     }
 
     .ide-side-panel {
