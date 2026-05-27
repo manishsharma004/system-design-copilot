@@ -7,6 +7,8 @@ async function loadCppRuntime() {
 
   if (!runtimePromise) {
     runtimePromise = (async () => {
+      await ensureBrowserBuffer()
+
       const [clangModule, wasiModule] = await Promise.all([
         import('@yowasp/clang'),
         import('@wasmer/wasi')
@@ -23,6 +25,13 @@ async function loadCppRuntime() {
   return runtimePromise
 }
 
+async function ensureBrowserBuffer() {
+  if (typeof globalThis.Buffer !== 'undefined') return
+
+  const bufferModule = await import('buffer')
+  globalThis.Buffer = bufferModule.Buffer
+}
+
 export async function ensureCppRuntime() {
   await loadCppRuntime()
 }
@@ -33,7 +42,16 @@ export async function runCppSource(source) {
   let compiledFiles
   try {
     compiledFiles = await runClang(
-      ['clang++', 'solution.cpp', '-std=c++17', '-O2', '-o', 'solution'],
+      [
+        'clang++',
+        'solution.cpp',
+        '-std=c++17',
+        '-O2',
+        '-fno-exceptions',
+        '-D_LIBCPP_HAS_NO_EXCEPTIONS',
+        '-o',
+        'solution'
+      ],
       { 'solution.cpp': source }
     )
   } catch (error) {

@@ -7,6 +7,8 @@ const HTML_ENTITIES = {
   '&#39;': "'"
 }
 
+const JAVA_RUNTIME_DIR = '/files'
+
 const SUPPORTED_SCALAR_TYPES = new Set(['integer', 'string', 'boolean'])
 
 export const practiceLanguageCatalog = [
@@ -33,8 +35,8 @@ export const practiceLanguageCatalog = [
     label: 'Java',
     monacoLanguage: 'java',
     runtimeId: 'wasm-java',
-    available: false,
-    helperText: 'Select and edit the Java template now. Running requires a bundled Java WASM toolchain.',
+    available: true,
+    helperText: 'Runs in-browser through a CheerpJ-backed Java runtime that compiles the current source and executes a generated harness locally.',
     filename: 'Solution.java'
   }
 ]
@@ -120,7 +122,7 @@ export function supportsLocalWasmPractice({ practiceMeta, languageTemplates }) {
   return Boolean(
     practiceMeta
       && isSupportedPracticeMeta(practiceMeta)
-      && (languageTemplates.python3?.defaultCode || languageTemplates.cpp?.defaultCode)
+      && (languageTemplates.python3?.defaultCode || languageTemplates.cpp?.defaultCode || languageTemplates.java?.defaultCode)
   )
 }
 
@@ -228,25 +230,44 @@ export function buildCppPracticeSource({ practiceMeta, userCode, inputValues }) 
     : 'result'
 
   return [
-    '#include <bits/stdc++.h>',
+    '#include <algorithm>',
+    '#include <array>',
+    '#include <cmath>',
+    '#include <cstdint>',
+    '#include <deque>',
+    '#include <functional>',
+    '#include <iostream>',
+    '#include <limits>',
+    '#include <map>',
+    '#include <numeric>',
+    '#include <queue>',
+    '#include <set>',
+    '#include <stack>',
+    '#include <stdexcept>',
+    '#include <string>',
+    '#include <type_traits>',
+    '#include <unordered_map>',
+    '#include <unordered_set>',
+    '#include <utility>',
+    '#include <vector>',
     'using namespace std;',
     '',
     'static string escape_json_string(const string& value) {',
     '  string escaped;',
     '  escaped.reserve(value.size() + 8);',
     '  for (char ch : value) {',
-    "    if (ch == '\\') escaped += \"\\\\\";",
-    "    else if (ch == '\"') escaped += \"\\\"\";",
-    "    else if (ch == '\n') escaped += \"\\n\";",
-    "    else if (ch == '\r') escaped += \"\\r\";",
-    "    else if (ch == '\t') escaped += \"\\t\";",
+    String.raw`    if (ch == '\\') escaped += "\\\\";`,
+    String.raw`    else if (ch == '"') escaped += "\\\"";`,
+    String.raw`    else if (ch == '\n') escaped += "\\n";`,
+    String.raw`    else if (ch == '\r') escaped += "\\r";`,
+    String.raw`    else if (ch == '\t') escaped += "\\t";`,
     '    else escaped += ch;',
     '  }',
     '  return escaped;',
     '}',
     '',
     'static string to_json_value(const string& value) {',
-    '  return "\"" + escape_json_string(value) + "\"";',
+    String.raw`  return "\"" + escape_json_string(value) + "\"";`,
     '}',
     '',
     'static string to_json_value(const char* value) {',
@@ -283,6 +304,88 @@ export function buildCppPracticeSource({ practiceMeta, userCode, inputValues }) 
     '  return 0;',
     '}'
   ].join('\n').replace(/\n\n\n+/g, '\n\n')
+}
+
+export function buildJavaPracticeFiles({ practiceMeta, userCode, inputValues }) {
+  const parameterLines = practiceMeta.params
+    .map((param, index) => {
+      const typeInfo = normalizePracticeType(param.type)
+      return `${toJavaType(typeInfo)} ${param.name} = ${toJavaLiteral(inputValues[index], typeInfo)};`
+    })
+    .join('\n')
+
+  const returnType = normalizePracticeType(practiceMeta.return?.type ?? 'void')
+  const callArguments = practiceMeta.params.map((param) => param.name).join(', ')
+  const invocationLine = returnType.kind === 'void'
+    ? `solver.${practiceMeta.name}(${callArguments});`
+    : `Object result = solver.${practiceMeta.name}(${callArguments});`
+  const outputExpression = returnType.kind === 'void'
+    ? practiceMeta.params[practiceMeta.output.paramindex]?.name ?? 'null'
+    : 'result'
+
+  const harnessSource = [
+    'import java.lang.reflect.Array;',
+    'import java.nio.charset.StandardCharsets;',
+    'import java.nio.file.Files;',
+    'import java.nio.file.Paths;',
+    '',
+    'public class Harness {',
+    '  private static String escapeJsonString(String value) {',
+    '    StringBuilder escaped = new StringBuilder(value.length() + 8);',
+    '    for (int index = 0; index < value.length(); index += 1) {',
+    '      char ch = value.charAt(index);',
+    String.raw`      if (ch == '\\') escaped.append("\\\\");`,
+    String.raw`      else if (ch == '"') escaped.append("\\\"");`,
+    String.raw`      else if (ch == '\n') escaped.append("\\n");`,
+    String.raw`      else if (ch == '\r') escaped.append("\\r");`,
+    String.raw`      else if (ch == '\t') escaped.append("\\t");`,
+    '      else escaped.append(ch);',
+    '    }',
+    '    return escaped.toString();',
+    '  }',
+    '',
+    '  private static String toJsonValue(Object value) {',
+    '    if (value == null) return "null";',
+    String.raw`    if (value instanceof String) return "\"" + escapeJsonString((String) value) + "\"";`,
+    '    if (value instanceof Boolean) return ((Boolean) value).booleanValue() ? "true" : "false";',
+    '    if (value instanceof Number) return String.valueOf(value);',
+    '    Class<?> valueClass = value.getClass();',
+    '    if (valueClass.isArray()) {',
+    '      int length = Array.getLength(value);',
+    '      StringBuilder output = new StringBuilder("[");',
+    '      for (int index = 0; index < length; index += 1) {',
+    '        if (index > 0) output.append(", ");',
+    '        output.append(toJsonValue(Array.get(value, index)));',
+    '      }',
+    '      output.append("]");',
+    '      return output.toString();',
+    '    }',
+    String.raw`    return "\"" + escapeJsonString(String.valueOf(value)) + "\"";`,
+    '  }',
+    '',
+    '  public static void main(String[] args) throws Exception {',
+    ...indentJavaLines(parameterLines),
+    '    try {',
+    '      Solution solver = new Solution();',
+    `      ${invocationLine}`,
+    `      Files.write(Paths.get("${JAVA_RUNTIME_DIR}/result.json"), toJsonValue(${outputExpression}).getBytes(StandardCharsets.UTF_8));`,
+    `      Files.write(Paths.get("${JAVA_RUNTIME_DIR}/error.txt"), new byte[0]);`,
+    '    } catch (Throwable error) {',
+    '      java.io.StringWriter writer = new java.io.StringWriter();',
+    '      java.io.PrintWriter printer = new java.io.PrintWriter(writer);',
+    '      error.printStackTrace(printer);',
+    '      printer.flush();',
+    `      Files.write(Paths.get("${JAVA_RUNTIME_DIR}/error.txt"), writer.toString().getBytes(StandardCharsets.UTF_8));`,
+    '      throw error;',
+    '    }',
+    '  }',
+    '}'
+  ].join('\n').replace(/\n\n\n+/g, '\n\n')
+
+  return {
+    solutionSource: userCode.trimEnd(),
+    harnessSource
+  }
 }
 
 function decodeHtmlEntities(value) {
@@ -409,6 +512,38 @@ function toCppType(typeInfo) {
   return Array.from({ length: typeInfo.depth }).reduce((current) => `vector<${current}>`, baseType)
 }
 
+function toJavaType(typeInfo) {
+  if (!typeInfo || typeInfo.kind === 'void') return 'void'
+
+  const baseType = typeInfo.base === 'integer'
+    ? 'int'
+    : typeInfo.base === 'string'
+      ? 'String'
+      : 'boolean'
+
+  return `${baseType}${'[]'.repeat(typeInfo.depth)}`
+}
+
+function toJavaLiteral(value, typeInfo) {
+  if (Array.isArray(value)) {
+    const nextType = typeInfo && typeInfo.depth > 0
+      ? { ...typeInfo, depth: typeInfo.depth - 1, kind: typeInfo.depth - 1 ? 'array' : 'scalar' }
+      : null
+    const arrayType = typeInfo ? toJavaType(typeInfo) : 'Object[]'
+    return `new ${arrayType}{${value.map((entry) => toJavaLiteral(entry, nextType)).join(', ')}}`
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(value)
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false'
+  }
+  if (value === null || value === undefined) {
+    return 'null'
+  }
+  return String(value)
+}
+
 function toCppLiteral(value, typeInfo) {
   if (Array.isArray(value)) {
     const nextType = typeInfo && typeInfo.depth > 0
@@ -431,4 +566,9 @@ function toCppLiteral(value, typeInfo) {
 function indentCppLines(source) {
   if (!source.trim()) return []
   return source.split('\n').map((line) => `  ${line}`)
+}
+
+function indentJavaLines(source) {
+  if (!source.trim()) return []
+  return source.split('\n').map((line) => `    ${line}`)
 }

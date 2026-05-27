@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildCppPracticeSource, buildPythonPracticeSource } from '../src/lib/dsa/practice.js'
+import { buildCppPracticeSource, buildJavaPracticeFiles, buildPythonPracticeSource } from '../src/lib/dsa/practice.js'
 
 test('buildPythonPracticeSource emits top-level Python without stray indentation', () => {
   const source = buildPythonPracticeSource({
@@ -48,4 +48,29 @@ test('buildCppPracticeSource embeds input literals and serializes the return val
   assert.match(source, /int target = 9;/)
   assert.match(source, /auto result = solver\.twoSum\(nums, target\);/)
   assert.match(source, /cout << to_json_value\(result\);/)
+})
+
+test('buildJavaPracticeFiles emits a harness that writes the comparable result to the virtual filesystem', () => {
+  const files = buildJavaPracticeFiles({
+    practiceMeta: {
+      name: 'containsDuplicate',
+      params: [{ name: 'nums', type: 'integer[]' }],
+      return: { type: 'boolean' }
+    },
+    userCode: [
+      'class Solution {',
+      '    public boolean containsDuplicate(int[] nums) {',
+      '        return true;',
+      '    }',
+      '}'
+    ].join('\n'),
+    inputValues: [[1, 2, 3]]
+  })
+
+  assert.match(files.solutionSource, /class Solution/)
+  assert.match(files.harnessSource, /else if \(ch == '\"'\) escaped\.append\("\\\\\\\""\);/)
+  assert.match(files.harnessSource, /if \(value instanceof String\) return "\\\"" \+ escapeJsonString\(\(String\) value\) \+ "\\\"";/)
+  assert.match(files.harnessSource, /int\[] nums = new int\[]\{1, 2, 3\};/)
+  assert.match(files.harnessSource, /Object result = solver\.containsDuplicate\(nums\);/)
+  assert.match(files.harnessSource, /Files\.write\(Paths\.get\("\/files\/result\.json"\), toJsonValue\(result\)\.getBytes\(StandardCharsets\.UTF_8\)\);/)
 })

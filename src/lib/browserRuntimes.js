@@ -24,8 +24,8 @@ const runtimeRegistry = new Map([
     id: 'wasm-java',
     label: 'Java WASM toolchain adapter',
     kind: 'wasm',
-    available: false,
-    summary: 'Reserved for a bundled Java compiler/runtime pair compiled to WebAssembly.'
+    available: true,
+    summary: 'Loads a CheerpJ browser runtime, compiles Java sources in-browser, and executes a generated harness locally.'
   }],
   ['wasm-lua', {
     id: 'wasm-lua',

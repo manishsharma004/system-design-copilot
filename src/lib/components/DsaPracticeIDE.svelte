@@ -6,6 +6,7 @@
   import CodeEditor from '$lib/components/CodeEditor.svelte'
   import {
     buildCppPracticeSource,
+    buildJavaPracticeFiles,
     buildPythonPracticeSource,
     formatComparableValue,
     parseExpectedValue,
@@ -13,6 +14,7 @@
     practiceLanguageCatalog
   } from '$lib/dsa/practice'
   import { ensureCppRuntime, runCppSource } from '$lib/dsa/wasmCppRuntime'
+  import { ensureJavaRuntime, runJavaPractice } from '$lib/dsa/wasmJavaRuntime'
   import { ensurePythonRuntime, runPythonSource } from '$lib/dsa/wasmPythonRuntime'
 
   export let lesson
@@ -100,7 +102,7 @@
       return 'C++ runtime is ready. The current file will compile to WebAssembly in-browser and run through a WASI adapter.'
     }
     if (nextLanguageId === 'java') {
-      return 'Java template mode is ready, but execution is still pending a browser JVM integration.'
+      return 'Java runtime is ready. The current source will compile inside CheerpJ and execute through a generated harness in the browser.'
     }
     return 'Python runtime loaded locally in the browser through Pyodide WebAssembly.'
   }
@@ -187,6 +189,31 @@
           inputValues
         })
         execution = await runCppSource(source)
+      }
+    } else if (activeLanguage.id === 'java') {
+      runtimeStatus = 'loading'
+      runtimeMessage = 'Compiling Java in the browser through CheerpJ, then executing a generated harness.'
+
+      try {
+        await ensureJavaRuntime()
+        runtimeReadyByLanguage = { ...runtimeReadyByLanguage, java: true }
+      } catch (error) {
+        execution = {
+          ok: false,
+          stdout: '',
+          stderr: '',
+          error: error instanceof Error ? error.message : 'Unable to load the Java browser runtime.'
+        }
+      }
+
+      if (!execution) {
+        const sources = buildJavaPracticeFiles({
+          practiceMeta: selectedQuestion.practiceMeta,
+          userCode: editorValue,
+          inputValues
+        })
+        console.log('Generated Java sources for practice run:', sources)
+        execution = await runJavaPractice(sources)
       }
     } else {
       latestRun = {
