@@ -343,7 +343,7 @@
                 </button>
               {/each}
             </div>
-            <button class="action-link primary" type="button" onclick={runCurrentCase}>Run test case</button>
+            <button class="action-link primary" type="button" onclick={runCurrentCase} title="Run test case (Ctrl+Enter)">Run test case</button>
           </div>
 
           <div class="editor-frame">
@@ -352,8 +352,10 @@
                 files={editorFiles}
                 activeFileId="solution"
                 minHeight="24rem"
+                runShortcutEnabled={true}
                 showHelperToolbar={false}
                 on:change={handleEditorChange}
+                on:runshortcut={runCurrentCase}
               />
             {/key}
           </div>

@@ -19,6 +19,7 @@
   export let snippetActions = []
   export let commandActions = []
   export let showHelperToolbar = true
+  export let runShortcutEnabled = false
 
   const dispatch = createEventDispatcher()
 
@@ -437,6 +438,14 @@
     if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 's' && editorActive && hasSaveCommand) {
       event.preventDefault()
       saveCurrentFile()
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key === 'Enter' && editorActive && runShortcutEnabled && !commandPaletteOpen) {
+      event.preventDefault()
+      dispatch('runshortcut', {
+        activeFileId: resolvedActiveFileId,
+        file: currentFile
+      })
       return
     }
     if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'z' && editorActive) {
