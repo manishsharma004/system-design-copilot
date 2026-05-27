@@ -35,7 +35,10 @@
     "vite": "^8.0.7"
   },
   "dependencies": {
+    "@wasmer/wasi": "^1.2.2",
+    "@yowasp/clang": "^22.0.0-git20542-10",
     "mermaid": "^11.15.0",
-    "monaco-editor": "^0.53.0"
+    "monaco-editor": "^0.53.0",
+    "pyodide": "^0.29.4"
   }
 }

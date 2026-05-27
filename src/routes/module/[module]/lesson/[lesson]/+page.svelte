@@ -4,9 +4,15 @@
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
   import SimulationIDE from '$lib/components/SimulationIDE.svelte';
+  import { getFlowBySlug } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
+  import DsaPracticeIDE from '$lib/components/DsaPracticeIDE.svelte';
   export let data;
+
+  $: flow = getFlowBySlug(data.module.flowSlug);
+  $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
+  $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
 
   /** @param {string} heading */
   function sectionId(heading) {
@@ -24,6 +30,10 @@
     <div class="breadcrumb">
       <a href={`${base}/`}>Curriculum</a>
       <span>→</span>
+      {#if flow}
+        <a href={`${base}/flow/${flow.slug}`}>{flow.title}</a>
+        <span>→</span>
+      {/if}
       <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
       <span>→</span>
       <span>{data.lesson.title}</span>
@@ -33,6 +43,9 @@
     <p class="hero-subtitle">{data.lesson.summary}</p>
     <div class="action-row">
       <span class="pill">{data.lesson.duration}</span>
+      {#if flow}
+        <span class="pill">{flow.shortTitle} flow</span>
+      {/if}
       <span class="pill">{data.module.title}</span>
       <span class="pill">{data.lesson.sections.length + 1} guided stops</span>
       <button
@@ -202,9 +215,15 @@
 </section>
 
 <LessonExplorer lesson={data.lesson} />
-<SimulationIDE lesson={data.lesson} />
+{#if showSimulationLab}
+  <SimulationIDE lesson={data.lesson} />
+{/if}
 
-<PracticeIDE lesson={data.lesson} />
+{#if isDsaLesson}
+  <DsaPracticeIDE lesson={data.lesson} />
+{:else}
+  <PracticeIDE lesson={data.lesson} />
+{/if}
 <LessonSolutionPanel lesson={data.lesson} />
 
 <section class="panel hero-card">

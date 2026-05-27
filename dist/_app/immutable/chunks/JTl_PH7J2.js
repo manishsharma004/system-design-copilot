@@ -1,0 +1,1 @@
+import{t as e}from"./BEJ5LYV3.js";import{t}from"./CNxaR7cg.js";t({id:`java`,extensions:[`.java`,`.jav`],aliases:[`Java`,`java`],mimetypes:[`text/x-java-source`,`text/x-java`],loader:()=>e(()=>import(`./BEtHBSE62.js`),[],import.meta.url)});

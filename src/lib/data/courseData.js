@@ -1,7 +1,9 @@
+import { rawDsaModules } from './dsaCourseData.js';
+
 export const siteOverview = {
   "title": "System Design Copilot",
-  "subtitle": "A deeper system design interview prep curriculum with topic guides, building blocks, trade-offs, case studies, and interactive practice labs.",
-  "description": "Study foundations, distributed systems building blocks, architecture patterns, storage, caching, reliability, security, and end-to-end design drills in a mobile-friendly SvelteKit site with locally saved practice answers.",
+  "subtitle": "Parallel interview prep flows for high-level design, low-level design, and DSA rounds, with guided lessons, case studies, and interactive practice labs.",
+  "description": "Study distributed systems architecture, low-level object design, and data structures and algorithms in separate guided flows, with mobile-friendly lessons, saved practice answers, and interactive drills.",
   "heroGuidance": "Treat the map like a progression from framing to trade-offs. The best interview answers do not list components at random; they move from requirements and estimates into a clear baseline, then spend the remaining time defending the hardest decisions.",
   "studyTracks": [
     {
@@ -3323,12 +3325,810 @@ const rawModules = [
   }
 ];
 
-export const modules = rawModules;
+const rawLowLevelModules = [
+  {
+    "slug": "lld-foundations",
+    "title": "LLD foundations and prompt framing",
+    "summary": "Learn how to turn a machine-coding or object-design prompt into bounded requirements, clean responsibilities, and explicit object contracts.",
+    "objectives": [
+      "Clarify scope, actors, and invariants before sketching classes",
+      "Model responsibilities so each type owns one coherent reason to change",
+      "Choose interfaces and APIs that survive follow-up requirements"
+    ],
+    "lessons": [
+      {
+        "slug": "lld-problem-framing",
+        "title": "LLD prompt framing and scope control",
+        "summary": "Start low-level design interviews by defining the first version, edge cases, and non-negotiable invariants before naming classes.",
+        "duration": "20-30 min",
+        "whyItMatters": "Weak LLD answers jump into class diagrams too early. Strong ones narrow the problem with actors, responsibilities, constraints, and failure rules first.",
+        "sections": [
+          {
+            "heading": "Clarify the product slice",
+            "body": "Ask what the first version must support, who uses it, and which flows matter enough to deserve dedicated objects or services.",
+            "bullets": [
+              "Name the primary user journey before modeling classes",
+              "Separate must-have requirements from optional follow-ups",
+              "Call out constraints such as concurrency, persistence, or auditability"
+            ]
+          },
+          {
+            "heading": "Translate rules into invariants",
+            "body": "Turn interview requirements into rules the design must protect, such as uniqueness, valid state transitions, ordering guarantees, or authorization boundaries.",
+            "bullets": [
+              "List the states an object can legally enter",
+              "Identify data that must stay internally consistent",
+              "Surface the operations that need validation or rejection paths"
+            ]
+          },
+          {
+            "heading": "Choose the first design boundary",
+            "body": "Decide which concepts deserve their own type and which can stay as fields or helper structures so the model stays simple.",
+            "bullets": [
+              "Promote concepts with distinct behavior into objects",
+              "Keep passive data separate from orchestration logic",
+              "Leave speculative abstractions out until requirements justify them"
+            ]
+          }
+        ],
+        "checklist": [
+          "State the scope of version one before drawing types.",
+          "List the invariants the design must preserve.",
+          "Name the critical user flow the object model optimizes for.",
+          "Call out one follow-up requirement you are intentionally postponing."
+        ],
+        "pitfalls": [
+          "Inventing a large pattern-heavy class hierarchy before the requirements are stable.",
+          "Treating every noun in the prompt as a top-level class.",
+          "Ignoring failure or validation rules until the interviewer asks."
+        ],
+        "interviewPrompts": [
+          "How would you frame an LLD prompt for a parking lot versus a rate limiter?",
+          "Which invariants would you lock down first for a meeting scheduler?",
+          "What follow-up questions usually change the object model the most?"
+        ],
+        "diagram": null,
+        "related": [
+          "problem-framing"
+        ]
+      },
+      {
+        "slug": "responsibilities-and-interfaces",
+        "title": "Responsibilities, interfaces, and seams",
+        "summary": "Assign behavior to the right object, define collaboration boundaries, and keep business rules testable without framework noise.",
+        "duration": "25-35 min",
+        "whyItMatters": "Interviewers look for designs where responsibilities are obvious, dependencies are controlled, and logic remains testable as the prompt evolves.",
+        "sections": [
+          {
+            "heading": "Assign ownership deliberately",
+            "body": "Each class should own a focused set of rules or state transitions. If multiple objects need the same rule, introduce a shared policy or service instead of duplicating logic.",
+            "bullets": [
+              "Keep orchestration separate from entity state",
+              "Prefer behavior-rich models over anemic data bags when rules matter",
+              "Move cross-cutting concerns behind interfaces"
+            ]
+          },
+          {
+            "heading": "Design collaboration seams",
+            "body": "Create interfaces where the dependency is likely to change independently, such as persistence, notification delivery, pricing strategies, or clock access.",
+            "bullets": [
+              "Inject dependencies that have external side effects",
+              "Model the minimum interface required by the caller",
+              "Use seams to improve testability, not to satisfy a pattern checklist"
+            ]
+          },
+          {
+            "heading": "Keep the API readable",
+            "body": "Method names, parameter objects, and return types should make legal usage clear and invalid usage hard.",
+            "bullets": [
+              "Choose method names that match domain actions",
+              "Use small value objects for grouped parameters when it improves clarity",
+              "Return explicit results or errors when failure is part of the workflow"
+            ]
+          }
+        ],
+        "checklist": [
+          "Explain why each core class exists.",
+          "Name the interface boundaries that isolate external dependencies.",
+          "Keep the public API aligned with domain language.",
+          "Show how the design stays unit-testable."
+        ],
+        "pitfalls": [
+          "Creating interfaces for every class even when no alternate implementation exists.",
+          "Putting validation, persistence, and workflow orchestration in a single god object.",
+          "Using generic method names like process or handle when the domain action is specific."
+        ],
+        "interviewPrompts": [
+          "When should a rule live inside an entity versus a service?",
+          "How do you decide whether a dependency deserves an interface?",
+          "What makes an API feel interview-ready rather than framework-driven?"
+        ],
+        "diagram": null,
+        "related": [
+          "api-design"
+        ]
+      },
+      {
+        "slug": "validation-errors-and-state",
+        "title": "Validation, errors, and state transitions",
+        "summary": "Design methods that enforce invariants, express failure paths cleanly, and keep state changes easy to reason about.",
+        "duration": "25-35 min",
+        "whyItMatters": "Low-level design quality shows up in how safely objects move between states, reject invalid commands, and explain failure without leaking inconsistent state.",
+        "sections": [
+          {
+            "heading": "Model valid transitions",
+            "body": "Document which operations are legal in each state so the object graph cannot drift into combinations the business rules do not allow.",
+            "bullets": [
+              "Name the lifecycle states explicitly",
+              "Check transitions before mutating dependent fields",
+              "Keep derived status consistent with source data"
+            ]
+          },
+          {
+            "heading": "Choose an error strategy",
+            "body": "Use exceptions, result objects, or domain-specific failures consistently so callers know whether an operation can be retried, corrected, or must abort.",
+            "bullets": [
+              "Reserve exceptions for truly exceptional control flow when possible",
+              "Expose domain failures in terms the caller can act on",
+              "Make partial success impossible unless it is explicitly modeled"
+            ]
+          },
+          {
+            "heading": "Protect invariants under change",
+            "body": "Guard methods at the boundary and centralize critical validation so follow-up requirements do not scatter rule checks across unrelated classes.",
+            "bullets": [
+              "Validate before persisting or publishing side effects",
+              "Keep invariant logic close to the state it protects",
+              "Avoid setter-heavy designs that let callers bypass rules"
+            ]
+          }
+        ],
+        "checklist": [
+          "Describe the legal state machine for the core object.",
+          "Show how invalid commands are rejected.",
+          "Keep state mutation and validation in the same abstraction.",
+          "Explain how callers observe and handle domain errors."
+        ],
+        "pitfalls": [
+          "Updating several fields independently without an invariant boundary.",
+          "Mixing technical exceptions with domain-level outcomes inconsistently.",
+          "Exposing public setters that let callers skip business rules."
+        ],
+        "interviewPrompts": [
+          "How would you model state changes for an order or booking lifecycle?",
+          "When is a result object cleaner than throwing an exception?",
+          "How do you stop invariant checks from being duplicated everywhere?"
+        ],
+        "diagram": null,
+        "related": [
+          "distributed-transactions"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "lld-modeling",
+    "title": "Object modeling and domain relationships",
+    "summary": "Practice identifying entities, value objects, aggregates, and collaborations so your designs stay cohesive as requirements grow.",
+    "objectives": [
+      "Separate identity-bearing entities from immutable values",
+      "Choose composition, association, or inheritance based on behavior",
+      "Keep state and workflows aligned with domain boundaries"
+    ],
+    "lessons": [
+      {
+        "slug": "entities-value-objects-and-aggregates",
+        "title": "Entities, value objects, and aggregates",
+        "summary": "Use identity, immutability, and transactional boundaries to decide how domain concepts should be modeled.",
+        "duration": "25-35 min",
+        "whyItMatters": "Many LLD prompts become simpler when you distinguish long-lived entities from descriptive values and group consistency rules under the right aggregate root.",
+        "sections": [
+          {
+            "heading": "Find the objects with identity",
+            "body": "Entities are the parts of the system you track over time. They deserve identifiers, lifecycle rules, and methods that enforce meaningful transitions.",
+            "bullets": [
+              "Keep entity identity stable even when attributes change",
+              "Attach lifecycle rules to the entity that owns them",
+              "Avoid comparing entities only by mutable fields"
+            ]
+          },
+          {
+            "heading": "Promote descriptive data into value objects",
+            "body": "Immutable value objects make validation and comparison cleaner when a concept is descriptive rather than identity-bearing.",
+            "bullets": [
+              "Use value objects for validated concepts like Money or TimeRange",
+              "Bundle related fields when they travel together conceptually",
+              "Push small validation rules into the value object constructor"
+            ]
+          },
+          {
+            "heading": "Choose aggregate boundaries",
+            "body": "Place strongly consistent rules inside one aggregate and accept eventual coordination between aggregates when the workflow spans multiple owners.",
+            "bullets": [
+              "Keep each aggregate small enough to update atomically",
+              "Route mutating commands through the aggregate root",
+              "Avoid giant roots that serialize unrelated work"
+            ]
+          }
+        ],
+        "checklist": [
+          "Identify which concepts need stable identity.",
+          "Use value objects for validated, immutable data.",
+          "Name the aggregate root that protects each critical invariant.",
+          "Explain what consistency is guaranteed inside versus outside the aggregate."
+        ],
+        "pitfalls": [
+          "Treating every nested type as a separate entity.",
+          "Allowing callers to mutate internal collections directly.",
+          "Creating one aggregate so large that unrelated actions contend with each other."
+        ],
+        "interviewPrompts": [
+          "Which parts of a ride-booking system are entities versus value objects?",
+          "How do aggregate boundaries affect consistency and performance?",
+          "When is a value object worth introducing in an interview answer?"
+        ],
+        "diagram": null,
+        "related": [
+          "relational-data-modeling"
+        ]
+      },
+      {
+        "slug": "composition-vs-inheritance",
+        "title": "Composition, inheritance, and polymorphism",
+        "summary": "Use shared behavior carefully so the design stays extensible without coupling unrelated workflows together.",
+        "duration": "20-30 min",
+        "whyItMatters": "Low-level interviews often probe whether you can reuse behavior without locking future requirements into a brittle inheritance tree.",
+        "sections": [
+          {
+            "heading": "Prefer composition for optional behavior",
+            "body": "Compose collaborators when behavior varies independently from the owning object so you can swap policies without rewriting the hierarchy.",
+            "bullets": [
+              "Wrap algorithms behind focused strategy interfaces",
+              "Compose features that may be turned on or off independently",
+              "Avoid inheritance when the relationship is only convenience reuse"
+            ]
+          },
+          {
+            "heading": "Use inheritance for real substitutability",
+            "body": "Inheritance is strongest when each subtype honors the same semantic contract and callers can treat them uniformly.",
+            "bullets": [
+              "Check the Liskov-style behavioral contract, not just field overlap",
+              "Keep base classes small and stable",
+              "Push extension hooks to the edges of the abstraction"
+            ]
+          },
+          {
+            "heading": "Present the trade-off clearly",
+            "body": "Interview answers improve when you justify why a choice makes future extension safer or simpler for this problem shape.",
+            "bullets": [
+              "Explain what kind of future change the design optimizes for",
+              "Mention the cost of too many tiny abstractions",
+              "Show one concrete follow-up requirement your design can absorb"
+            ]
+          }
+        ],
+        "checklist": [
+          "Use composition when behavior varies independently.",
+          "Use inheritance only for genuine substitutability.",
+          "Keep contracts clear enough that callers depend on behavior, not concrete types.",
+          "Tie the design choice to an expected future extension."
+        ],
+        "pitfalls": [
+          "Building deep inheritance trees to save a little duplication.",
+          "Using polymorphism where a simple conditional would be clearer.",
+          "Forgetting to explain what extension point the abstraction buys you."
+        ],
+        "interviewPrompts": [
+          "How would you model different pricing or notification behaviors?",
+          "When is inheritance justified in an interview setting?",
+          "What makes a strategy abstraction too heavy for the problem?"
+        ],
+        "diagram": null,
+        "related": [
+          "storage-selection"
+        ]
+      },
+      {
+        "slug": "workflow-and-state-modeling",
+        "title": "Workflow orchestration and state modeling",
+        "summary": "Separate durable state from coordination logic so long-running workflows remain understandable and extensible.",
+        "duration": "25-35 min",
+        "whyItMatters": "LLD prompts often expand from a single method to a multi-step workflow. Good designs keep orchestration explicit instead of burying it across many collaborating objects.",
+        "sections": [
+          {
+            "heading": "Model the command flow",
+            "body": "Write down which object receives the command, which validations happen first, and how downstream collaborators are invoked.",
+            "bullets": [
+              "Choose one clear entry point for each user action",
+              "Keep orchestration readable from top to bottom",
+              "Distinguish synchronous validation from eventual work"
+            ]
+          },
+          {
+            "heading": "Keep domain state authoritative",
+            "body": "Workflows should ask aggregates or entities to change state rather than bypassing them and mutating their data directly.",
+            "bullets": [
+              "Let domain objects decide whether a transition is legal",
+              "Emit explicit events or callbacks when later actions depend on the change",
+              "Avoid duplicating status logic in services and entities"
+            ]
+          },
+          {
+            "heading": "Prepare for follow-up requirements",
+            "body": "Interview prompts commonly add retries, cancellations, notifications, or audit logs. Design the workflow so those steps can be attached without rewriting the core model.",
+            "bullets": [
+              "Leave room for side-effect handlers or observers",
+              "Keep long-running concerns out of the entity itself",
+              "Show how new steps can be inserted without changing the main contract"
+            ]
+          }
+        ],
+        "checklist": [
+          "Identify the entry point for each major workflow.",
+          "Keep state transitions owned by domain objects.",
+          "Separate orchestration from persistence and side effects.",
+          "Explain how the workflow absorbs common follow-up requirements."
+        ],
+        "pitfalls": [
+          "Hiding a long workflow behind a single vague service method.",
+          "Mutating entity internals from orchestration code.",
+          "Tying notifications or persistence so tightly to the workflow that every change ripples everywhere."
+        ],
+        "interviewPrompts": [
+          "How would you structure a booking or checkout workflow?",
+          "Where should orchestration stop and domain ownership begin?",
+          "How would you add cancellation or retries without breaking the model?"
+        ],
+        "diagram": null,
+        "related": [
+          "distributed-transactions"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "lld-extensibility",
+    "title": "Extensibility and common LLD patterns",
+    "summary": "Use patterns as decision tools, not cargo cults, so your design stays open to change without drowning in abstraction.",
+    "objectives": [
+      "Apply core patterns only when they solve a real axis of change",
+      "Use dependency inversion to isolate volatile collaborators",
+      "Keep pattern-heavy answers readable under interview time pressure"
+    ],
+    "lessons": [
+      {
+        "slug": "strategy-factory-and-builder",
+        "title": "Strategy, factory, and builder patterns in interviews",
+        "summary": "Recognize when these patterns clarify construction or runtime variation, and when plain code is simpler.",
+        "duration": "25-35 min",
+        "whyItMatters": "These are common interview patterns because they solve real change vectors, but overusing them signals memorization rather than design judgment.",
+        "sections": [
+          {
+            "heading": "Use strategy for runtime variation",
+            "body": "Reach for strategy when behavior varies by policy, tenant, or feature flag and callers should not branch on concrete implementations.",
+            "bullets": [
+              "Define the narrowest contract that captures the variation",
+              "Keep shared orchestration outside the strategy when possible",
+              "Explain the concrete dimension of change the strategy isolates"
+            ]
+          },
+          {
+            "heading": "Use factories for creation complexity",
+            "body": "Factories help when object creation depends on configuration, validation, or assembling multiple dependencies before the object is safe to use.",
+            "bullets": [
+              "Hide construction rules that callers should not duplicate",
+              "Return objects in a valid initial state",
+              "Avoid factories that merely wrap a single constructor call"
+            ]
+          },
+          {
+            "heading": "Use builders for readable setup",
+            "body": "Builders shine when an object has many optional parts or staged validation, especially if a telescoping constructor would bury intent.",
+            "bullets": [
+              "Use builders when readability or staged validation matters",
+              "Make the final build step enforce completeness",
+              "Do not introduce a builder if named parameters would already be clear"
+            ]
+          }
+        ],
+        "checklist": [
+          "Tie each pattern to a real change driver.",
+          "Keep pattern interfaces narrow and intention-revealing.",
+          "Explain why simpler code is insufficient here.",
+          "Avoid adding a pattern without a clear payoff."
+        ],
+        "pitfalls": [
+          "Applying multiple patterns at once just to sound sophisticated.",
+          "Creating a factory and builder for the same object without distinct responsibilities.",
+          "Using strategy when a small configuration table would be clearer."
+        ],
+        "interviewPrompts": [
+          "How would you justify strategy in a pricing or allocation engine?",
+          "When does a factory meaningfully improve a design?",
+          "What is the simplest case where a builder is still worth it?"
+        ],
+        "diagram": null,
+        "related": [
+          "api-design"
+        ]
+      },
+      {
+        "slug": "observer-dependency-inversion-and-events",
+        "title": "Observer, dependency inversion, and event-style decoupling",
+        "summary": "Decouple workflows from side effects so new subscribers or integrations can be added without rewriting core business logic.",
+        "duration": "25-35 min",
+        "whyItMatters": "Many LLD follow-ups ask how to add notifications, analytics, or plugins. This is where explicit event seams and dependency inversion become practical design tools.",
+        "sections": [
+          {
+            "heading": "Separate the core action from side effects",
+            "body": "Keep the object that enforces the business rule focused on the rule itself, then trigger observers or handlers for downstream reactions.",
+            "bullets": [
+              "Publish a clear domain event after a successful state change",
+              "Keep observers idempotent when duplication is possible",
+              "Avoid making the core workflow wait on every optional side effect"
+            ]
+          },
+          {
+            "heading": "Use dependency inversion thoughtfully",
+            "body": "Callers should depend on stable contracts, while infrastructure details such as email gateways, repositories, or schedulers sit behind those contracts.",
+            "bullets": [
+              "Define interfaces from the caller's needs, not the implementation's internals",
+              "Keep infrastructure adapters thin",
+              "Let the domain layer remain readable without framework-specific details"
+            ]
+          },
+          {
+            "heading": "Discuss operational trade-offs",
+            "body": "Observer-style designs are flexible, but they introduce ordering, failure, and debugging concerns that strong answers should mention explicitly.",
+            "bullets": [
+              "Name whether observers run synchronously or asynchronously",
+              "Explain failure handling for optional versus required subscribers",
+              "Mention how you would trace or test event-driven side effects"
+            ]
+          }
+        ],
+        "checklist": [
+          "Keep core rules independent from side effects.",
+          "Use abstractions to isolate infrastructure choices.",
+          "Explain delivery and failure behavior for observers.",
+          "Show how new integrations can be added without editing core logic."
+        ],
+        "pitfalls": [
+          "Letting observer callbacks mutate core domain state behind the main workflow's back.",
+          "Using event terminology without specifying ordering or error handling.",
+          "Adding abstraction layers that obscure the happy path."
+        ],
+        "interviewPrompts": [
+          "How would you add notifications and analytics to an existing workflow?",
+          "When should an observer be synchronous versus asynchronous?",
+          "How does dependency inversion help you keep LLD answers clean?"
+        ],
+        "diagram": null,
+        "related": [
+          "message-queues"
+        ]
+      },
+      {
+        "slug": "repositories-caching-and-persistence-seams",
+        "title": "Repositories, caching, and persistence seams",
+        "summary": "Keep storage details swappable enough for testing and iteration without pretending persistence does not shape the domain.",
+        "duration": "25-35 min",
+        "whyItMatters": "Low-level designs improve when persistence concerns are explicit but do not leak everywhere. This is especially important in interview prompts that may later add caching or new storage backends.",
+        "sections": [
+          {
+            "heading": "Define the persistence contract",
+            "body": "Repositories or gateways should expose the operations the domain needs, not generic CRUD methods that force callers to know too much about storage structure.",
+            "bullets": [
+              "Shape repository methods around use cases",
+              "Keep transaction boundaries understandable",
+              "Avoid leaking query details into business services"
+            ]
+          },
+          {
+            "heading": "Add caching without muddying ownership",
+            "body": "Caching can sit behind a repository or service boundary as long as ownership of freshness and invalidation rules stays explicit.",
+            "bullets": [
+              "Choose who owns cache invalidation before adding the cache",
+              "Keep stale-read behavior visible in the API contract",
+              "Use caching only where the access pattern justifies the complexity"
+            ]
+          },
+          {
+            "heading": "Protect testability and migration paths",
+            "body": "A good seam allows in-memory or fake implementations for tests while leaving room to evolve the backing store later.",
+            "bullets": [
+              "Provide stable interfaces for tests and adapters",
+              "Keep mapping logic near the storage adapter",
+              "Mention how you would evolve schemas or storage engines incrementally"
+            ]
+          }
+        ],
+        "checklist": [
+          "Model persistence APIs around domain use cases.",
+          "State who owns caching and freshness guarantees.",
+          "Keep storage-specific mapping out of the core workflow.",
+          "Explain how the design remains testable without a real database."
+        ],
+        "pitfalls": [
+          "Treating repositories as a mandatory layer even when they add no clarity.",
+          "Hiding important persistence behavior, such as stale reads, behind an innocent-looking method name.",
+          "Letting domain services know too much about cache keys or storage schemas."
+        ],
+        "interviewPrompts": [
+          "How would you hide persistence details in a ticket-booking design?",
+          "Where should caching live in an LLD answer?",
+          "What makes a repository contract clean rather than generic?"
+        ],
+        "diagram": null,
+        "related": [
+          "caching-layers",
+          "storage-selection"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "lld-machine-coding",
+    "title": "Machine coding, testing, and follow-up handling",
+    "summary": "Rehearse how to present class design, write extensible code under time pressure, and adapt cleanly when the interviewer adds new requirements.",
+    "objectives": [
+      "Structure machine-coding answers so core classes appear quickly",
+      "Design for testability, concurrency, and follow-up changes",
+      "Narrate trade-offs while keeping the implementation incremental"
+    ],
+    "lessons": [
+      {
+        "slug": "machine-coding-skeleton-and-iteration",
+        "title": "Machine-coding skeletons and incremental delivery",
+        "summary": "Start with the thin vertical slice that proves the model, then add interfaces, policies, and edge cases in an order the interviewer can follow.",
+        "duration": "20-30 min",
+        "whyItMatters": "A clean LLD interview is not only about the final class diagram. It is also about sequencing implementation choices so the interviewer sees judgment rather than rushed coding.",
+        "sections": [
+          {
+            "heading": "Open with the core slice",
+            "body": "Write the smallest set of types that supports one main scenario end to end before filling in optional abstractions or storage adapters.",
+            "bullets": [
+              "Pick one representative use case to implement first",
+              "Introduce classes in dependency order so the story stays readable",
+              "Defer non-critical features until the main flow works"
+            ]
+          },
+          {
+            "heading": "Narrate what comes next",
+            "body": "As you code, state where validation, interfaces, tests, or follow-up requirements would attach so the interviewer sees a roadmap beyond the first draft.",
+            "bullets": [
+              "Call out planned extension points while the code is still small",
+              "Mention what you would stub versus fully implement under time pressure",
+              "Keep the public API stable while internals evolve"
+            ]
+          },
+          {
+            "heading": "Leave the design reviewable",
+            "body": "Readable names, small methods, and explicit test seams matter more in the interview than squeezing every concern into one pass.",
+            "bullets": [
+              "Prefer clarity over cleverness",
+              "Keep construction and business logic separate",
+              "Stop to summarize trade-offs after each meaningful milestone"
+            ]
+          }
+        ],
+        "checklist": [
+          "Implement one end-to-end happy path first.",
+          "State where extension points will land before over-abstracting.",
+          "Keep class and method names tied to domain behavior.",
+          "Summarize the design after each incremental milestone."
+        ],
+        "pitfalls": [
+          "Trying to code every anticipated requirement before the first scenario works.",
+          "Dumping all implementation into a single service class for speed.",
+          "Using vague placeholders without explaining how the design will evolve."
+        ],
+        "interviewPrompts": [
+          "What do you code first in a 45-minute machine-coding round?",
+          "How do you show extensibility without burning time on abstractions?",
+          "When should you pause and explain rather than continue typing?"
+        ],
+        "diagram": null,
+        "related": [
+          "problem-framing"
+        ]
+      },
+      {
+        "slug": "testing-seams-and-refactoring",
+        "title": "Testing seams, refactoring, and interview-safe cleanup",
+        "summary": "Use tests and small refactors to prove design quality while preserving momentum during a live round.",
+        "duration": "20-30 min",
+        "whyItMatters": "Interviewers often evaluate whether you can recognize design pressure early and carve out seams before the implementation hardens into messy code.",
+        "sections": [
+          {
+            "heading": "Create seams for fast feedback",
+            "body": "Inject collaborators with external effects so business rules can be tested with simple fakes, and keep deterministic logic easy to exercise.",
+            "bullets": [
+              "Wrap clocks, IDs, storage, and gateways behind simple seams",
+              "Write tests around critical rules instead of boilerplate getters",
+              "Prefer deterministic inputs over global state"
+            ]
+          },
+          {
+            "heading": "Refactor in small, visible steps",
+            "body": "If a method grows too broad, extract the policy or helper that carries the real decision-making rather than scattering utility classes everywhere.",
+            "bullets": [
+              "Refactor after a working slice, not before",
+              "Name the reason for the refactor in domain terms",
+              "Use extraction to improve readability or extensibility, not appearance alone"
+            ]
+          },
+          {
+            "heading": "Balance delivery and polish",
+            "body": "A good interview answer shows where you would invest more cleanup with time, while still leaving the current design coherent and defensible.",
+            "bullets": [
+              "State which technical debt is acceptable for the round",
+              "Protect correctness before code style polish",
+              "Mention the next refactor you would make after the interview"
+            ]
+          }
+        ],
+        "checklist": [
+          "Expose seams around external dependencies.",
+          "Test the rules that protect important invariants.",
+          "Refactor only after the behavior is visible and working.",
+          "Explain what polish you would defer and why."
+        ],
+        "pitfalls": [
+          "Writing no tests or examples for critical rules when the prompt invites it.",
+          "Refactoring repeatedly without improving the design story.",
+          "Optimizing code style before the main behavior is correct."
+        ],
+        "interviewPrompts": [
+          "Which seams matter most in a machine-coding interview?",
+          "What is a safe refactor to perform live?",
+          "How do you talk about deferred cleanup without sounding careless?"
+        ],
+        "diagram": null,
+        "related": [
+          "responsibilities-and-interfaces"
+        ]
+      },
+      {
+        "slug": "concurrency-followups-and-scale-bridges",
+        "title": "Concurrency follow-ups and bridging into scale",
+        "summary": "Handle common interviewer pivots around thread safety, shared state, and how an object design changes once the system has to scale out.",
+        "duration": "25-35 min",
+        "whyItMatters": "Strong candidates can explain not only the object model but also what breaks when multiple callers race, shared state grows hot, or the design must move from in-memory logic to distributed coordination.",
+        "sections": [
+          {
+            "heading": "Identify shared mutable state",
+            "body": "Find the objects or caches that multiple threads or requests may touch concurrently and decide whether to lock, partition, copy, or serialize access.",
+            "bullets": [
+              "Name the mutable hotspots explicitly",
+              "Choose a coordination strategy that matches contention levels",
+              "Keep locking scopes narrow and intention-revealing"
+            ]
+          },
+          {
+            "heading": "Prepare the design for scale transitions",
+            "body": "Explain which parts remain local object logic and which must evolve into durable storage, queues, or distributed coordination once a single process is no longer enough.",
+            "bullets": [
+              "Separate in-memory policy from infrastructure assumptions",
+              "Call out where durability or distributed locking may later appear",
+              "Describe how identifiers and APIs survive the migration"
+            ]
+          },
+          {
+            "heading": "Answer follow-ups without overbuilding",
+            "body": "Interview follow-ups should extend the current design. Avoid rewriting everything; instead explain the seam or responsibility that changes as scale increases.",
+            "bullets": [
+              "Reuse existing abstractions where they still fit",
+              "Admit when a local design must hand off to HLD concerns",
+              "Show the first scaling change, not the final perfect architecture"
+            ]
+          }
+        ],
+        "checklist": [
+          "Point out shared mutable state and contention risks.",
+          "Explain what remains local logic versus distributed infrastructure.",
+          "Describe the first design seam that changes under scale.",
+          "Keep follow-up answers incremental instead of starting over."
+        ],
+        "pitfalls": [
+          "Claiming thread safety without naming the shared state being protected.",
+          "Jumping from local object design straight to full distributed architecture with no bridge.",
+          "Throwing away the original design instead of extending it."
+        ],
+        "interviewPrompts": [
+          "How would you answer a thread-safety follow-up on an in-memory design?",
+          "What changes first when an LLD design needs persistence and scale?",
+          "How do you bridge a machine-coding answer into higher-level architecture discussion?"
+        ],
+        "diagram": null,
+        "related": [
+          "consistent-hashing",
+          "message-queues"
+        ]
+      }
+    ]
+  }
+];
+
+const flowDefinitions = [
+  {
+    slug: 'high-level-design',
+    shortTitle: 'HLD',
+    title: 'High-level design interview prep',
+    summary: 'Architecture, distributed systems trade-offs, and end-to-end system walkthroughs for classic system design rounds.',
+    description: 'Use this flow when the interview expects requirements framing, scale estimates, APIs, storage choices, bottleneck analysis, and operational trade-offs across distributed systems.',
+    audience: 'Best for backend, platform, and senior product-engineering interviews that emphasize architecture under scale.',
+    cadence: 'Follow the modules in order or jump into case studies once the core building blocks feel familiar.',
+    heroGuidance: 'Start with requirements and workload shape, then defend the one architectural decision that most affects correctness, latency, or cost.',
+    focusAreas: [
+      'Requirements, estimation, and architecture baselines',
+      'Distributed systems building blocks such as caching, queues, replication, and partitioning',
+      'Product-shaped case studies that rehearse full interview narratives'
+    ],
+    outcome: 'You should be able to drive a whiteboard-style conversation from user needs to deep trade-off discussion without drifting into generic component lists.',
+    moduleSlugs: rawModules.map((module) => module.slug)
+  },
+  {
+    slug: 'low-level-design',
+    shortTitle: 'LLD',
+    title: 'Low-level design interview prep',
+    summary: 'Object modeling, extensible APIs, machine-coding structure, and follow-up handling for class-design rounds.',
+    description: 'Use this flow when the interview focuses on classes, interfaces, workflows, patterns, testing seams, and how code structure adapts to changing requirements.',
+    audience: 'Best for SDE-1 to senior engineer rounds that test object-oriented design, machine coding, and code-level architecture judgment.',
+    cadence: 'Work module by module and code small examples alongside the lessons so the design vocabulary turns into implementation muscle memory.',
+    heroGuidance: 'Frame the scope first, sketch the smallest coherent object model, then explain how your contracts absorb follow-up requirements without collapsing into a god class.',
+    focusAreas: [
+      'Prompt framing, invariants, and responsibility assignment',
+      'Object modeling, workflow orchestration, and change-friendly abstractions',
+      'Machine-coding execution, testing seams, concurrency, and scale follow-ups'
+    ],
+    outcome: 'You should be able to produce a clean class design quickly, justify pattern choices, and extend the design under interviewer follow-ups without rewriting everything.',
+    moduleSlugs: rawLowLevelModules.map((module) => module.slug)
+  },
+  {
+    slug: 'data-structures-and-algorithms',
+    shortTitle: 'DSA',
+    title: 'Data structures and algorithms interview prep',
+    summary: 'Curated coding-round practice across general problem sets and company-specific question banks for array, tree, graph, DP, and mock-round prep.',
+    description: 'Use this flow when the interview expects coding, algorithm selection, complexity discussion, and live problem solving under follow-up questions.',
+    audience: 'Best for coding screens, online assessments, phone interviews, and onsite rounds centered on data structures and algorithms.',
+    cadence: 'Alternate between one concept-focused module and one mock-style module so pattern study turns into timed execution.',
+    heroGuidance: 'Restate the problem, choose the pattern deliberately, defend the invariant or recurrence, then code the cleanest correct version before optimizing.',
+    focusAreas: [
+      'Core DSA patterns such as arrays, hash maps, trees, graphs, and dynamic programming',
+      'Execution habits for live coding: invariants, complexity, tests, and follow-up handling',
+      'Company-specific practice sets built from Amazon, Google, Microsoft, Meta, and Apple question banks'
+    ],
+    outcome: 'You should be able to identify common coding patterns quickly, explain trade-offs clearly, and complete structured mock rounds with less drift and fewer implementation mistakes.',
+    moduleSlugs: rawDsaModules.map((module) => module.slug)
+  }
+];
+
+function normalizeModule(module, flowSlug) {
+  return {
+    ...module,
+    flowSlug,
+    lessons: module.lessons.map((lesson, index) => ({
+      ...lesson,
+      order: lesson.order ?? index + 1,
+      id: lesson.id ?? `${module.slug}/${lesson.slug}`,
+      moduleSlug: module.slug,
+      moduleTitle: module.title
+    }))
+  };
+}
+
+export const modules = [
+  ...rawModules.map((module) => normalizeModule(module, 'high-level-design')),
+  ...rawLowLevelModules.map((module) => normalizeModule(module, 'low-level-design')),
+  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms'))
+];
 
 
 export const allLessons = modules.flatMap((module) =>
   module.lessons.map((lesson, index) => ({
     ...lesson,
+    flowSlug: module.flowSlug,
     moduleSlug: module.slug,
     moduleTitle: module.title,
     moduleSummary: module.summary,
@@ -3339,6 +4139,26 @@ export const allLessons = modules.flatMap((module) =>
 
 export const moduleIndex = Object.fromEntries(modules.map((module) => [module.slug, module]));
 export const lessonIndex = Object.fromEntries(allLessons.map((lesson) => [lesson.id, lesson]));
+export const courseFlows = flowDefinitions.map((flow) => ({
+  ...flow,
+  modules: flow.moduleSlugs.map((moduleSlug) => moduleIndex[moduleSlug]).filter(Boolean)
+}));
+export const flowIndex = Object.fromEntries(courseFlows.map((flow) => [flow.slug, flow]));
+export const defaultFlow = courseFlows[0];
+
+/**
+ * @param {string} flowSlug
+ */
+export function getFlowBySlug(flowSlug) {
+  return flowIndex[flowSlug];
+}
+
+/**
+ * @param {string} flowSlug
+ */
+export function getModulesByFlow(flowSlug) {
+  return modules.filter((module) => module.flowSlug === flowSlug);
+}
 
 /**
  * @param {string} moduleSlug

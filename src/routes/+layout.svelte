@@ -3,7 +3,7 @@
   import { base } from '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
-  import { allLessons, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
+  import { allLessons, courseFlows, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import { derived } from 'svelte/store';
   import { onMount } from 'svelte';
@@ -52,6 +52,8 @@
     Object.fromEntries(modules.map((module) => [module.slug, getModuleProgress($progress.completedLessonIds, module.slug)]))
   );
   const homeHref = `${base}/`;
+  /** @param {string} flowSlug */
+  const flowHref = (flowSlug) => `${base}/flow/${flowSlug}`;
   /** @param {string} moduleSlug */
   const moduleHref = (moduleSlug) => `${base}/module/${moduleSlug}`;
   /** @param {string} moduleSlug @param {string} lessonSlug */
@@ -103,14 +105,23 @@
   $: activeModule = modules.find((module) =>
     normalizedPathname === moduleHref(module.slug) || normalizedPathname.startsWith(`${moduleHref(module.slug)}/lesson/`)
   );
+  $: activeFlow = activeModule
+    ? getFlowBySlug(activeModule.flowSlug)
+    : courseFlows.find((flow) => normalizedPathname === flowHref(flow.slug)) ?? null;
   $: activeLesson = activeModule?.lessons.find((lesson) => normalizedPathname === lessonHref(activeModule.slug, lesson.slug)) ?? null;
   $: activeModuleProgress = activeModule ? $moduleProgress[activeModule.slug] : null;
-  $: contextTitle = activeLesson?.title ?? activeModule?.title ?? siteOverview.title;
+  $: activeFlowLessonTotal = activeFlow ? activeFlow.modules.reduce((sum, module) => sum + module.lessons.length, 0) : 0;
+  $: activeFlowCompleted = activeFlow
+    ? activeFlow.modules.reduce((sum, module) => sum + ($moduleProgress[module.slug]?.completed ?? 0), 0)
+    : 0;
+  $: contextTitle = activeLesson?.title ?? activeModule?.title ?? activeFlow?.title ?? siteOverview.title;
   $: contextSubtitle = activeLesson
     ? `${activeModule?.title ?? ''} · Lesson ${activeLesson.order} of ${activeModule?.lessons.length ?? 0}`
     : activeModule
-      ? `${activeModule.lessons.length} lessons · ${activeModuleProgress?.completed ?? 0}/${activeModuleProgress?.total ?? 0} complete`
-      : siteOverview.subtitle;
+      ? `${activeFlow?.shortTitle ?? 'Course'} · ${activeModule.lessons.length} lessons · ${activeModuleProgress?.completed ?? 0}/${activeModuleProgress?.total ?? 0} complete`
+      : activeFlow
+        ? `${activeFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`
+        : siteOverview.subtitle;
   $: currentLessonIndex = activeModule && activeLesson
     ? activeModule.lessons.findIndex((lesson) => lesson.slug === activeLesson.slug)
     : -1;
@@ -246,6 +257,28 @@
       <section class="sidebar-section sidebar-menu-section">
         <div class="sidebar-section-heading">
           <div>
+            <p class="eyebrow">Browse by flow</p>
+            <h3>Switch interview mode</h3>
+          </div>
+          <span class="pill">{courseFlows.length} flows</span>
+        </div>
+
+        <div class="nav-links">
+          {#each courseFlows as flow}
+            <a class:active={normalizedPathname === flowHref(flow.slug)} class="nav-link" href={flowHref(flow.slug)}>
+              <div class="nav-link-row">
+                <strong>{flow.title}</strong>
+                <span class="pill">{flow.shortTitle}</span>
+              </div>
+              <small>{flow.summary}</small>
+            </a>
+          {/each}
+        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-menu-section">
+        <div class="sidebar-section-heading">
+          <div>
             <p class="eyebrow">Browse by module</p>
             <h3>Open one thread at a time</h3>
           </div>
@@ -266,6 +299,7 @@
                     <span class="module-chevron" aria-hidden="true">{module.isExpanded ? '−' : '+'}</span>
                     <div class="module-toggle-text">
                       <strong>{module.title}</strong>
+                      <small>{getFlowBySlug(module.flowSlug)?.shortTitle} flow</small>
                       <small>{module.summary}</small>
                     </div>
                   </div>

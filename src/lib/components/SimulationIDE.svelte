@@ -56,35 +56,48 @@
       id: 'diagram',
       label: 'topology.flow',
       filename: 'topology.flow',
+      path: 'src/topology.flow',
       language: FLOW_GRAPH_LANGUAGE,
+      icon: '🔷',
       value: diagramText
     },
     {
       id: 'script',
       label: 'overrides.ts',
       filename: 'overrides.ts',
+      path: 'src/overrides.ts',
       language: 'typescript',
+      icon: '📘',
       value: scriptText
     },
     {
       id: '_api_config',
       label: `${activeApi?.label ?? 'api'}.json`,
       filename: `${activeApi?.label ?? 'api'}.json`,
+      path: `config/${activeApi?.label ?? 'api'}.json`,
       language: 'json',
+      icon: '⚙',
+      persistContent: false,
       value: apiConfigContent
     },
     {
       id: '_profile_config',
       label: `${activeProfile?.label ?? 'profile'}.json`,
       filename: `${activeProfile?.label ?? 'profile'}.json`,
+      path: `config/${activeProfile?.label ?? 'profile'}.json`,
       language: 'json',
+      icon: '⚙',
+      persistContent: false,
       value: profileConfigContent
     },
     {
       id: '_readme',
       label: 'README.md',
       filename: 'README.md',
+      path: 'README.md',
       language: 'markdown',
+      icon: '📝',
+      persistContent: false,
       value: readmeContent
     }
   ]
@@ -290,10 +303,12 @@
     </div>
 
     <IDEWorkspace
+      workspaceId={`simulation:${lesson.id}`}
       files={editorFiles}
       explorerTitle="EXPLORER"
       projectName={simulation.title.toUpperCase().slice(0, 24)}
       {explorerNodes}
+      sidebarHelpersTitle="NODE HELPERS"
       previewItemsByFile={{
         diagram: diagramMetadata.previewItems,
         script: scriptMetadata.previewItems
@@ -308,12 +323,16 @@
       }}
       snippetActions={editorSnippetActions}
       {commandActions}
+      sidePanelEyebrow="INTERACTIVE DIAGRAM"
+      sidePanelTitle="Compiled topology"
+      sidePanelDescription="Generated from current flow-graph."
       previewContent={compilePreview?.mermaid || latestRun?.mermaid ? 'diagram' : null}
       resultsContent={resultsText}
       on:fileschange={syncEditorFiles}
     >
       <div slot="preview">
         <MermaidDiagram
+          variant="extension"
           diagram={{
             title: 'Compiled topology',
             caption: 'Generated from current flow-graph.',

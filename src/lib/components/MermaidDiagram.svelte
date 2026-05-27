@@ -4,6 +4,7 @@
 
   /** @type {{ title?: string, caption?: string, code?: string } | null} */
   export let diagram = null;
+  export let variant = 'card';
 
   let mounted = false;
   let renderedSvg = '';
@@ -21,7 +22,7 @@
         startOnLoad: false,
         securityLevel: 'strict',
         theme: 'dark',
-        fontFamily: 'Inter, system-ui, sans-serif'
+        fontFamily: 'Segoe WPC, Segoe UI, system-ui, sans-serif'
       });
       const { svg } = await mermaid.render(`${baseId}-${Date.now()}`, diagram.code);
       renderedSvg = svg;
@@ -45,9 +46,11 @@
 </script>
 
 {#if diagram?.code}
-  <article class="diagram-card mermaid-card">
-    <p class="eyebrow">Interactive diagram</p>
-    <h3>{diagram.title ?? 'Mermaid diagram'}</h3>
+  <article class:diagram-card={variant !== 'extension'} class="mermaid-card" class:extension={variant === 'extension'}>
+    {#if variant !== 'extension'}
+      <p class="eyebrow">Interactive diagram</p>
+      <h3>{diagram.title ?? 'Mermaid diagram'}</h3>
+    {/if}
     {#if renderedSvg}
       <div class="mermaid-output">{@html renderedSvg}</div>
     {:else if errorMessage}
@@ -58,8 +61,37 @@
     {:else}
       <p class="muted">Rendering diagram…</p>
     {/if}
-    {#if diagram.caption}
+    {#if diagram.caption && variant !== 'extension'}
       <p>{diagram.caption}</p>
     {/if}
   </article>
 {/if}
+
+<style>
+  .mermaid-card.extension {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .mermaid-card.extension h3,
+  .mermaid-card.extension p {
+    margin: 0;
+  }
+
+  .mermaid-card.extension .mermaid-output,
+  .mermaid-card.extension .mermaid-fallback {
+    padding: 0.9rem;
+    border: 1px solid #252a35;
+    border-radius: 0.45rem;
+    background: #11131a;
+  }
+
+  .mermaid-card.extension .mermaid-output :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+</style>

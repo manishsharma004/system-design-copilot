@@ -185,7 +185,10 @@ async function initialize() {
   monacoPromise = (async () => {
     const [monaco] = await Promise.all([
       import('monaco-editor/esm/vs/editor/editor.api.js'),
+      import('monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution.js'),
+      import('monaco-editor/esm/vs/basic-languages/java/java.contribution.js'),
       import('monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js'),
+      import('monaco-editor/esm/vs/basic-languages/python/python.contribution.js'),
       import('monaco-editor/esm/vs/language/typescript/monaco.contribution.js'),
       import('monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js'),
       import('monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js')

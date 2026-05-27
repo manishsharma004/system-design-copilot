@@ -10,8 +10,22 @@ const runtimeRegistry = new Map([
     id: 'wasm-python',
     label: 'Pyodide / Python WASM adapter',
     kind: 'wasm',
+    available: true,
+    summary: 'Loads the Pyodide WebAssembly runtime in-browser for single-file Python execution.'
+  }],
+  ['wasm-cpp', {
+    id: 'wasm-cpp',
+    label: 'C++ WASM toolchain adapter',
+    kind: 'wasm',
+    available: true,
+    summary: 'Compiles single-file C++ solutions to WebAssembly in-browser with YoWASP Clang and runs them through a WASI runtime.'
+  }],
+  ['wasm-java', {
+    id: 'wasm-java',
+    label: 'Java WASM toolchain adapter',
+    kind: 'wasm',
     available: false,
-    summary: 'Ready for browser-side Python interpreters compiled to WebAssembly.'
+    summary: 'Reserved for a bundled Java compiler/runtime pair compiled to WebAssembly.'
   }],
   ['wasm-lua', {
     id: 'wasm-lua',

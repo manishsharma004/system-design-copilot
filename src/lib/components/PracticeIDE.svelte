@@ -193,6 +193,9 @@
     explorerTitle="PRACTICE STEPS"
     projectName={lesson.title.toUpperCase().slice(0, 24)}
     {explorerNodes}
+    sidePanelEyebrow="PRACTICE GUIDE"
+    sidePanelTitle={currentStep?.title ?? 'Preview'}
+    sidePanelDescription={currentStep?.objective ?? ''}
     previewItemsByFile={{ answer: draftMetadata.previewItems }}
     markersByFile={{ answer: draftMetadata.markers }}
     summaryByFile={{ answer: draftMetadata.summary }}

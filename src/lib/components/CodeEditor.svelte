@@ -18,6 +18,7 @@
   export let summaryByFile = {}
   export let snippetActions = []
   export let commandActions = []
+  export let showHelperToolbar = true
 
   const dispatch = createEventDispatcher()
 
@@ -67,7 +68,6 @@
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || normalizedFiles.some((file) => file.id === action.fileId))
   $: showTabbar = normalizedFiles.length > 1
   $: showToolbar = Boolean(currentSummary || scopedSnippetActions.length)
-  $: helperVisible = Boolean(currentMarkers.length || currentPreviewItems.length)
   $: saveCommand = commandActions.find((action) => /save/i.test(action.id ?? '') || /save/i.test(action.label ?? '')) ?? null
   $: hasSaveCommand = Boolean(saveCommand)
   let cursorLine = 1
@@ -215,6 +215,16 @@
         models.set(file.id, model)
         fileNames.set(file.id, file.filename ?? file.id)
       } else {
+        const nextLanguageId = getLanguageId(file)
+        if (currentModel.getLanguageId() !== nextLanguageId) {
+          monaco.editor.setModelLanguage(currentModel, nextLanguageId)
+        }
+
+        const nextFilename = file.filename ?? file.id
+        if (fileNames.get(file.id) !== nextFilename) {
+          fileNames.set(file.id, nextFilename)
+        }
+
         const currentValue = currentModel.getValue()
         if (currentValue !== nextValue) {
           mutedModelSync = true
@@ -370,6 +380,10 @@
     const needsSpacer = existing.trim().length > 0 && !existing.endsWith('\n')
     const nextValue = `${existing}${needsSpacer ? '\n\n' : existing.trim().length ? '\n' : ''}${action.insertText}`
     updateFileValue(targetFileId, nextValue)
+  }
+
+  export function insertSnippetAction(action) {
+    insertSnippet(action)
   }
 
   async function runPaletteCommand(action) {
@@ -537,7 +551,7 @@
         contextmenu: true,
         fontSize: 13,
         lineHeight: 20,
-        fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        fontFamily: "Consolas, 'Droid Sans Mono', 'Courier New', monospace",
         fontLigatures: true,
         tabSize: 2,
         detectIndentation: false,
@@ -690,7 +704,7 @@
     </div>
   {/if}
 
-  {#if showToolbar}
+  {#if showHelperToolbar && showToolbar}
     <div class="code-editor-toolbar">
       {#if currentSummary}
         <p class="code-editor-summary">{currentSummary}</p>
@@ -719,14 +733,6 @@
   <div class:editor-hidden={!ready} class="monaco-host" style={`min-height: ${minHeight};`} bind:this={host}></div>
 
   <div class="code-editor-status-bar">
-    <div class="code-editor-status-left">
-      {#each currentMarkers.slice(0, 3) as marker}
-        <span class="code-editor-status-item warning">⚠ Line {marker.line}: {marker.message}</span>
-      {/each}
-      {#each currentPreviewItems.slice(0, 3) as item}
-        <span class="code-editor-status-item info">● Line {item.line}: {item.text}</span>
-      {/each}
-    </div>
     <div class="code-editor-status-right">
       <span class="code-editor-status-item">Ln {cursorLine}, Col {cursorColumn}</span>
       <span class="code-editor-status-item">{lineCount} lines</span>
@@ -790,6 +796,7 @@
     border: 1px solid #2f3340;
     background: #11131a;
     height: 100%;
+    font-family: 'Segoe WPC', 'Segoe UI', system-ui, sans-serif;
   }
 
   .code-editor-tabbar {
@@ -1004,14 +1011,7 @@
     border-top: 1px solid #252a35;
     min-height: 1.4rem;
     align-items: center;
-    justify-content: space-between;
-  }
-
-  .code-editor-status-left {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    align-items: center;
+    justify-content: flex-end;
   }
 
   .code-editor-status-right {

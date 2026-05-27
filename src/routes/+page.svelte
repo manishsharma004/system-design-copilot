@@ -2,9 +2,9 @@
 <script>
   import { base } from '$app/paths';
   import { completedLessonCount, progress } from '$lib/stores/progress';
-  import { getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
+  import { courseFlows, defaultFlow, getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
 
-  const featuredModules = modules.slice(0, 3);
+  const featuredModules = defaultFlow.modules.slice(0, 3);
 </script>
 
 <svelte:head>
@@ -14,28 +14,29 @@
 <section class="hero panel">
   <div class="hero-grid home-hero-grid">
     <div class="hero-card hero-primary-card">
-      <p class="eyebrow">Complete curriculum</p>
+      <p class="eyebrow">Two interview tracks</p>
       <div class="hero-kicker-row">
         <span class="pill">Self-paced SvelteKit guide</span>
-        <span class="pill">48 lessons across 9 modules</span>
+        <span class="pill">{courseFlows.length} focused prep flows</span>
       </div>
-      <h1 class="hero-title">Study system design in the order interviews actually reward.</h1>
+      <h1 class="hero-title">Prepare for system design, low-level design, and DSA interviews in one place.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
-      <p class="hero-guidance">{siteOverview.heroGuidance}</p>
+      <p class="hero-guidance">Pick the flow that matches the interview in front of you, then work the modules in order so your answers sound structured instead of improvised.</p>
       <div class="action-row">
-        <a class="action-link primary" href={`${base}/module/${modules[0].slug}`}>Start with {modules[0].title}</a>
-        <a class="action-link" href={`${base}/module/${modules[modules.length - 1].slug}`}>Jump to case studies</a>
+        <a class="action-link primary" href={`${base}/flow/high-level-design`}>Open HLD flow</a>
+        <a class="action-link" href={`${base}/flow/low-level-design`}>Open LLD flow</a>
+        <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</a>
       </div>
       <div class="hero-stat-strip">
         <article class="hero-stat-card">
-          <span class="eyebrow">Modules</span>
-          <strong>{modules.length}</strong>
-          <p>Ordered from estimation and core building blocks through full case studies.</p>
+          <span class="eyebrow">Tracks</span>
+          <strong>{courseFlows.length}</strong>
+          <p>Separate paths for architecture-heavy HLD rounds, object-design-heavy LLD rounds, and coding-focused DSA loops.</p>
         </article>
         <article class="hero-stat-card">
-          <span class="eyebrow">Lessons</span>
-          <strong>{allLessons.length}</strong>
-          <p>Short, specific topics designed to sharpen one interview decision at a time.</p>
+          <span class="eyebrow">Modules</span>
+          <strong>{modules.length}</strong>
+          <p>Organized into flow-specific sequences so the next step stays obvious.</p>
         </article>
         <article class="hero-stat-card">
           <span class="eyebrow">Progress</span>
@@ -45,14 +46,14 @@
       </div>
       <div class="action-row">
         <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
+        <span class="pill">Dedicated HLD and LLD landing pages</span>
         <span class="pill">Interactive practice labs with saved drafts</span>
-        <span class="pill">Reveal sample answers and interview-ready code on demand</span>
       </div>
       <div class="hero-highlight-grid">
-        {#each siteOverview.studyMapSections as section}
+        {#each courseFlows as flow}
           <article class="section-chip">
-            <strong>{section.title}</strong>
-            <span>{section.summary}</span>
+            <strong>{flow.title}</strong>
+            <span>{flow.summary}</span>
           </article>
         {/each}
       </div>
@@ -83,9 +84,53 @@
 </section>
 
 <section class="section-grid hero-featured-grid">
+  {#each courseFlows as flow}
+    <article class="module-card study-track-card">
+      <div class="study-track-heading">
+        <div>
+          <p class="eyebrow">{flow.shortTitle} flow</p>
+          <h2>{flow.title}</h2>
+        </div>
+        <div class="card-meta">
+          <span class="pill">{flow.modules.length} modules</span>
+        </div>
+      </div>
+      <p>{flow.description}</p>
+      <div class="study-track-meta">
+        <article class="section-chip">
+          <strong>Best for</strong>
+          <span>{flow.audience}</span>
+        </article>
+        <article class="section-chip">
+          <strong>Cadence</strong>
+          <span>{flow.cadence}</span>
+        </article>
+        <article class="section-chip">
+          <strong>Outcome</strong>
+          <span>{flow.outcome}</span>
+        </article>
+      </div>
+      <ol class="study-step-list">
+        {#each flow.focusAreas as area, index}
+          <li class="study-step-card">
+            <span class="pill">Focus {index + 1}</span>
+            <strong>{area}</strong>
+            <p>{flow.heroGuidance}</p>
+          </li>
+        {/each}
+      </ol>
+      <div class="action-row">
+        <a class="action-link primary" href={`${base}/flow/${flow.slug}`}>Open {flow.shortTitle} roadmap</a>
+        <a class="action-link" href={`${base}/module/${flow.modules[0].slug}`}>Start with {flow.modules[0].title}</a>
+      </div>
+    </article>
+  {/each}
+</section>
+
+<section class="section-grid hero-featured-grid">
   <article class="hero-card home-detail-card">
-    <p class="eyebrow">Fastest way in</p>
-    <h2>Three strong entry points, depending on how you need to practice.</h2>
+    <p class="eyebrow">HLD starting points</p>
+    <h2>Three strong entry points into the high-level design flow.</h2>
     <div class="hero-featured-modules">
       {#each featuredModules as module, index}
         <a class="featured-module-card" href={`${base}/module/${module.slug}`}>
@@ -121,6 +166,11 @@
 </section>
 
 <section class="track-grid study-track-grid">
+  <article class="hero-card home-detail-card">
+    <p class="eyebrow">High-level design study modes</p>
+    <h2>These guided tracks still map to the HLD curriculum when you want structured repetition.</h2>
+    <p>{siteOverview.heroGuidance}</p>
+  </article>
   {#each siteOverview.studyTracks as track}
     <article class="module-card study-track-card">
       <div class="study-track-heading">

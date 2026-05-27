@@ -2,9 +2,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { allLessons, getLessonPracticeSteps, modules, siteOverview } from '../courseData.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { allLessons, courseFlows, getFlowBySlug, getLessonPracticeSteps, getModulesByFlow, modules, siteOverview } from '../courseData.js';
 import { getInteractiveLesson } from '../src/lib/data/interactiveLessons.js';
 import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
+
+const repoRoot = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
 
 test('site overview describes the expanded curriculum', () => {
   assert.match(siteOverview.title, /System Design Copilot/);
@@ -57,6 +61,60 @@ test('curriculum covers a complete prep path', () => {
   ].forEach((title) => assert.ok(titles.has(title), `missing lesson: ${title}`));
 });
 
+test('course flows separate high-level, low-level, and DSA prep', () => {
+  assert.equal(courseFlows.length, 3);
+
+  const highLevelFlow = getFlowBySlug('high-level-design');
+  const lowLevelFlow = getFlowBySlug('low-level-design');
+  const dsaFlow = getFlowBySlug('data-structures-and-algorithms');
+
+  assert.ok(highLevelFlow);
+  assert.ok(lowLevelFlow);
+  assert.ok(dsaFlow);
+  assert.match(highLevelFlow.title, /High-level design/i);
+  assert.match(lowLevelFlow.title, /Low-level design/i);
+  assert.match(dsaFlow.title, /data structures and algorithms/i);
+  assert.ok(highLevelFlow.modules.length >= 7);
+  assert.ok(lowLevelFlow.modules.length >= 4);
+  assert.ok(dsaFlow.modules.length >= 4);
+  assert.equal(getModulesByFlow('high-level-design').every((module) => module.flowSlug === 'high-level-design'), true);
+  assert.equal(getModulesByFlow('low-level-design').every((module) => module.flowSlug === 'low-level-design'), true);
+  assert.equal(getModulesByFlow('data-structures-and-algorithms').every((module) => module.flowSlug === 'data-structures-and-algorithms'), true);
+
+  const lowLevelLessonTitles = new Set(getModulesByFlow('low-level-design').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
+  [
+    'LLD prompt framing and scope control',
+    'Entities, value objects, and aggregates',
+    'Strategy, factory, and builder patterns in interviews',
+    'Concurrency follow-ups and bridging into scale'
+  ].forEach((title) => assert.ok(lowLevelLessonTitles.has(title), `missing LLD lesson: ${title}`));
+
+  const dsaLessonTitles = new Set(getModulesByFlow('data-structures-and-algorithms').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
+  [
+    'Arrays, hash maps, and two pointers',
+    'Recursion, backtracking, and search trees',
+    'Google phone and onsite practice set',
+    'Hard stretch round and review'
+  ].forEach((title) => assert.ok(dsaLessonTitles.has(title), `missing DSA lesson: ${title}`));
+});
+
+test('DSA lessons expose coding-practice metadata for the local WASM runner', () => {
+  const dsaLessons = getModulesByFlow('data-structures-and-algorithms').flatMap((module) => module.lessons);
+
+  dsaLessons.forEach((lesson) => {
+    assert.equal(lesson.practiceMode, 'coding');
+    assert.equal(lesson.runtimeTarget, 'browser-wasm');
+    assert.ok(lesson.questionHighlights.length >= 1, `missing DSA practice questions for ${lesson.title}`);
+    assert.ok(lesson.questionHighlights.some((question) => question.supportsLocalWasmRun), `missing runnable DSA question for ${lesson.title}`);
+
+    lesson.questionHighlights.forEach((question) => {
+      assert.ok(question.practiceMeta?.name, `missing practice metadata for ${question.title}`);
+      assert.ok(question.languageTemplates?.python3?.defaultCode, `missing Python template for ${question.title}`);
+      assert.ok(Array.isArray(question.practiceCases), `missing practice cases for ${question.title}`);
+    });
+  });
+});
+
 test('every lesson has interview scaffolding and local diagrams resolve', () => {
   allLessons.forEach((lesson) => {
     assert.ok(lesson.summary);
@@ -67,7 +125,7 @@ test('every lesson has interview scaffolding and local diagrams resolve', () => 
     assert.ok(lesson.interviewPrompts.length >= 2);
     if (lesson.diagram) {
       assert.equal(lesson.diagram.src.startsWith('/primer-images/'), true);
-      const imagePath = `/home/runner/work/system-design-copilot/system-design-copilot/static${lesson.diagram.src}`;
+      const imagePath = path.join(repoRoot, 'static', lesson.diagram.src.replace(/^\//, ''));
       assert.equal(existsSync(imagePath), true, `missing diagram file for ${lesson.title}`);
     }
   });

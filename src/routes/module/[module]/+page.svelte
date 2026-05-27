@@ -1,10 +1,62 @@
 <svelte:options runes={false} />
 <script>
   import { base } from '$app/paths';
-  import { getModuleProgress } from '$lib/data/courseData';
+  import { getFlowBySlug, getModuleProgress } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   export let data;
 
+  $: flow = getFlowBySlug(data.module.flowSlug);
+  $: isLowLevelFlow = data.module.flowSlug === 'low-level-design';
+  $: isDsaFlow = data.module.flowSlug === 'data-structures-and-algorithms';
+  $: moduleFocusHeadline = isLowLevelFlow
+    ? 'Design responsibilities cleanly before patterns start to stack up.'
+    : isDsaFlow
+      ? 'Choose the solving pattern early, then defend the invariant while you code.'
+      : 'Build one clean mental model before scaling it.';
+  $: moduleFocusSummary = isLowLevelFlow
+    ? 'Move through the lessons in order so each object-model decision has context before follow-up requirements and machine-coding trade-offs appear.'
+    : isDsaFlow
+      ? 'Move through the lessons in order so pattern recognition, live coding structure, and company-specific reps build on each other instead of staying disconnected.'
+      : 'Move through the lessons in order so each trade-off has context before the harder distributed systems decisions show up.';
+  $: moduleDeepStudyLine = isLowLevelFlow
+    ? 'Read the prompt shape, object boundaries, and extension seams before coding anything.'
+    : isDsaFlow
+      ? 'Read the prompt shape, pick the target pattern, and name the invariant before typing the first line of code.'
+      : 'Read the summary, inspect the diagram, and identify the sharpest trade-off.';
+  $: practiceFlowLines = isLowLevelFlow
+    ? [
+        'Read the summary and explain the core object or workflow decision in your own words.',
+        'Sketch the key classes, responsibilities, and extension seams before you code.',
+        'Answer the interview prompts aloud before marking the lesson complete.'
+      ]
+    : isDsaFlow
+      ? [
+          'Read the summary and explain the core pattern or invariant in your own words.',
+          'Walk one example manually, then code the cleanest correct version before optimizing.',
+          'Answer the interview prompts aloud before marking the lesson complete.'
+        ]
+      : [
+          'Read the summary and explain the core trade-off in your own words.',
+          'Study the diagram and identify the critical path or failure boundary.',
+          'Answer the interview prompts aloud before marking the lesson complete.'
+        ];
+  $: masteryCheckLines = isLowLevelFlow
+    ? [
+        'Clear assumptions, invariants, and object boundaries.',
+        'Justified abstraction choices instead of pattern dumping.',
+        'Awareness of follow-ups such as testing, concurrency, and extensibility.'
+      ]
+    : isDsaFlow
+      ? [
+          'Clear problem restatement, complexity target, and solving pattern.',
+          'A stable invariant or recurrence that survives interviewer follow-ups.',
+          'Confident edge-case testing and clean explanation while coding.'
+        ]
+      : [
+          'Clear assumptions and estimated scale.',
+          'Justified component choices instead of pattern dumping.',
+          'Awareness of operations, failure modes, and trade-offs.'
+        ];
   $: moduleProgress = getModuleProgress($progress.completedLessonIds, data.module.slug);
   $: completedLessons = moduleProgress.completed;
   $: totalLessons = moduleProgress.total;
@@ -25,9 +77,13 @@
         <div class="breadcrumb">
           <a href={`${base}/`}>Curriculum</a>
           <span>→</span>
+          {#if flow}
+            <a href={`${base}/flow/${flow.slug}`}>{flow.title}</a>
+            <span>→</span>
+          {/if}
           <span>{data.module.title}</span>
         </div>
-        <p class="eyebrow">Learning path</p>
+        <p class="eyebrow">{flow?.shortTitle ?? 'Course'} learning path</p>
         <h1>{data.module.title}</h1>
         <p class="hero-subtitle">{data.module.summary}</p>
       </div>
@@ -49,8 +105,8 @@
       </article>
       <article class="module-focus-card">
         <span class="eyebrow">Why this module matters</span>
-        <strong>Build one clean mental model before scaling it.</strong>
-        <p>Move through the lessons in order so each trade-off has context before the harder distributed systems decisions show up.</p>
+        <strong>{moduleFocusHeadline}</strong>
+        <p>{moduleFocusSummary}</p>
       </article>
       <article class="module-focus-card">
         <span class="eyebrow">Study target</span>
@@ -60,9 +116,15 @@
     </div>
 
     <div class="action-row">
+      {#if flow}
+        <span class="pill">{flow.title}</span>
+      {/if}
       <span class="pill">{data.module.lessons.length} lessons</span>
       <span class="pill">{completedLessons}/{totalLessons} complete</span>
       <span class="pill">Follow in order for best results</span>
+      {#if flow}
+        <a class="action-link" href={`${base}/flow/${flow.slug}`}>Back to {flow.shortTitle} roadmap</a>
+      {/if}
       <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${nextLesson.slug}`}>{completedLessons ? 'Continue module' : 'Start module'}</a>
       <a class="action-link" href="#lesson-runway">View lesson runway</a>
     </div>
@@ -73,12 +135,12 @@
     <h3>Study this like a sequenced course, not a reference dump</h3>
     <ol class="module-rhythm-list">
       <li><strong>Preview the runway.</strong> Skim every lesson title first so you can see the progression before you dive in.</li>
-      <li><strong>Do one lesson deeply.</strong> Read the summary, inspect the diagram, and identify the sharpest trade-off.</li>
+      <li><strong>Do one lesson deeply.</strong> {moduleDeepStudyLine}</li>
       <li><strong>Say it back aloud.</strong> Explain the idea in interviewer language before you mark it complete.</li>
       <li><strong>Only then advance.</strong> Move to the next lesson when you can defend the previous one without the notes open.</li>
     </ol>
     <div class="module-rhythm-meta">
-      <span class="pill">Sequential learning path</span>
+      <span class="pill">{flow?.shortTitle ?? 'Course'} sequence</span>
       <span class="pill">Designed for interview recall</span>
     </div>
   </article>
@@ -98,18 +160,18 @@
     <p class="eyebrow">Practice flow</p>
     <h3>How to study each lesson</h3>
     <ul>
-      <li>Read the summary and explain the core trade-off in your own words.</li>
-      <li>Study the diagram and identify the critical path or failure boundary.</li>
-      <li>Answer the interview prompts aloud before marking the lesson complete.</li>
+      {#each practiceFlowLines as line}
+        <li>{line}</li>
+      {/each}
     </ul>
   </article>
   <article class="list-card">
     <p class="eyebrow">Mastery check</p>
     <h3>How you know it is sticking</h3>
     <ul>
-      <li>Clear assumptions and estimated scale.</li>
-      <li>Justified component choices instead of pattern dumping.</li>
-      <li>Awareness of operations, failure modes, and trade-offs.</li>
+      {#each masteryCheckLines as line}
+        <li>{line}</li>
+      {/each}
     </ul>
   </article>
 </section>
