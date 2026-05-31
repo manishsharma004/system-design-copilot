@@ -1768,7 +1768,7 @@ export const interactiveLessons = {
           'Dead-letter queues surface partner-specific ingestion issues before they corrupt downstream labels.'
         ],
         alternative:
-          'If you optimize only for ingestion throughput, the training set quietly drifts away from reality and model trust erodes.'
+          'If you optimize only for ingestion throughput, the training set quietly drifts away from reality and model trust erodes.',
         outcome:
           'Interviewers trust pipelines that prioritize correctness, replayability, and lineage over vague "Kafka everywhere" answers.'
       }
