@@ -205,40 +205,46 @@
         <div class="sidebar-compact-group">
           <span class="sidebar-compact-label">Flows</span>
           {#each courseFlows as flow}
-            <a class:active={normalizedPathname === flowHref(flow.slug)} class="sidebar-compact-link" href={flowHref(flow.slug)}>
-              {flow.title}
+            <a class:active={normalizedPathname === flowHref(flow.slug)} class="sidebar-menu-item" href={flowHref(flow.slug)}>
+              <span class="sidebar-menu-icon">◈</span>
+              <span class="sidebar-menu-text">{flow.title}</span>
+              <span class="sidebar-menu-chevron">›</span>
             </a>
           {/each}
         </div>
 
         {#if visibleModules.length}
-          {#each visibleModules as module}
-            <div class="sidebar-compact-group">
+          <div class="sidebar-compact-group">
+            <span class="sidebar-compact-label">Modules</span>
+            {#each visibleModules as module}
               <button
-                class="sidebar-compact-module"
-                class:active-module={module.slug === activeModule?.slug}
+                class="sidebar-menu-item"
+                class:active={module.slug === activeModule?.slug}
                 type="button"
                 aria-expanded={module.isExpanded}
                 onclick={() => toggleModule(module.slug)}
               >
-                <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
-                <span class="sidebar-compact-module-title">{module.title}</span>
-                <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
+                <span class="sidebar-menu-icon">◎</span>
+                <span class="sidebar-menu-text">{module.title}</span>
+                <span class="sidebar-menu-badge">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
+                <span class="sidebar-menu-chevron">›</span>
               </button>
               {#if module.isExpanded}
                 <div class="sidebar-compact-lessons">
                   {#each module.lessons as lesson}
-                    <a class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)} class="sidebar-compact-link sidebar-compact-lesson" href={lessonHref(module.slug, lesson.slug)}>
-                      <span>{lesson.order}. {lesson.title}</span>
+                    <a class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)} class="sidebar-menu-item sidebar-menu-item--nested" href={lessonHref(module.slug, lesson.slug)}>
+                      <span class="sidebar-menu-icon sidebar-menu-icon--small">○</span>
+                      <span class="sidebar-menu-text">{lesson.order}. {lesson.title}</span>
                       {#if $progress.completedLessonIds.includes(lesson.id)}
-                        <span class="sidebar-compact-done">✓</span>
+                        <span class="sidebar-menu-done">✓</span>
                       {/if}
+                      <span class="sidebar-menu-chevron">›</span>
                     </a>
                   {/each}
                 </div>
               {/if}
-            </div>
-          {/each}
+            {/each}
+          </div>
         {:else}
           <p class="sidebar-compact-empty">No lessons matched your search.</p>
         {/if}
