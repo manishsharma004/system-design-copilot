@@ -156,6 +156,144 @@ img { display: block; max-width: 100%; }
 
 .sidebar.open,
 .sidebar.desktop-open { transform: translateX(0); }
+
+/* Compact sidebar styles */
+.sidebar-compact {
+  padding: 0.5rem;
+  gap: 0;
+}
+
+.sidebar-compact-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.4rem;
+}
+
+.sidebar-compact-search {
+  flex: 1;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border);
+  background: #232333;
+  color: var(--text);
+  padding: 0.38rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.sidebar-compact-nav {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.sidebar-compact-group {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.sidebar-compact-group + .sidebar-compact-group {
+  margin-top: 0.2rem;
+}
+
+.sidebar-compact-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  padding: 0.35rem 0.4rem 0.15rem;
+}
+
+.sidebar-compact-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.sidebar-compact-link:hover {
+  background: rgba(105, 108, 255, 0.08);
+}
+
+.sidebar-compact-link.active {
+  background: rgba(105, 108, 255, 0.14);
+  color: var(--accent);
+}
+
+.sidebar-compact-module {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sidebar-compact-module:hover,
+.sidebar-compact-module.active-module {
+  background: rgba(105, 108, 255, 0.08);
+}
+
+.sidebar-compact-chevron {
+  font-size: 0.7rem;
+  width: 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.sidebar-compact-module-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-compact-count {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sidebar-compact-lessons {
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.sidebar-compact-lesson {
+  font-size: 0.82rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.sidebar-compact-done {
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sidebar-compact-empty {
+  padding: 0.5rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .panel, .hero-card, .module-card, .lesson-card, .content-card, .diagram-card, .list-card {
   background: var(--surface-strong);
   border: 1px solid var(--border);
@@ -738,7 +876,10 @@ img { display: block; max-width: 100%; }
 @media (min-width: 960px) {
   .sidebar {
     width: min(24rem, 29vw);
-    padding: 1rem 1rem 1.05rem;
+    padding: 0.5rem;
+  }
+  .sidebar.sidebar-compact {
+    padding: 0.5rem;
   }
 
   .topbar-progress {
