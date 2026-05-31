@@ -1155,6 +1155,723 @@ export const interactiveLessons = {
     Budget -->|Exceeded| Human
       `
     }
+  },
+  'ml-foundations/model-evaluation': {
+    title: 'Model evaluation decision lab',
+    summary:
+      'Strong ML systems fail less because teams evaluate them correctly before launch. The interview signal is showing you can match validation strategy, metrics, and release criteria to the real risk in the product.',
+    takeaways: [
+      'Choose validation strategy from data shape first, not from habit.',
+      'A business-critical metric usually matters more than a generic leaderboard score.',
+      'Offline evaluation should predict which models are safe to expose online.'
+    ],
+    examples: [
+      {
+        id: 'fraud-detection',
+        label: 'Fraud detection',
+        title: 'Optimize recall under a precision floor for highly imbalanced risk models',
+        scenario:
+          'A payments team detects fraudulent transactions where only 0.2% of events are bad, but every missed fraud has direct financial cost.',
+        decision: 'Use time-aware validation, precision-recall analysis, and threshold tuning against a business loss function.',
+        why: [
+          'Accuracy hides failure because predicting "not fraud" for everything looks good on paper.',
+          'Precision-recall curves expose the real operating trade-off between false alarms and missed fraud.',
+          'Time-aware splits mimic production drift and prevent label leakage from future transactions.'
+        ],
+        alternative:
+          'Relying on random train/test splits and accuracy can ship a model that looks great offline but misses recent fraud patterns in production.',
+        outcome:
+          'Explain the operating threshold explicitly: how much fraud you catch, how many transactions you review, and what business cost you accept.'
+      },
+      {
+        id: 'demand-forecasting',
+        label: 'Demand forecasting',
+        title: 'Evaluate forecasting models against seasonality, bias, and decision impact',
+        scenario:
+          'A retail planner predicts weekly demand per SKU and region. Under-forecasting causes stockouts, while over-forecasting creates holding cost.',
+        decision: 'Use rolling-window backtests with segment-level error analysis and asymmetric cost weighting.',
+        why: [
+          'Rolling backtests show whether the model holds up across seasonal shifts and promotions.',
+          'Segment slices reveal that aggregate error can hide major misses on top categories or key regions.',
+          'Asymmetric cost weighting aligns the score with inventory decisions rather than abstract average error.'
+        ],
+        alternative:
+          'A single random holdout averages away seasonality and hides whether the model consistently under-forecasts the most valuable SKUs.',
+        outcome:
+          'A production-ready answer ties evaluation to replenishment decisions, not just to MAE or RMSE in isolation.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'Which evaluation setup best matches the ML problem?',
+      options: [
+        {
+          id: 'cross-validation',
+          label: 'Cross-validation',
+          bestFor: 'Smaller iid datasets where every sample is similarly distributed and model variance matters.',
+          chooseWhen: [
+            'You need a stable estimate from limited labeled data.',
+            'Each fold can preserve the same target distribution or class balance.',
+            'Feature engineering and model choice need fair comparison across repeated splits.'
+          ],
+          tradeOffs: [
+            'Expensive models can become slow to evaluate repeatedly.',
+            'It is the wrong default for time-series or grouped leakage scenarios.',
+            'Mean fold score can still hide segment-level failures.'
+          ],
+          alternativeOutcome:
+            'If you use cross-validation on temporal data, the model learns from the future and your offline score becomes falsely optimistic.'
+        },
+        {
+          id: 'time-series-backtest',
+          label: 'Rolling time-series backtest',
+          bestFor: 'Forecasting, ranking, risk, and any workload where time ordering changes the data distribution.',
+          chooseWhen: [
+            'Recent behavior matters more than historical averages.',
+            'Features or labels could leak if future rows appear in training.',
+            'You want to measure degradation across multiple release windows.'
+          ],
+          tradeOffs: [
+            'Training and evaluation take longer because you repeat the process over windows.',
+            'Older data may become less representative of the next production period.',
+            'You need enough history to simulate multiple realistic launch dates.'
+          ],
+          alternativeOutcome:
+            'Skipping backtests often means discovering drift only after launch, when inventory, fraud, or demand decisions are already wrong.'
+        },
+        {
+          id: 'online-experiment',
+          label: 'Online experiment / shadow launch',
+          bestFor: 'High-volume products where user behavior and feedback loops matter more than offline fit alone.',
+          chooseWhen: [
+            'Offline metrics are necessary but not sufficient to prove user value.',
+            'The model changes what users see, click, buy, or trust.',
+            'You can safely gate exposure or run in shadow mode before full rollout.'
+          ],
+          tradeOffs: [
+            'Online tests add operational complexity and require careful guardrails.',
+            'Poor experiment design can confuse model quality with traffic or seasonality effects.',
+            'You still need strong offline checks to avoid unsafe launches.'
+          ],
+          alternativeOutcome:
+            'Launching without a controlled online readout leaves the team arguing about anecdotes instead of measured user impact.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Launching a marketplace ranking model safely',
+      context:
+        'You are replacing a heuristic ranking system for a marketplace homepage. The business wants higher conversions without hurting seller diversity or surfacing low-quality listings.',
+      steps: [
+        {
+          phase: '1. Offline gating',
+          decision: 'Validate on recent marketplace traffic with segment slices by category, geography, and seller cohort.',
+          why: 'Global gains can still hide regressions for important seller groups or top-revenue categories.',
+          whatIf: 'If you only report one aggregate metric, you may ship a model that helps popular categories while quietly harming the rest of the marketplace.'
+        },
+        {
+          phase: '2. Shadow evaluation',
+          decision: 'Run the model in shadow mode against live requests and compare ranking outputs, latency, and policy violations before exposing users.',
+          why: 'Shadow traffic catches serving bugs, feature freshness issues, and drift between training and real inputs without user impact.',
+          whatIf: 'Going straight from offline results to production can expose users to slow or policy-breaking rankings that never appeared in the evaluation set.'
+        },
+        {
+          phase: '3. Controlled rollout',
+          decision: 'Launch behind an experiment flag with guardrails on conversion, bounce rate, seller diversity, and incident rate.',
+          why: 'The model must earn rollout by improving business metrics without violating marketplace health constraints.',
+          whatIf: 'If you optimize only for clicks, the system may over-promote sensational but low-quality listings that damage long-term trust.'
+        }
+      ],
+      metrics: ['precision-recall or NDCG by slice', 'prediction latency p95', 'feature freshness lag', 'conversion lift', 'guardrail violation rate']
+    },
+    mermaid: {
+      title: 'Model evaluation ladder',
+      caption: 'Move from offline validation to shadow traffic and controlled rollout so model quality is proven at each stage.',
+      code: `flowchart LR
+    Data[Training + validation data] --> Offline[Offline evaluation]
+    Offline --> Slice[Slice analysis]
+    Slice --> Gate{Pass launch gates?}
+    Gate -->|No| Iterate[Fix features / model]
+    Gate -->|Yes| Shadow[Shadow traffic]
+    Shadow --> Compare[Compare predictions + latency]
+    Compare --> Rollout[Canary / A-B rollout]
+    Rollout --> Monitor[Business + safety monitors]
+    Iterate --> Offline
+      `
+    }
+  },
+  'deep-learning/neural-network-fundamentals': {
+    title: 'Neural network training lab',
+    summary:
+      'Neural networks are useful when representation learning matters more than hand-engineered rules. The interview signal is being able to explain how data, architecture, optimization, and regularization work together instead of treating the model as a black box.',
+    takeaways: [
+      'Representation learning is the reason to pay neural-network complexity cost.',
+      'Optimization stability depends on initialization, normalization, and learning-rate control.',
+      'Regularization is part of the architecture story, not an afterthought.'
+    ],
+    examples: [
+      {
+        id: 'vision-classifier',
+        label: 'Image classification',
+        title: 'Use layered representations when raw pixels are the bottleneck',
+        scenario:
+          'A manufacturing line needs to detect product defects from camera images where handcrafted thresholds fail across lighting and product variants.',
+        decision: 'Train a convolutional neural network with augmentation and a validation pipeline that tracks recall on rare defect classes.',
+        why: [
+          'CNN layers learn edges, textures, and part-level patterns that manual thresholds do not capture.',
+          'Data augmentation makes the model robust to lighting, rotation, and camera variation.',
+          'Per-class recall prevents the model from ignoring rare but expensive defects.'
+        ],
+        alternative:
+          'Feature-engineering alone may work for one camera setup, but it usually breaks when the defect pattern or imaging conditions shift.',
+        outcome:
+          'The strong explanation is not "deep learning is better", but "representation learning handles variability that brittle rules cannot."'
+      },
+      {
+        id: 'tabular-overkill',
+        label: 'When not to use it',
+        title: 'Skip deep models when simpler baselines solve the problem',
+        scenario:
+          'A growth team predicts email open rates from a few structured campaign features and 200K labeled rows.',
+        decision: 'Start with tree ensembles and only consider deep models if you can show a clear incremental gain from representation learning.',
+        why: [
+          'Tabular signals with clean features often favor simpler models that train faster and are easier to debug.',
+          'The operational cost of deep learning is hard to justify without significant lift.',
+          'A baseline clarifies whether complexity is buying genuine business value.'
+        ],
+        alternative:
+          'Jumping straight to an MLP can increase tuning burden and inference cost without improving campaign decisions.',
+        outcome:
+          'A good AI engineer knows when neural networks are the right hammer and when they are expensive theater.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'What neural-network strategy fits the workload?',
+      options: [
+        {
+          id: 'train-from-scratch',
+          label: 'Train from scratch',
+          bestFor: 'Large proprietary datasets where the input domain differs materially from public pretraining data.',
+          chooseWhen: [
+            'You have enough labeled data and compute to learn domain-specific representations.',
+            'The input modality or feature space is unusual enough that transfer learning is weak.',
+            'Owning the full architecture and training stack is part of the product moat.'
+          ],
+          tradeOffs: [
+            'High data, compute, and experiment cost before value is proven.',
+            'Longer iteration cycles and greater risk of unstable training.',
+            'Operational burden rises because model size and serving needs are often larger.'
+          ],
+          alternativeOutcome:
+            'If transfer learning is viable, training from scratch is usually slower and more expensive than the problem requires.'
+        },
+        {
+          id: 'transfer-learning',
+          label: 'Transfer learning / fine-tune a pretrained model',
+          bestFor: 'Vision or language tasks where pretrained representations already capture much of the domain signal.',
+          chooseWhen: [
+            'You need production quality with limited labeled data.',
+            'Time-to-value matters more than owning the entire training recipe.',
+            'The domain differs somewhat from public data but not completely.'
+          ],
+          tradeOffs: [
+            'Inherited biases and blind spots from the pretrained model remain.',
+            'Large backbones may still be expensive at inference time.',
+            'You need careful evaluation to ensure transferred features really fit the task.'
+          ],
+          alternativeOutcome:
+            'Ignoring pretrained models often wastes months relearning representations that the field already solved.'
+        },
+        {
+          id: 'hybrid-stack',
+          label: 'Neural features + simpler downstream model',
+          bestFor: 'Workloads that benefit from learned embeddings but still need interpretable or controllable decision logic.',
+          chooseWhen: [
+            'Representation learning helps, but the final business decision needs simple calibration or rule overlays.',
+            'You want to separate heavy embedding generation from lightweight online scoring.',
+            'The product needs gradual adoption from existing ML pipelines.'
+          ],
+          tradeOffs: [
+            'Two-stage systems add more moving parts to train and serve.',
+            'Feature drift between embedding generation and downstream scoring must be monitored.',
+            'End-to-end optimization is weaker than a single fully trained network.'
+          ],
+          alternativeOutcome:
+            'A hybrid system is often the safest migration path when a full end-to-end deep model would be too disruptive to adopt at once.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Designing vision quality control for a factory line',
+      context:
+        'A factory wants to detect subtle visual defects in real time. False negatives ship bad products; false positives slow the line and waste manual review time.',
+      steps: [
+        {
+          phase: '1. Data strategy',
+          decision: 'Collect labeled defect examples across cameras, shifts, and lighting conditions, then augment for realistic variation.',
+          why: 'The model is only as good as the variation it sees during training.',
+          whatIf: 'If the dataset only reflects one shift or one camera, the model will appear strong offline and then fail under ordinary production variation.'
+        },
+        {
+          phase: '2. Training stability',
+          decision: 'Use a pretrained CNN backbone, learning-rate scheduling, and early stopping against a defect-focused validation metric.',
+          why: 'Transfer learning shortens iteration time while stable optimization prevents noisy training from masking real quality progress.',
+          whatIf: 'Without learning-rate control and validation discipline, the team may chase unstable loss curves instead of better defect detection.'
+        },
+        {
+          phase: '3. Decision thresholding',
+          decision: 'Tune the classifier threshold jointly with the inspection workflow so rare misses and review load stay within operational limits.',
+          why: 'The model score is only useful when converted into a line decision the operators can sustain.',
+          whatIf: 'If you ship the default threshold from training, the plant may drown in false positives or miss the defects that actually matter.'
+        }
+      ],
+      metrics: ['defect recall', 'false-positive review rate', 'training/validation loss gap', 'inference latency per image', 'drift by camera or shift']
+    },
+    mermaid: {
+      title: 'Neural-network training loop',
+      caption: 'Treat training as a full system: data, optimization, validation, and thresholding all determine production behavior.',
+      code: `flowchart LR
+    Raw[Raw labeled data] --> Augment[Augmentation + preprocessing]
+    Augment --> Backbone[Pretrained backbone]
+    Backbone --> Head[Task-specific head]
+    Head --> Train[Training loop]
+    Train --> Validate[Validation + regularization]
+    Validate --> Tune[Threshold / deployment tuning]
+    Tune --> Serve[Online inference]
+    Serve --> Feedback[Error analysis + new labels]
+    Feedback --> Raw
+      `
+    }
+  },
+  'mlops-and-deployment/model-serving': {
+    title: 'Model serving architecture lab',
+    summary:
+      'Serving is where model quality meets latency, cost, and reliability. The interview signal is showing you can turn a trained model into a dependable production service with sensible routing, caching, and rollback paths.',
+    takeaways: [
+      'Inference architecture is a product decision shaped by latency and traffic, not just a DevOps detail.',
+      'Batching, caching, and model routing change the economics of serving dramatically.',
+      'Every serving path needs a fallback and a rollback story.'
+    ],
+    examples: [
+      {
+        id: 'fraud-api',
+        label: 'Real-time scoring',
+        title: 'Serve low-latency models inline with strict tail constraints',
+        scenario:
+          'A checkout service needs fraud scores in under 60 ms p95 before approving a transaction.',
+        decision: 'Deploy a lightweight online model behind a feature store cache with aggressive timeout and fallback behavior.',
+        why: [
+          'The request path cannot wait on heavyweight inference without harming checkout conversion.',
+          'Feature-store caching prevents redundant feature computation on the hot path.',
+          'Fallback rules keep the business moving if the model service degrades.'
+        ],
+        alternative:
+          'Routing checkout traffic to a bulky model stack without timeouts turns every model incident into a customer-facing outage.',
+        outcome:
+          'The strongest answer includes explicit latency budgets, fallback actions, and how the score joins the transactional workflow.'
+      },
+      {
+        id: 'document-pipeline',
+        label: 'Asynchronous inference',
+        title: 'Use queue-backed batch or async serving for heavy multimodal models',
+        scenario:
+          'A back-office team summarizes PDFs and images with a multimodal model where each request can take several seconds.',
+        decision: 'Move inference behind a job queue with autoscaled workers, result storage, and user-visible progress states.',
+        why: [
+          'Async execution prevents expensive models from blocking interactive APIs.',
+          'Workers can batch similar jobs for higher accelerator utilization.',
+          'Queue depth becomes the operational signal for scaling and admission control.'
+        ],
+        alternative:
+          'Forcing long-running inference into synchronous APIs creates timeouts, wasted retries, and poor accelerator utilization.',
+        outcome:
+          'A good serving design makes the product honest about turnaround time instead of pretending every workload is real time.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'Which model-serving pattern should you use?',
+      options: [
+        {
+          id: 'sync-online',
+          label: 'Synchronous online inference',
+          bestFor: 'Fraud scoring, recommendations, ranking, and other request-path predictions with tight latency budgets.',
+          chooseWhen: [
+            'The prediction must influence a live user interaction.',
+            'The model is small enough to meet p95 and p99 latency objectives.',
+            'Fallback behavior is well defined when the service is slow or unavailable.'
+          ],
+          tradeOffs: [
+            'Tail latency and cold starts become user-visible quickly.',
+            'Compute must be overprovisioned for bursty traffic and strict SLAs.',
+            'Feature freshness bugs can be harder to detect because everything happens inline.'
+          ],
+          alternativeOutcome:
+            'If the model is too large for the budget, synchronous serving just hides the problem behind timeouts and retries.'
+        },
+        {
+          id: 'async-batch',
+          label: 'Asynchronous / queue-backed inference',
+          bestFor: 'Document processing, enrichment, offline scoring, and expensive multimodal pipelines.',
+          chooseWhen: [
+            'Users can tolerate waiting minutes or longer for results.',
+            'Throughput and utilization matter more than per-request latency.',
+            'The workload benefits from batching or accelerator pooling.'
+          ],
+          tradeOffs: [
+            'Product UX must communicate job state and partial completion clearly.',
+            'Queue backlogs and retries need strong observability.',
+            'Result freshness may lag behind the latest source updates.'
+          ],
+          alternativeOutcome:
+            'If you ignore asynchronous patterns for heavy inference, the system wastes GPUs while still delivering a poor user experience.'
+        },
+        {
+          id: 'tiered-routing',
+          label: 'Tiered routing / cascade serving',
+          bestFor: 'Mixed workloads where most requests are simple but a minority need heavier models.',
+          chooseWhen: [
+            'A cheap model or heuristic can confidently handle the easy majority.',
+            'You need to control serving cost without sacrificing quality on hard cases.',
+            'Routing confidence can be measured and audited.'
+          ],
+          tradeOffs: [
+            'Misrouting hard cases to weak models hurts quality silently.',
+            'More models mean more deployment, monitoring, and rollback complexity.',
+            'You need evaluation that measures both router quality and end-task quality.'
+          ],
+          alternativeOutcome:
+            'Tiered routing is often the practical answer for LLM-style economics, but only if the router is treated as a first-class model.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Serving a recommendation model for a media app',
+      context:
+        'A media app refreshes personalized recommendations on every home-page load. The model must stay under 120 ms p95 while traffic spikes during live events.',
+      steps: [
+        {
+          phase: '1. Feature and score path',
+          decision: 'Precompute heavy user/item features, cache them aggressively, and keep the online scorer lightweight.',
+          why: 'The home-page budget is too small to recompute expensive joins or embeddings for every request.',
+          whatIf: 'If feature generation happens inline, tail latency explodes during spikes and recommendation freshness becomes unpredictable.'
+        },
+        {
+          phase: '2. Scaling and resilience',
+          decision: 'Autoscale the serving tier, warm instances before big events, and fall back to cached or popularity-based recommendations on timeout.',
+          why: 'A degraded recommendation is acceptable; a broken home page is not.',
+          whatIf: 'Without fallbacks, a model-serving incident becomes a full product outage during the highest-traffic moments.'
+        },
+        {
+          phase: '3. Safe rollout',
+          decision: 'Deploy new model versions behind a canary and compare latency, CTR, and diversity metrics before full promotion.',
+          why: 'Serving changes can break both business outcomes and reliability, so rollout must prove both.',
+          whatIf: 'A model that raises CTR slightly but doubles latency or harms content diversity is not a clear win.'
+        }
+      ],
+      metrics: ['inference latency p95/p99', 'timeout rate', 'cost per 1K predictions', 'cache hit rate', 'online business lift']
+    },
+    mermaid: {
+      title: 'Production model-serving stack',
+      caption: 'Separate feature preparation, routing, and fallback handling so the serving path stays fast and resilient.',
+      code: `flowchart LR
+    App[Product API] --> Features[Feature cache / store]
+    Features --> Router[Model router]
+    Router --> Fast[Fast online model]
+    Router --> Heavy[Heavy model / async path]
+    Fast --> Guard{Latency / confidence check}
+    Heavy --> Guard
+    Guard -->|Pass| Response[Prediction response]
+    Guard -->|Fail| Fallback[Cached / heuristic fallback]
+    Response --> Monitor[Latency + quality monitors]
+    Fallback --> Monitor
+      `
+    }
+  },
+  'ai-safety-and-ethics/bias-and-fairness': {
+    title: 'Fairness and harm analysis lab',
+    summary:
+      'Responsible AI work is strongest when it stays tied to product decisions. The interview signal is showing you can identify who might be harmed, how to measure it, and what operational controls keep the system within acceptable bounds.',
+    takeaways: [
+      'Fairness work starts by naming the affected users, decisions, and failure costs.',
+      'One fairness metric is rarely enough because harms differ by product context.',
+      'Mitigation only counts if it survives deployment and monitoring.'
+    ],
+    examples: [
+      {
+        id: 'loan-screening',
+        label: 'Credit underwriting',
+        title: 'Measure approval quality and disparate impact together',
+        scenario:
+          'A lending startup trains a model to pre-screen applicants for manual review. Regulators and legal teams care about both default risk and fair treatment across protected groups.',
+        decision: 'Evaluate approval rates, false-negative rates, and calibration by group, then constrain model thresholds and review policy accordingly.',
+        why: [
+          'A single aggregate AUC score cannot reveal if one group is denied disproportionately.',
+          'Calibration matters because the same score should mean the same risk across groups.',
+          'Policy and thresholding choices can be as harmful as the model itself.'
+        ],
+        alternative:
+          'Reporting only business lift or default reduction can hide systematic exclusion that later becomes a legal and reputational crisis.',
+        outcome:
+          'The interview-ready answer ties fairness metrics back to the actual decision users experience, not just to abstract ethics language.'
+      },
+      {
+        id: 'hiring-screening',
+        label: 'Resume ranking',
+        title: 'Audit proxy features before they silently encode protected attributes',
+        scenario:
+          'A recruiting product ranks resumes for recruiter review. Features include school history, location, and career gaps.',
+        decision: 'Run feature and outcome audits for proxy variables, then remove or constrain features whose predictive value comes mostly from sensitive correlations.',
+        why: [
+          'Location, school, and employment-gap features can act as hidden proxies for socioeconomic status or gendered caregiving patterns.',
+          'Outcome audits show whether model errors concentrate on groups with less historical representation.',
+          'Constraint and policy layers can preserve recruiter efficiency without allowing obviously problematic shortcuts.'
+        ],
+        alternative:
+          'Assuming the model is fair because protected attributes were dropped ignores the proxy problem entirely.',
+        outcome:
+          'Good fairness work combines model diagnostics, feature review, and policy choices about how automated ranking is used.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'How should you structure fairness analysis for the system?',
+      options: [
+        {
+          id: 'pre-launch-audit',
+          label: 'Pre-launch audit',
+          bestFor: 'High-stakes systems where the decision policy must be reviewed before users are affected.',
+          chooseWhen: [
+            'The model influences credit, employment, healthcare, education, or other sensitive outcomes.',
+            'You can identify relevant cohorts and acceptable harm thresholds before release.',
+            'Legal, policy, and domain stakeholders need sign-off.'
+          ],
+          tradeOffs: [
+            'The audit can slow launches and reveal uncomfortable product constraints.',
+            'Available group labels may be incomplete, noisy, or restricted.',
+            'Passing a pre-launch audit does not guarantee fairness after drift.'
+          ],
+          alternativeOutcome:
+            'Without a pre-launch audit, teams usually discover fairness issues only after affected users report harm in the real world.'
+        },
+        {
+          id: 'continuous-monitoring',
+          label: 'Continuous fairness monitoring',
+          bestFor: 'Systems where data mix, user behavior, or product policy changes over time.',
+          chooseWhen: [
+            'The model stays in production for long periods and user cohorts shift.',
+            'You already know fairness can drift as the product or market changes.',
+            'You can log enough context to analyze outcomes responsibly.'
+          ],
+          tradeOffs: [
+            'You need durable logging, governance, and privacy-aware data access.',
+            'Small slices can create noisy fairness measurements that require careful interpretation.',
+            'Monitoring without action thresholds produces dashboards but not accountability.'
+          ],
+          alternativeOutcome:
+            'Teams that stop at a one-time audit usually miss the moment when retraining or product change reintroduces the same harm.'
+        },
+        {
+          id: 'human-review-loop',
+          label: 'Human review + escalation loop',
+          bestFor: 'Borderline decisions where automation should inform, not fully decide.',
+          chooseWhen: [
+            'False negatives or false positives create meaningful human harm.',
+            'A reviewer can add contextual judgment missing from the model.',
+            'The organization can train reviewers to detect and correct model bias patterns.'
+          ],
+          tradeOffs: [
+            'Human review adds cost and can introduce its own bias if not standardized.',
+            'Case queues and SLA expectations must be managed carefully.',
+            'Reviewers need clear override criteria or they become rubber stamps.'
+          ],
+          alternativeOutcome:
+            'A review loop is often the safest launch path, but it only helps when the human process is measured and governed as carefully as the model.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Reviewing an AI-assisted hiring screen',
+      context:
+        'You are asked to deploy a model that prioritizes candidates for recruiter review. Leadership wants productivity gains, but the company cannot risk a biased screening process.',
+      steps: [
+        {
+          phase: '1. Harm framing',
+          decision: 'Define whose opportunities are affected, which decisions are automated, and what fairness constraints the company will enforce.',
+          why: 'You cannot choose meaningful metrics until the actual user harm and policy boundary are explicit.',
+          whatIf: 'If the team starts with a metric dashboard before naming the harm, it will optimize easy numbers instead of the real risk.'
+        },
+        {
+          phase: '2. Audit and mitigation',
+          decision: 'Evaluate outcome gaps by cohort, inspect proxy-heavy features, and redesign the model or policy where disparities exceed thresholds.',
+          why: 'Both the model and the surrounding workflow can create discriminatory outcomes.',
+          whatIf: 'If you only retrain the model without changing the workflow, recruiters may still receive a biased ranked list that shapes who gets human attention.'
+        },
+        {
+          phase: '3. Governance in production',
+          decision: 'Launch with recruiter override logging, periodic fairness reviews, and a documented escalation path for complaints or anomalies.',
+          why: 'Fairness is an operational commitment, not a one-time notebook exercise.',
+          whatIf: 'Without governance, the system may drift or be repurposed in ways that violate the original fairness review.'
+        }
+      ],
+      metrics: ['selection rate by cohort', 'false-negative/false-positive gap', 'calibration by cohort', 'override rate', 'complaint or escalation rate']
+    },
+    mermaid: {
+      title: 'Fairness review workflow',
+      caption: 'Treat fairness as a full lifecycle process from harm framing through production governance.',
+      code: `flowchart LR
+    UseCase[Product use case] --> Harm[Harm and cohort mapping]
+    Harm --> Audit[Offline fairness audit]
+    Audit --> Mitigate[Feature / threshold / policy mitigation]
+    Mitigate --> Review[Human + legal review]
+    Review --> Launch[Scoped launch]
+    Launch --> Monitor[Continuous fairness monitoring]
+    Monitor --> Escalate[Escalation + remediation]
+    Escalate --> Audit
+      `
+    }
+  },
+  'data-engineering-for-ml/data-pipelines-at-scale': {
+    title: 'ML data pipeline architecture lab',
+    summary:
+      'AI systems only stay good when the data pipeline is trustworthy. The interview signal is proving you can move from raw events to training-ready datasets with freshness, lineage, and quality controls that survive scale.',
+    takeaways: [
+      'Data pipelines are product infrastructure because every downstream model inherits their mistakes.',
+      'Feature freshness, schema discipline, and lineage matter as much as throughput.',
+      'Batch and streaming layers should exist only when the use case genuinely needs both.'
+    ],
+    examples: [
+      {
+        id: 'recsys-features',
+        label: 'Recommendation features',
+        title: 'Blend batch history with fresh event streams for ranking systems',
+        scenario:
+          'A recommendation platform needs long-term engagement aggregates plus the last few minutes of user behavior to rank content well.',
+        decision: 'Use a lakehouse-backed batch pipeline for historical aggregates and a streaming path for fresh session signals into an online feature store.',
+        why: [
+          'Historical aggregates capture durable preference while the stream captures changing short-term intent.',
+          'Feature-store contracts keep training and serving definitions aligned.',
+          'Separate freshness tiers make it clear which features must be seconds-old versus hours-old.'
+        ],
+        alternative:
+          'Trying to push every feature through one batch job leaves recommendations stale, while streaming everything makes the system more complex than the product needs.',
+        outcome:
+          'A strong answer explains which features need freshness and which ones only need scale-efficient recomputation.'
+      },
+      {
+        id: 'ml-fraud-events',
+        label: 'Fraud signal pipeline',
+        title: 'Preserve event quality before optimizing throughput',
+        scenario:
+          'A fraud platform ingests payment events from many merchants, but schemas drift and some partners send late or malformed records.',
+        decision: 'Add schema validation, dead-letter handling, and replayable raw storage before feature generation.',
+        why: [
+          'Fraud models become brittle when malformed events silently poison training data.',
+          'Replayable raw storage lets the team backfill features after parser or business-rule fixes.',
+          'Dead-letter queues surface partner-specific ingestion issues before they corrupt downstream labels.'
+        ],
+        alternative:
+          'If you optimize only for ingestion throughput, the training set quietly drifts away from reality and model trust erodes.'
+        outcome:
+          'Interviewers trust pipelines that prioritize correctness, replayability, and lineage over vague "Kafka everywhere" answers.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'Which data-pipeline shape fits the ML workload?',
+      options: [
+        {
+          id: 'batch-first',
+          label: 'Batch-first pipeline',
+          bestFor: 'Nightly retraining, large historical joins, and use cases where freshness can be measured in hours or days.',
+          chooseWhen: [
+            'Training or scoring does not depend on sub-minute updates.',
+            'You need heavy transformations over large historical datasets.',
+            'Operational simplicity matters more than near-real-time freshness.'
+          ],
+          tradeOffs: [
+            'Predictions can become stale between refresh windows.',
+            'Late-arriving data complicates backfills and historical correctness.',
+            'User-facing systems may outgrow the freshness budget as the product evolves.'
+          ],
+          alternativeOutcome:
+            'Batch-first is often the right default, but it becomes a bottleneck when product quality depends on fresh behavior signals.'
+        },
+        {
+          id: 'lambda-like',
+          label: 'Hybrid batch + streaming pipeline',
+          bestFor: 'Ranking, fraud, personalization, and any product that needs both deep history and fresh behavior.',
+          chooseWhen: [
+            'Some features need seconds-to-minutes freshness while others can be recomputed in bulk.',
+            'You can justify the extra operational complexity with measurable product gain.',
+            'The organization can support feature definitions shared across offline and online paths.'
+          ],
+          tradeOffs: [
+            'Dual paths create reconciliation and consistency challenges.',
+            'Schema evolution must be coordinated carefully across stream and batch jobs.',
+            'Observability needs grow because freshness and correctness can fail in different ways.'
+          ],
+          alternativeOutcome:
+            'A hybrid pipeline should be earned by product need; otherwise it becomes complexity without corresponding user value.'
+        },
+        {
+          id: 'feature-store-centric',
+          label: 'Feature-store-centric architecture',
+          bestFor: 'Teams that need reusable, governed features across multiple models and both offline/online consumers.',
+          chooseWhen: [
+            'Many models share core features with strict consistency requirements.',
+            'Training-serving skew has already caused production issues.',
+            'Governance, reuse, and lineage are worth standardizing centrally.'
+          ],
+          tradeOffs: [
+            'Feature stores add platform overhead and require good data contracts.',
+            'Poorly governed central features can become a bottleneck for fast-moving teams.',
+            'Not every ML project needs the full platform investment on day one.'
+          ],
+          alternativeOutcome:
+            'A feature store is usually the right answer once multiple teams reuse the same signals, but it can be overkill for a single-model prototype.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Building a ranking feature pipeline for a streaming app',
+      context:
+        'A streaming platform wants homepage recommendations that respond to new viewing behavior within minutes while preserving stable long-term taste signals for retraining.',
+      steps: [
+        {
+          phase: '1. Raw ingestion and contracts',
+          decision: 'Land all click, impression, and watch events in immutable raw storage with schema checks and producer ownership metadata.',
+          why: 'Durable raw logs and contracts make it possible to replay and debug every downstream feature change.',
+          whatIf: 'If the only copy is a transformed table, the team cannot repair labels or trace which producer broke a critical signal.'
+        },
+        {
+          phase: '2. Fresh and historical features',
+          decision: 'Compute long-horizon aggregates in batch and short-horizon intent features in stream processors, then publish both through a shared feature contract.',
+          why: 'The model needs both stable preference and recent intent, but those freshness needs are different.',
+          whatIf: 'If you force all features through one path, you either ship stale recommendations or overbuild the entire pipeline for unnecessary low latency.'
+        },
+        {
+          phase: '3. Data quality and lineage',
+          decision: 'Monitor freshness, null-rate spikes, schema drift, and training-serving skew, and block retraining when critical quality checks fail.',
+          why: 'Data incidents should stop bad models before they propagate into production decisions.',
+          whatIf: 'Without quality gates, retraining can quietly absorb broken events and create widespread recommendation regressions.'
+        }
+      ],
+      metrics: ['feature freshness lag', 'schema-drift incidents', 'late-event rate', 'training-serving skew', 'data quality gate failures']
+    },
+    mermaid: {
+      title: 'ML data pipeline with freshness tiers',
+      caption: 'Separate raw ingestion, batch history, and streaming freshness so training and serving stay aligned.',
+      code: `flowchart LR
+    Sources[App + partner events] --> Raw[Immutable raw lake]
+    Raw --> Batch[Batch transforms]
+    Raw --> Stream[Streaming enrichments]
+    Batch --> Offline[(Offline feature tables)]
+    Stream --> Online[(Online feature store)]
+    Offline --> Train[Model training]
+    Online --> Serve[Model serving]
+    Train --> Registry[Model registry]
+    Registry --> Serve
+    Raw --> Quality[Schema + quality checks]
+    Quality --> Train
+      `
+    }
   }
 };
 

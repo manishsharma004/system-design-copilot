@@ -245,11 +245,16 @@ test('AI engineer practice steps use ML-specific structure', () => {
   assert.match(steps[2].title, /Evaluation and production review/);
 });
 
-test('AI engineer interactive lessons cover key modules', () => {
+test('AI engineer interactive lessons cover every AI module', () => {
   [
+    'ml-foundations/model-evaluation',
+    'deep-learning/neural-network-fundamentals',
     'llms-and-nlp/llm-fundamentals',
     'prompt-engineering-and-rag/rag-systems',
-    'ai-agents/agent-fundamentals'
+    'ai-agents/agent-fundamentals',
+    'mlops-and-deployment/model-serving',
+    'ai-safety-and-ethics/bias-and-fairness',
+    'data-engineering-for-ml/data-pipelines-at-scale'
   ].forEach((lessonId) => {
     const interactive = getInteractiveLesson(lessonId);
     assert.ok(interactive, `missing AI interactive lesson for ${lessonId}`);
