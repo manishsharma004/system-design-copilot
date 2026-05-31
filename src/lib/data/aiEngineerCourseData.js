@@ -39,7 +39,22 @@ export const rawAiEngineerModules = [
               'Partial derivatives measure how each parameter affects the loss',
               'Gradient descent iteratively moves parameters toward lower loss',
               'Learning rate controls step size and affects convergence speed and stability'
-            ]
+            ],
+            codeExample: {
+              title: 'Gradient descent in 10 lines',
+              code: `import numpy as np
+
+# Minimize f(x) = (x - 3)^2 + 1
+x = 10.0              # start far from minimum
+lr = 0.1              # learning rate
+
+for step in range(20):
+    grad = 2 * (x - 3)          # df/dx
+    x = x - lr * grad           # update rule
+    print(f"step {step:2d}: x={x:.4f}  f(x)={(x-3)**2+1:.4f}")
+
+# x converges to 3.0, f(x) converges to 1.0`
+            }
           },
           {
             heading: 'Probability and statistics',
@@ -128,7 +143,26 @@ export const rawAiEngineerModules = [
               'Linear models are interpretable and fast; start here as a baseline',
               'Tree ensembles (XGBoost, LightGBM) dominate tabular data competitions',
               'SVMs work well in high-dimensional spaces with clear margins'
-            ]
+            ],
+            codeExample: {
+              title: 'Train and compare classifiers with scikit-learn',
+              code: `from sklearn.datasets import load_iris
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+
+X, y = load_iris(return_X_y=True)
+
+models = {
+    "Logistic Regression": LogisticRegression(max_iter=200),
+    "Random Forest":       RandomForestClassifier(n_estimators=100),
+    "Gradient Boosting":   GradientBoostingClassifier(n_estimators=100),
+}
+
+for name, model in models.items():
+    scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+    print(f"{name:22s}  acc={scores.mean():.3f} ± {scores.std():.3f}")`
+            }
           },
           {
             heading: 'Unsupervised learning',
@@ -213,7 +247,24 @@ export const rawAiEngineerModules = [
               'K-fold cross-validation gives robust estimates on small datasets',
               'Stratified splits preserve class ratios in imbalanced problems',
               'Time-series data requires chronological splits to avoid look-ahead bias'
-            ]
+            ],
+            codeExample: {
+              title: 'K-fold cross-validation with stratification',
+              code: `from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+import numpy as np
+
+X = np.random.randn(200, 5)
+y = np.array([0]*150 + [1]*50)  # imbalanced classes
+
+# Stratified K-Fold preserves class ratio in each fold
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+model = RandomForestClassifier(n_estimators=50, random_state=42)
+
+scores = cross_val_score(model, X, y, cv=skf, scoring='f1')
+print(f"F1 per fold: {scores.round(3)}")
+print(f"Mean F1: {scores.mean():.3f} ± {scores.std():.3f}")`
+            }
           },
           {
             heading: 'Metrics that matter',
@@ -310,7 +361,39 @@ export const rawAiEngineerModules = [
               'Each neuron computes a weighted sum followed by a non-linear activation',
               'Depth allows hierarchical feature learning; width allows richer representations per layer',
               'ReLU dominates hidden layers due to efficient gradients; softmax serves classification outputs'
-            ]
+            ],
+            codeExample: {
+              title: 'Define and train a neural network with PyTorch',
+              code: `import torch
+import torch.nn as nn
+
+# 2-layer neural network for classification
+class SimpleNet(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, num_classes),
+        )
+
+    def forward(self, x):
+        return self.layers(x)
+
+model = SimpleNet(input_dim=10, hidden_dim=64, num_classes=3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()
+
+# Training loop (one batch)
+X = torch.randn(32, 10)           # batch of 32 samples
+y = torch.randint(0, 3, (32,))    # random labels
+
+logits = model(X)
+loss = loss_fn(logits, y)
+loss.backward()                    # compute gradients
+optimizer.step()                   # update weights
+print(f"Loss: {loss.item():.4f}")`
+            }
           },
           {
             heading: 'Training mechanics',
@@ -393,7 +476,36 @@ export const rawAiEngineerModules = [
               'Filters detect edges, textures, and increasingly abstract patterns in deeper layers',
               'Stride and padding control output dimensions',
               'Max pooling provides translation invariance; average pooling preserves more spatial info'
-            ]
+            ],
+            codeExample: {
+              title: 'Build a CNN for image classification',
+              code: `import torch.nn as nn
+
+class CNN(nn.Module):
+    def __init__(self, num_classes=10):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),  # 32x32 -> 32x32
+            nn.ReLU(),
+            nn.MaxPool2d(2),                              # 32x32 -> 16x16
+            nn.Conv2d(32, 64, kernel_size=3, padding=1), # 16x16 -> 16x16
+            nn.ReLU(),
+            nn.MaxPool2d(2),                              # 16x16 -> 8x8
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 8 * 8, 128),
+            nn.ReLU(),
+            nn.Linear(128, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        return self.classifier(x)
+
+model = CNN(num_classes=10)
+print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")`
+            }
           },
           {
             heading: 'Modern architectures',
@@ -476,7 +588,32 @@ export const rawAiEngineerModules = [
               'Attention weights are computed as softmax(QK^T / sqrt(d_k))',
               'Multi-head attention runs parallel attention with different learned projections',
               'Self-attention has O(n²) complexity in sequence length, motivating efficiency research'
-            ]
+            ],
+            codeExample: {
+              title: 'Scaled dot-product attention from scratch',
+              code: `import numpy as np
+
+def scaled_dot_product_attention(Q, K, V):
+    """Q, K, V: (seq_len, d_k)"""
+    d_k = K.shape[-1]
+    scores = Q @ K.T / np.sqrt(d_k)   # (seq_len, seq_len)
+    weights = np.exp(scores) / np.exp(scores).sum(axis=-1, keepdims=True)  # softmax
+    return weights @ V                  # (seq_len, d_v)
+
+# Example: 4 tokens, embedding dim 8
+seq_len, d_model = 4, 8
+X = np.random.randn(seq_len, d_model)
+
+# Learned projections (simplified)
+W_q = np.random.randn(d_model, d_model)
+W_k = np.random.randn(d_model, d_model)
+W_v = np.random.randn(d_model, d_model)
+
+Q, K, V = X @ W_q, X @ W_k, X @ W_v
+output = scaled_dot_product_attention(Q, K, V)
+print(f"Input shape:  {X.shape}")
+print(f"Output shape: {output.shape}")  # same as input`
+            }
           },
           {
             heading: 'Architecture components',
@@ -582,7 +719,25 @@ export const rawAiEngineerModules = [
               'Token count determines memory usage and computational cost per request',
               'Context window size limits how much information the model can use at once',
               'Tokenization artifacts can cause surprising behavior with numbers, code, and rare words'
-            ]
+            ],
+            codeExample: {
+              title: 'Count tokens and estimate cost with tiktoken',
+              code: `import tiktoken
+
+enc = tiktoken.get_encoding("cl100k_base")  # GPT-4 tokenizer
+
+text = "Retrieval-augmented generation grounds LLM responses in external knowledge."
+tokens = enc.encode(text)
+
+print(f"Text: {text}")
+print(f"Token count: {len(tokens)}")
+print(f"Tokens: {[enc.decode([t]) for t in tokens]}")
+
+# Estimate API cost (input tokens at $0.01/1K)
+cost_per_1k = 0.01
+estimated_cost = len(tokens) * cost_per_1k / 1000
+print(f"Estimated cost: \${estimated_cost:.6f}")`
+            }
           },
           {
             heading: 'Capabilities and limitations',
@@ -665,7 +820,28 @@ export const rawAiEngineerModules = [
               'LoRA adds low-rank matrices to attention layers, training <1% of parameters',
               'QLoRA combines 4-bit quantization with LoRA for memory efficiency',
               'Adapter layers insert small trainable modules between frozen transformer blocks'
-            ]
+            ],
+            codeExample: {
+              title: 'Fine-tune with LoRA using PEFT',
+              code: `from peft import LoraConfig, get_peft_model, TaskType
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Load base model
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf")
+
+# Configure LoRA: low-rank adapters on attention layers
+lora_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    r=8,                  # rank of the update matrices
+    lora_alpha=32,        # scaling factor
+    lora_dropout=0.1,
+    target_modules=["q_proj", "v_proj"],  # only adapt Q and V
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+# Output: "trainable params: 4,194,304 || all params: 6,742,609,920 || 0.06%"`
+            }
           },
           {
             heading: 'Data preparation and evaluation',
@@ -742,7 +918,33 @@ export const rawAiEngineerModules = [
               'Embedding quality directly determines retrieval relevance in downstream tasks',
               'Domain-specific fine-tuning of embedding models improves retrieval for specialized corpora',
               'Embedding dimensions trade off between expressiveness and storage/compute cost'
-            ]
+            ],
+            codeExample: {
+              title: 'Generate embeddings and compute similarity',
+              code: `from sentence_transformers import SentenceTransformer
+import numpy as np
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+docs = [
+    "How to deploy a machine learning model",
+    "Best pizza recipes for beginners",
+    "ML model serving with FastAPI and Docker",
+]
+query = "deploying ML models to production"
+
+# Encode documents and query
+doc_embeddings = model.encode(docs)
+query_embedding = model.encode(query)
+
+# Cosine similarity
+similarities = np.dot(doc_embeddings, query_embedding) / (
+    np.linalg.norm(doc_embeddings, axis=1) * np.linalg.norm(query_embedding)
+)
+
+for doc, score in sorted(zip(docs, similarities), key=lambda x: -x[1]):
+    print(f"{score:.3f}  {doc}")`
+            }
           },
           {
             heading: 'Vector databases',
@@ -751,7 +953,33 @@ export const rawAiEngineerModules = [
               'Approximate nearest neighbor (ANN) algorithms enable sub-linear search time',
               'Metadata filtering combines semantic similarity with structured constraints',
               'Choosing between managed services and self-hosted depends on scale and compliance needs'
-            ]
+            ],
+            codeExample: {
+              title: 'Semantic search with FAISS vector index',
+              code: `import numpy as np
+import faiss
+
+# Create 10,000 document embeddings (384-dim)
+dimension = 384
+num_docs = 10_000
+doc_embeddings = np.random.randn(num_docs, dimension).astype('float32')
+
+# Build FAISS index (IVF for faster search on large datasets)
+nlist = 100  # number of clusters
+quantizer = faiss.IndexFlatL2(dimension)
+index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
+index.train(doc_embeddings)
+index.add(doc_embeddings)
+
+# Search: find 5 nearest neighbors
+query = np.random.randn(1, dimension).astype('float32')
+index.nprobe = 10  # search 10 clusters (tradeoff: speed vs recall)
+distances, indices = index.search(query, k=5)
+
+print(f"Top 5 similar docs: {indices[0]}")
+print(f"Distances: {distances[0].round(2)}")
+print(f"Index size: {index.ntotal:,} vectors")`
+            }
           },
           {
             heading: 'Hybrid and advanced retrieval',
@@ -837,7 +1065,37 @@ export const rawAiEngineerModules = [
               'Clear role and task descriptions in system prompts set the behavioral frame',
               'Few-shot examples teach format and style more reliably than verbose instructions',
               'Chain-of-thought prompting improves reasoning on multi-step problems'
-            ]
+            ],
+            codeExample: {
+              title: 'Zero-shot, few-shot, and chain-of-thought prompts',
+              code: `from openai import OpenAI
+client = OpenAI()
+
+# Zero-shot: just describe the task
+zero_shot = "Classify this review as positive or negative: 'The battery lasts forever!'"
+
+# Few-shot: provide examples first
+few_shot = """Classify sentiment:
+Review: "Broke after one day" -> negative
+Review: "Best purchase ever" -> positive
+Review: "The battery lasts forever!" ->"""
+
+# Chain-of-thought: force step-by-step reasoning
+cot = """Classify this review. Think step by step:
+1) Identify positive/negative language
+2) Weigh the overall sentiment
+3) Give final label
+
+Review: "The battery lasts forever!"
+Analysis:"""
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": cot}],
+    temperature=0,
+)
+print(response.choices[0].message.content)`
+            }
           },
           {
             heading: 'Structured output',
@@ -920,7 +1178,33 @@ export const rawAiEngineerModules = [
               'Document loaders handle PDFs, HTML, databases, and API sources',
               'Chunking strategy (sentence, paragraph, semantic boundaries) affects retrieval granularity',
               'The retriever-generator pipeline separates knowledge storage from reasoning'
-            ]
+            ],
+            codeExample: {
+              title: 'Minimal RAG pipeline with LangChain',
+              code: `from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.chains import RetrievalQA
+
+# 1. Chunk documents
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+docs = splitter.create_documents(["Your long document text here..."])
+
+# 2. Embed and store in vector DB
+vectorstore = FAISS.from_documents(docs, OpenAIEmbeddings())
+
+# 3. Build retrieval chain
+qa_chain = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(model="gpt-4"),
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
+    return_source_documents=True,
+)
+
+# 4. Query with retrieved context
+result = qa_chain.invoke({"query": "What does the document say about scaling?"})
+print(result["result"])
+print(f"Sources: {len(result['source_documents'])} chunks used")`
+            }
           },
           {
             heading: 'Advanced RAG patterns',
@@ -1014,7 +1298,34 @@ export const rawAiEngineerModules = [
               'Chains compose multiple LLM calls and transformations into workflows',
               'Memory modules maintain conversation context across turns',
               'Output parsers enforce structured responses and handle parsing failures'
-            ]
+            ],
+            codeExample: {
+              title: 'LangChain chain with memory and output parsing',
+              code: `from langchain_openai import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+
+# 1. Conversational chain with memory
+llm = ChatOpenAI(model="gpt-4", temperature=0)
+memory = ConversationBufferMemory()
+chain = ConversationChain(llm=llm, memory=memory)
+
+# Memory persists across calls
+chain.invoke({"input": "My name is Alice"})
+resp = chain.invoke({"input": "What's my name?"})
+print(resp["response"])  # "Your name is Alice"
+
+# 2. Structured output parsing
+class ActionItem(BaseModel):
+    task: str = Field(description="What needs to be done")
+    assignee: str = Field(description="Who should do it")
+    priority: str = Field(description="high, medium, or low")
+
+parser = PydanticOutputParser(pydantic_object=ActionItem)
+print(parser.get_format_instructions())  # inject into prompt`
+            }
           },
           {
             heading: 'When to use vs build custom',
@@ -1100,7 +1411,50 @@ export const rawAiEngineerModules = [
               'The agent loop: observe, reason, act, and evaluate results iteratively',
               'Tools extend LLM capabilities to interact with external systems and APIs',
               'Memory (short-term and long-term) maintains context across reasoning steps'
-            ]
+            ],
+            codeExample: {
+              title: 'Minimal agent loop with tool calling',
+              code: `from openai import OpenAI
+import json
+
+client = OpenAI()
+
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "search",
+        "description": "Search for current information",
+        "parameters": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"]
+        }
+    }
+}]
+
+messages = [{"role": "user", "content": "What's the weather in Paris?"}]
+
+# Agent loop: keep calling until no more tool use
+while True:
+    response = client.chat.completions.create(
+        model="gpt-4", messages=messages, tools=tools
+    )
+    msg = response.choices[0].message
+    messages.append(msg)
+
+    if not msg.tool_calls:
+        print(f"Final answer: {msg.content}")
+        break
+
+    # Execute each tool call
+    for call in msg.tool_calls:
+        result = f"Paris: 18°C, partly cloudy"  # mock tool execution
+        messages.append({
+            "role": "tool",
+            "tool_call_id": call.id,
+            "content": result
+        })`
+            }
           },
           {
             heading: 'Architecture patterns',
@@ -1184,7 +1538,50 @@ export const rawAiEngineerModules = [
               'Function descriptions should explain when and why to use the tool',
               'Parameter schemas with types, constraints, and examples reduce invocation errors',
               'Return value formatting affects how the LLM integrates tool results into reasoning'
-            ]
+            ],
+            codeExample: {
+              title: 'Define OpenAI-compatible function schemas',
+              code: `tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "query_database",
+            "description": "Query the product database. Use when user asks about inventory, prices, or product details.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sql": {
+                        "type": "string",
+                        "description": "SQL query to execute (SELECT only)"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max rows to return",
+                        "default": 10
+                    }
+                },
+                "required": ["sql"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_notification",
+            "description": "Send a notification to a user. Use ONLY after explicit user confirmation.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string"},
+                    "message": {"type": "string", "maxLength": 500},
+                    "channel": {"type": "string", "enum": ["email", "sms", "push"]}
+                },
+                "required": ["user_id", "message", "channel"]
+            }
+        }
+    }
+]`
+            }
           },
           {
             heading: 'Error handling and recovery',
@@ -1345,7 +1742,38 @@ export const rawAiEngineerModules = [
               'Experiment tracking (MLflow, W&B) records parameters, metrics, and artifacts',
               'Distributed training (DeepSpeed, FSDP) enables training models that exceed single-GPU memory',
               'Hyperparameter optimization (Optuna, Ray Tune) automates search over configuration space'
-            ]
+            ],
+            codeExample: {
+              title: 'Track experiments with MLflow',
+              code: `import mlflow
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import load_iris
+from sklearn.model_selection import cross_val_score
+
+X, y = load_iris(return_X_y=True)
+
+mlflow.set_experiment("iris-classification")
+
+# Log each hyperparameter combination as a run
+for n_estimators in [50, 100, 200]:
+    for max_depth in [3, 5, None]:
+        with mlflow.start_run():
+            model = RandomForestClassifier(
+                n_estimators=n_estimators, max_depth=max_depth
+            )
+            scores = cross_val_score(model, X, y, cv=5)
+
+            # Log params and metrics
+            mlflow.log_params({"n_estimators": n_estimators, "max_depth": max_depth})
+            mlflow.log_metric("accuracy_mean", scores.mean())
+            mlflow.log_metric("accuracy_std", scores.std())
+
+            # Log the trained model artifact
+            model.fit(X, y)
+            mlflow.sklearn.log_model(model, "model")
+
+# Compare runs: mlflow ui --port 5000`
+            }
           },
           {
             heading: 'Pipeline orchestration',
@@ -1419,7 +1847,33 @@ export const rawAiEngineerModules = [
               'REST/gRPC APIs serve real-time predictions with low-latency requirements',
               'Batch inference processes large datasets efficiently when latency is not critical',
               'Edge deployment (ONNX Runtime, TFLite) brings predictions to devices and reduces cloud costs'
-            ]
+            ],
+            codeExample: {
+              title: 'Serve a model with FastAPI',
+              code: `from fastapi import FastAPI
+from pydantic import BaseModel
+import numpy as np
+import joblib
+
+app = FastAPI()
+model = joblib.load("model.pkl")  # pre-trained sklearn model
+
+class PredictRequest(BaseModel):
+    features: list[float]
+
+class PredictResponse(BaseModel):
+    prediction: float
+    confidence: float
+
+@app.post("/predict", response_model=PredictResponse)
+async def predict(req: PredictRequest):
+    X = np.array(req.features).reshape(1, -1)
+    pred = model.predict(X)[0]
+    proba = model.predict_proba(X).max()
+    return PredictResponse(prediction=pred, confidence=round(proba, 3))
+
+# Run: uvicorn serve:app --host 0.0.0.0 --port 8000`
+            }
           },
           {
             heading: 'Optimization techniques',
@@ -1511,7 +1965,34 @@ export const rawAiEngineerModules = [
               'Population Stability Index (PSI) measures feature distribution shift',
               'Embedding drift detects semantic changes in unstructured input data',
               'Performance monitoring requires labeled ground truth, often with delay'
-            ]
+            ],
+            codeExample: {
+              title: 'Detect data drift with PSI and KS test',
+              code: `import numpy as np
+from scipy import stats
+
+def population_stability_index(expected, actual, bins=10):
+    """PSI > 0.2 indicates significant distribution shift."""
+    breakpoints = np.linspace(min(expected.min(), actual.min()),
+                              max(expected.max(), actual.max()), bins + 1)
+    expected_pct = np.histogram(expected, breakpoints)[0] / len(expected)
+    actual_pct = np.histogram(actual, breakpoints)[0] / len(actual)
+    # Avoid log(0)
+    expected_pct = np.clip(expected_pct, 1e-4, None)
+    actual_pct = np.clip(actual_pct, 1e-4, None)
+    psi = np.sum((actual_pct - expected_pct) * np.log(actual_pct / expected_pct))
+    return psi
+
+# Simulate drift: training vs production feature distributions
+train_data = np.random.normal(0, 1, 10000)
+prod_data = np.random.normal(0.5, 1.2, 10000)  # shifted!
+
+psi = population_stability_index(train_data, prod_data)
+ks_stat, ks_pval = stats.ks_2samp(train_data, prod_data)
+
+print(f"PSI: {psi:.4f} ({'DRIFT' if psi > 0.2 else 'stable'})")
+print(f"KS test: stat={ks_stat:.4f}, p={ks_pval:.2e}")`
+            }
           },
           {
             heading: 'Feedback loops and retraining',
@@ -1606,7 +2087,33 @@ export const rawAiEngineerModules = [
               'No single fairness metric satisfies all ethical frameworks simultaneously',
               'Choosing metrics requires understanding the specific harm you want to prevent',
               'Disaggregated evaluation across subgroups reveals disparate performance'
-            ]
+            ],
+            codeExample: {
+              title: 'Compute fairness metrics by subgroup',
+              code: `import numpy as np
+
+def fairness_report(y_true, y_pred, groups):
+    """Print positive rate and TPR per demographic group."""
+    print(f"{'Group':<10} {'Pos Rate':<10} {'TPR':<10} {'FPR':<10}")
+    print("-" * 40)
+    for group in np.unique(groups):
+        mask = groups == group
+        pos_rate = y_pred[mask].mean()
+        positives = y_true[mask] == 1
+        tpr = y_pred[mask][positives].mean() if positives.any() else 0
+        negatives = y_true[mask] == 0
+        fpr = y_pred[mask][negatives].mean() if negatives.any() else 0
+        print(f"{group:<10} {pos_rate:<10.3f} {tpr:<10.3f} {fpr:<10.3f}")
+
+# Example: loan approval model
+y_true = np.array([1, 1, 0, 0, 1, 1, 0, 0, 1, 1])
+y_pred = np.array([1, 1, 0, 0, 1, 0, 1, 0, 1, 0])
+groups = np.array(['A','A','A','A','A','B','B','B','B','B'])
+
+fairness_report(y_true, y_pred, groups)
+# Check: are positive rates similar? (demographic parity)
+# Check: are TPR/FPR similar? (equalized odds)`
+            }
           },
           {
             heading: 'Mitigation strategies',
@@ -1667,7 +2174,30 @@ export const rawAiEngineerModules = [
               'SHAP provides theoretically grounded feature importance with consistency guarantees',
               'LIME generates local explanations by approximating the model with interpretable surrogates',
               'Attention weights provide some insight but are not always faithful explanations'
-            ]
+            ],
+            codeExample: {
+              title: 'Explain predictions with SHAP',
+              code: `import shap
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.datasets import load_breast_cancer
+
+# Train a model
+X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+model = GradientBoostingClassifier(n_estimators=100).fit(X, y)
+
+# Compute SHAP values for a single prediction
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X.iloc[0:1])
+
+# Show top contributing features
+feature_importance = list(zip(X.columns, shap_values[0]))
+feature_importance.sort(key=lambda x: abs(x[1]), reverse=True)
+
+print("Top features driving this prediction:")
+for feat, val in feature_importance[:5]:
+    direction = "↑ malignant" if val > 0 else "↓ benign"
+    print(f"  {feat:30s} SHAP={val:+.4f}  {direction}")`
+            }
           },
           {
             heading: 'Designing for interpretability',
@@ -1841,7 +2371,43 @@ export const rawAiEngineerModules = [
               'Schema enforcement catches structural data issues at ingestion time',
               'Statistical profiling detects distribution shifts, null spikes, and anomalies',
               'Data contracts between producers and consumers prevent silent breaking changes'
-            ]
+            ],
+            codeExample: {
+              title: 'Validate data quality before training',
+              code: `import numpy as np
+
+def validate_training_data(df_dict, rules):
+    """Run data quality checks before feeding data to training."""
+    issues = []
+    for col, checks in rules.items():
+        data = df_dict.get(col)
+        if data is None:
+            issues.append(f"MISSING column: {col}")
+            continue
+        if "no_nulls" in checks:
+            null_pct = sum(1 for v in data if v is None) / len(data)
+            if null_pct > 0.01:
+                issues.append(f"{col}: {null_pct:.1%} nulls (max 1%)")
+        if "range" in checks:
+            lo, hi = checks["range"]
+            out = [v for v in data if v is not None and (v < lo or v > hi)]
+            if out:
+                issues.append(f"{col}: {len(out)} values outside [{lo}, {hi}]")
+    return issues
+
+# Define validation rules
+rules = {
+    "age": {"no_nulls": True, "range": (0, 120)},
+    "income": {"no_nulls": True, "range": (0, 10_000_000)},
+}
+
+data = {"age": [25, 30, None, -5, 200], "income": [50000, 75000, 120000, None, None]}
+issues = validate_training_data(data, rules)
+for issue in issues:
+    print(f"⚠️  {issue}")
+# Block training if any critical issues found
+assert len(issues) == 0, f"Data quality check failed: {len(issues)} issues"`
+            }
           },
           {
             heading: 'Scaling considerations',
