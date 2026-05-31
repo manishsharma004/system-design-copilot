@@ -61,25 +61,30 @@ test('curriculum covers a complete prep path', () => {
   ].forEach((title) => assert.ok(titles.has(title), `missing lesson: ${title}`));
 });
 
-test('course flows separate high-level, low-level, and DSA prep', () => {
-  assert.equal(courseFlows.length, 3);
+test('course flows separate high-level, low-level, DSA, and AI engineer prep', () => {
+  assert.equal(courseFlows.length, 4);
 
   const highLevelFlow = getFlowBySlug('high-level-design');
   const lowLevelFlow = getFlowBySlug('low-level-design');
   const dsaFlow = getFlowBySlug('data-structures-and-algorithms');
+  const aiFlow = getFlowBySlug('ai-engineer');
 
   assert.ok(highLevelFlow);
   assert.ok(lowLevelFlow);
   assert.ok(dsaFlow);
+  assert.ok(aiFlow);
   assert.match(highLevelFlow.title, /High-level design/i);
   assert.match(lowLevelFlow.title, /Low-level design/i);
   assert.match(dsaFlow.title, /data structures and algorithms/i);
+  assert.match(aiFlow.title, /AI Engineer/i);
   assert.ok(highLevelFlow.modules.length >= 7);
   assert.ok(lowLevelFlow.modules.length >= 4);
   assert.ok(dsaFlow.modules.length >= 4);
+  assert.ok(aiFlow.modules.length >= 5);
   assert.equal(getModulesByFlow('high-level-design').every((module) => module.flowSlug === 'high-level-design'), true);
   assert.equal(getModulesByFlow('low-level-design').every((module) => module.flowSlug === 'low-level-design'), true);
   assert.equal(getModulesByFlow('data-structures-and-algorithms').every((module) => module.flowSlug === 'data-structures-and-algorithms'), true);
+  assert.equal(getModulesByFlow('ai-engineer').every((module) => module.flowSlug === 'ai-engineer'), true);
 
   const lowLevelLessonTitles = new Set(getModulesByFlow('low-level-design').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
   [
@@ -182,6 +187,72 @@ test('interactive lesson labs cover key topic and case-study deep dives', () => 
   ].forEach((lessonId) => {
     const interactive = getInteractiveLesson(lessonId);
     assert.ok(interactive, `missing interactive lesson data for ${lessonId}`);
+    assert.ok(interactive.takeaways.length >= 3);
+    assert.ok(interactive.examples.length >= 2);
+    assert.ok(interactive.decisionGuide.options.length >= 3);
+    assert.ok(interactive.caseStudy.steps.length >= 3);
+    assert.ok(interactive.caseStudy.metrics.length >= 3);
+    assert.match(interactive.mermaid.code, /flowchart|graph/);
+  });
+});
+
+test('AI engineer lessons include hands-on exercises', () => {
+  const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
+  assert.ok(aiLessons.length >= 20);
+
+  aiLessons.forEach((lesson) => {
+    assert.ok(Array.isArray(lesson.exercises), `missing exercises for ${lesson.title}`);
+    assert.ok(lesson.exercises.length >= 1, `empty exercises for ${lesson.title}`);
+
+    lesson.exercises.forEach((exercise) => {
+      assert.ok(exercise.id, `missing exercise id in ${lesson.title}`);
+      assert.ok(exercise.title, `missing exercise title in ${lesson.title}`);
+      assert.ok(exercise.difficulty, `missing exercise difficulty in ${lesson.title}`);
+      assert.ok(exercise.type, `missing exercise type in ${lesson.title}`);
+      assert.ok(['coding', 'design'].includes(exercise.type), `invalid exercise type: ${exercise.type}`);
+      assert.ok(exercise.description, `missing exercise description in ${lesson.title}`);
+
+      if (exercise.type === 'coding') {
+        assert.ok(exercise.starterCode, `missing starterCode for coding exercise ${exercise.id}`);
+        assert.ok(exercise.solution, `missing solution for coding exercise ${exercise.id}`);
+        assert.ok(Array.isArray(exercise.hints), `missing hints for ${exercise.id}`);
+      }
+      if (exercise.type === 'design') {
+        assert.ok(Array.isArray(exercise.promptQuestions), `missing promptQuestions for design exercise ${exercise.id}`);
+        assert.ok(exercise.promptQuestions.length >= 3, `too few promptQuestions for ${exercise.id}`);
+      }
+    });
+  });
+});
+
+test('AI engineer practice steps use ML-specific structure', () => {
+  const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
+  const firstLesson = aiLessons[0];
+  const steps = getLessonPracticeSteps(firstLesson);
+
+  assert.equal(steps.length, 3);
+  assert.equal(steps[0].id, 'opening');
+  assert.equal(steps[1].id, 'design');
+  assert.equal(steps[2].id, 'tradeoffs');
+
+  // AI-specific structure elements
+  assert.ok(steps[0].structure.includes('Core intuition'));
+  assert.ok(steps[1].structure.includes('Architecture or pipeline'));
+  assert.ok(steps[2].structure.includes('Metrics and evaluation'));
+
+  // AI-specific titles
+  assert.match(steps[1].title, /Implementation deep dive/);
+  assert.match(steps[2].title, /Evaluation and production review/);
+});
+
+test('AI engineer interactive lessons cover key modules', () => {
+  [
+    'llms-and-nlp/llm-fundamentals',
+    'prompt-engineering-and-rag/rag-systems',
+    'ai-agents/agent-fundamentals'
+  ].forEach((lessonId) => {
+    const interactive = getInteractiveLesson(lessonId);
+    assert.ok(interactive, `missing AI interactive lesson for ${lessonId}`);
     assert.ok(interactive.takeaways.length >= 3);
     assert.ok(interactive.examples.length >= 2);
     assert.ok(interactive.decisionGuide.options.length >= 3);

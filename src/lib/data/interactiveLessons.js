@@ -708,6 +708,453 @@ export const interactiveLessons = {
     Stage3 --> Stage4[Stage 4: partitioning / multi-region]
       `
     }
+  },
+  'llms-and-nlp/llm-fundamentals': {
+    title: 'LLM capabilities and limitations lab',
+    summary:
+      'LLMs are probabilistic text generators trained on internet-scale data. The interview signal is understanding what they can and cannot do, and designing systems that compensate for their weaknesses.',
+    takeaways: [
+      'LLMs predict tokens, not truth. Design systems that verify outputs.',
+      'Token economics (context window, cost per token) drive architecture decisions.',
+      'RLHF alignment is not safety; it is preference optimization with known failure modes.'
+    ],
+    examples: [
+      {
+        id: 'hallucination-mitigation',
+        label: 'Reducing hallucination',
+        title: 'Ground LLM outputs in verified knowledge sources',
+        scenario:
+          'A customer support bot answers questions about product features. Without grounding, it confidently states features that do not exist.',
+        decision: 'Use RAG to inject verified product documentation into the context before generation.',
+        why: [
+          'The model generates from context, not memory, reducing hallucination risk.',
+          'Documentation updates are reflected immediately without retraining.',
+          'Citations can be traced back to source documents for verification.'
+        ],
+        alternative:
+          'Fine-tuning on product docs embeds knowledge in weights but cannot be updated without retraining and may still hallucinate on edge cases.',
+        outcome:
+          'RAG plus citation verification gives the best tradeoff between accuracy and maintainability for factual Q&A systems.'
+      },
+      {
+        id: 'cost-optimization',
+        label: 'Token cost management',
+        title: 'Design token-efficient architectures for high-volume applications',
+        scenario:
+          'A document processing pipeline runs 100K documents per day through GPT-4, costing $50K monthly. The team needs to reduce costs by 80% without significant quality loss.',
+        decision: 'Use model routing: classify complexity first, route simple tasks to smaller models, reserve large models for complex cases.',
+        why: [
+          'Most documents (80%+) can be processed accurately by smaller, cheaper models.',
+          'A lightweight classifier adds negligible cost compared to savings from model downsizing.',
+          'Quality monitoring catches cases where the smaller model underperforms.'
+        ],
+        alternative:
+          'Using the largest model for all tasks ensures quality but at unsustainable cost that prevents scaling.',
+        outcome:
+          'Tiered model routing with quality monitoring achieves 70-85% cost reduction while maintaining 95%+ quality parity.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'How should you integrate LLMs into your application?',
+      options: [
+        {
+          id: 'direct-api',
+          label: 'Direct API calls',
+          bestFor: 'Simple generation tasks, prototypes, and low-volume applications.',
+          chooseWhen: [
+            'The task is straightforward text generation or classification.',
+            'Volume is low enough that per-token costs are manageable.',
+            'You need the latest model capabilities without infrastructure investment.'
+          ],
+          tradeOffs: [
+            'Vendor lock-in and pricing changes can impact economics.',
+            'Latency depends on external service availability.',
+            'Data privacy concerns with sending content to third-party APIs.'
+          ],
+          alternativeOutcome:
+            'For high-volume or latency-sensitive workloads, self-hosted or fine-tuned smaller models may be more economical.'
+        },
+        {
+          id: 'rag-grounded',
+          label: 'RAG-grounded generation',
+          bestFor: 'Knowledge-intensive applications where accuracy and currency matter.',
+          chooseWhen: [
+            'The system needs access to private or frequently changing knowledge.',
+            'Hallucination risk must be minimized with traceable sources.',
+            'You want to update knowledge without retraining models.'
+          ],
+          tradeOffs: [
+            'Retrieval quality directly bounds generation quality.',
+            'Additional infrastructure for vector stores and indexing pipelines.',
+            'Increased latency from the retrieval step before generation.'
+          ],
+          alternativeOutcome:
+            'Without grounding, the model relies on training data which may be outdated or incorrect for your specific domain.'
+        },
+        {
+          id: 'fine-tuned',
+          label: 'Fine-tuned model',
+          bestFor: 'Tasks requiring consistent style, format, or domain expertise beyond prompting.',
+          chooseWhen: [
+            'Prompting cannot achieve the required output consistency.',
+            'You have high-quality training data for the specific task.',
+            'A smaller fine-tuned model can replace expensive large model calls.'
+          ],
+          tradeOffs: [
+            'Requires labeled data collection and training infrastructure.',
+            'Knowledge is frozen at training time without RAG augmentation.',
+            'Risk of catastrophic forgetting if training data is too narrow.'
+          ],
+          alternativeOutcome:
+            'If you fine-tune without proper evaluation, you may degrade base model capabilities while gaining only marginal task improvement.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Building a production LLM-powered search assistant',
+      context:
+        'You are designing a search assistant for a legal research platform with 500K case documents. Lawyers need accurate, cited answers with zero tolerance for fabricated legal references.',
+      steps: [
+        {
+          phase: '1. Retrieval layer',
+          decision: 'Build a hybrid search combining BM25 keyword matching with semantic vector search over case embeddings.',
+          why: 'Legal text has precise terminology where keywords matter, but also conceptual similarity that vectors capture.',
+          whatIf: 'Pure vector search misses exact statute numbers and case citations that lawyers search for verbatim.'
+        },
+        {
+          phase: '2. Generation with grounding',
+          decision: 'Feed top-k retrieved passages as context with explicit instruction to cite sources and say "I don\'t know" when uncertain.',
+          why: 'Grounding in retrieved documents reduces hallucination and enables citation verification.',
+          whatIf: 'Without grounding instructions, the model will confidently generate plausible but fabricated legal citations.'
+        },
+        {
+          phase: '3. Verification layer',
+          decision: 'Post-process outputs to verify all cited case numbers exist in the corpus and flag unverifiable claims.',
+          why: 'Even with RAG, models occasionally fabricate citations. Automated verification catches these before users see them.',
+          whatIf: 'A single fabricated legal citation could undermine lawyer trust and have professional liability implications.'
+        },
+        {
+          phase: '4. Feedback and improvement',
+          decision: 'Track which answers lawyers accept, edit, or reject to continuously improve retrieval and generation quality.',
+          why: 'Lawyer feedback is the ground truth for legal relevance that no automated metric can fully capture.',
+          whatIf: 'Without feedback loops, the system cannot adapt to changing legal interpretations or user expectations.'
+        }
+      ],
+      metrics: ['citation accuracy rate', 'retrieval recall@10', 'answer acceptance rate', 'hallucination rate', 'query latency p95']
+    },
+    mermaid: {
+      title: 'LLM application architecture with grounding',
+      caption: 'Ground model outputs in verified knowledge and add verification layers before serving to users.',
+      code: `flowchart LR
+    User[User query] --> Router[Query router]
+    Router --> Simple[Small model]
+    Router --> Complex[Large model + RAG]
+    Complex --> Retriever[Hybrid retriever]
+    Retriever --> VectorDB[(Vector store)]
+    Retriever --> KeywordIdx[(BM25 index)]
+    Complex --> Generator[LLM generation]
+    Generator --> Verifier[Citation verifier]
+    Verifier --> Response[Verified response]
+    Simple --> Response
+      `
+    }
+  },
+  'prompt-engineering-and-rag/rag-systems': {
+    title: 'RAG pipeline design lab',
+    summary:
+      'RAG systems combine retrieval and generation to produce grounded answers. The interview signal is showing you understand how each component affects end-to-end quality and where failures propagate.',
+    takeaways: [
+      'Retrieval quality is the ceiling for generation quality in RAG.',
+      'Chunking strategy is the most impactful and most overlooked design decision.',
+      'Evaluate retrieval and generation separately to pinpoint degradation sources.'
+    ],
+    examples: [
+      {
+        id: 'enterprise-docs',
+        label: 'Enterprise documentation',
+        title: 'RAG for internal knowledge bases with mixed document types',
+        scenario:
+          'A company has 50K internal documents (Confluence pages, PDFs, Slack threads, code docs) and wants employees to ask natural language questions.',
+        decision: 'Build a multi-source ingestion pipeline with format-specific parsers, semantic chunking, and a unified vector index.',
+        why: [
+          'Different document types need specialized parsers (PDF layout, Slack threads, code structure).',
+          'Semantic chunking preserves meaning boundaries better than fixed-size splitting.',
+          'Metadata (author, date, team, document type) enables filtered retrieval for relevance.'
+        ],
+        alternative:
+          'Treating all documents as plain text with fixed-size chunks loses structural information and mixes unrelated content in the same chunk.',
+        outcome:
+          'Quality RAG requires treating ingestion as seriously as generation. Most failures trace to poor chunking or missing metadata.'
+      },
+      {
+        id: 'multi-hop',
+        label: 'Multi-hop reasoning',
+        title: 'Questions that require combining information from multiple sources',
+        scenario:
+          'A financial analyst asks "How did our Q3 revenue compare to the target set in the board presentation?" This requires finding both the Q3 report and the board deck.',
+        decision: 'Implement query decomposition that breaks complex questions into sub-queries, retrieves for each, then synthesizes.',
+        why: [
+          'Single-query retrieval rarely finds all relevant passages for multi-hop questions.',
+          'Sub-query decomposition makes the retrieval problem tractable for each step.',
+          'Synthesis with all retrieved context produces coherent answers that cite multiple sources.'
+        ],
+        alternative:
+          'Naive single-query RAG will retrieve documents related to one aspect but miss the comparison target, giving incomplete answers.',
+        outcome:
+          'Multi-hop RAG increases answer completeness for complex queries at the cost of higher latency and token usage.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'Which RAG architecture pattern fits your use case?',
+      options: [
+        {
+          id: 'naive-rag',
+          label: 'Naive RAG (retrieve-then-generate)',
+          bestFor: 'Simple Q&A over homogeneous document sets with straightforward queries.',
+          chooseWhen: [
+            'Questions are simple and usually answered by a single passage.',
+            'Document corpus is relatively uniform in structure and quality.',
+            'Latency budget allows one retrieval step plus one generation step.'
+          ],
+          tradeOffs: [
+            'Fails on complex questions requiring multi-step reasoning.',
+            'Retrieval errors propagate directly to generation quality.',
+            'No self-correction mechanism for irrelevant retrievals.'
+          ],
+          alternativeOutcome:
+            'For simple use cases, naive RAG provides the best latency-to-quality ratio without overengineering.'
+        },
+        {
+          id: 'advanced-rag',
+          label: 'Advanced RAG (rerank + verify)',
+          bestFor: 'High-stakes applications where answer accuracy justifies additional latency and cost.',
+          chooseWhen: [
+            'Retrieval precision must be high (legal, medical, financial domains).',
+            'You can afford the latency of reranking and verification steps.',
+            'False answers have significant cost (trust, liability, business impact).'
+          ],
+          tradeOffs: [
+            'Each additional step adds latency (50-200ms per reranking pass).',
+            'Cross-encoder reranking requires GPU resources for real-time serving.',
+            'More complex pipeline means more failure modes to monitor.'
+          ],
+          alternativeOutcome:
+            'Skipping reranking saves latency but relies entirely on the initial retriever quality, which may not be sufficient for precision-critical applications.'
+        },
+        {
+          id: 'agentic-rag',
+          label: 'Agentic RAG (iterative retrieval)',
+          bestFor: 'Complex research queries that require multiple retrieval steps and reasoning.',
+          chooseWhen: [
+            'Questions frequently require combining information from multiple sources.',
+            'The corpus is large enough that no single retrieval finds all relevant context.',
+            'Users expect comprehensive, well-researched answers rather than quick snippets.'
+          ],
+          tradeOffs: [
+            'Significantly higher latency (multiple LLM calls per query).',
+            'Token costs scale with the number of retrieval-reasoning iterations.',
+            'Harder to evaluate and debug due to non-deterministic multi-step reasoning.'
+          ],
+          alternativeOutcome:
+            'For simple factual lookups, agentic RAG is overkill. Use it only when query complexity justifies the cost and latency overhead.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Designing RAG for a customer support knowledge base',
+      context:
+        'You are building a RAG system for a SaaS product with 10K support articles, 50K resolved tickets, and product documentation. The system must answer customer questions accurately and know when to escalate to a human agent.',
+      steps: [
+        {
+          phase: '1. Ingestion and chunking',
+          decision: 'Use semantic chunking with overlap, preserving article structure (headers, code blocks, steps) as metadata.',
+          why: 'Support articles have clear sections. Respecting boundaries keeps related steps together in one chunk.',
+          whatIf: 'Fixed-size chunking splits step-by-step instructions mid-sequence, producing retrieval results that confuse rather than help.'
+        },
+        {
+          phase: '2. Hybrid retrieval',
+          decision: 'Combine BM25 for exact error messages with vector search for semantic intent, fused with reciprocal rank fusion.',
+          why: 'Customers often paste exact error messages (keyword match wins) but also describe problems in natural language (semantic match wins).',
+          whatIf: 'Pure vector search misses exact error code matches; pure keyword search misses paraphrased problem descriptions.'
+        },
+        {
+          phase: '3. Confidence and escalation',
+          decision: 'Score retrieval confidence and route low-confidence queries to human agents rather than generating uncertain answers.',
+          why: 'A wrong answer is worse than no answer in support contexts. Escalation preserves trust.',
+          whatIf: 'Without confidence gating, the system generates plausible but incorrect troubleshooting steps that waste customer time.'
+        }
+      ],
+      metrics: ['retrieval precision@5', 'answer resolution rate', 'escalation rate', 'customer satisfaction score', 'time to resolution']
+    },
+    mermaid: {
+      title: 'Production RAG pipeline with confidence gating',
+      caption: 'Combine multiple retrieval strategies and add confidence checks before serving generated answers.',
+      code: `flowchart LR
+    Query[Customer query] --> Hybrid[Hybrid retriever]
+    Hybrid --> BM25[BM25 index]
+    Hybrid --> Vector[Vector search]
+    BM25 --> Fuse[Rank fusion]
+    Vector --> Fuse
+    Fuse --> Rerank[Cross-encoder reranker]
+    Rerank --> Confidence{Confidence check}
+    Confidence -->|High| Generate[LLM generation]
+    Confidence -->|Low| Escalate[Human agent]
+    Generate --> Cite[Add citations]
+    Cite --> Answer[Final answer]
+      `
+    }
+  },
+  'ai-agents/agent-fundamentals': {
+    title: 'Agent architecture design lab',
+    summary:
+      'AI agents combine LLMs with tools and control loops to accomplish multi-step tasks. The interview signal is knowing when agents add value versus when deterministic code is better, and how to keep them safe and efficient.',
+    takeaways: [
+      'Not every task needs an agent. Use agents for ambiguous, multi-step tasks where the path is not known in advance.',
+      'Budget limits (steps, tokens, time) are non-negotiable safety mechanisms.',
+      'Evaluate agents on end-to-end task success, not individual step quality.'
+    ],
+    examples: [
+      {
+        id: 'code-agent',
+        label: 'Coding agent',
+        title: 'An agent that writes, tests, and iterates on code',
+        scenario:
+          'A developer wants an agent that can implement a feature: read the codebase, write code, run tests, and fix failures iteratively.',
+        decision: 'Use a ReAct-style agent with tools for file reading, code writing, test execution, and error analysis.',
+        why: [
+          'The task requires iterative refinement based on test results (not solvable in one shot).',
+          'Tool use (file system, test runner) grounds the agent in actual code state.',
+          'The observe-act loop naturally handles the write-test-fix cycle.'
+        ],
+        alternative:
+          'A single-shot code generation prompt cannot iterate on test failures or read existing code context, producing code that often does not integrate correctly.',
+        outcome:
+          'ReAct with proper tools achieves 60-80% task completion on SWE-bench style problems, far exceeding single-shot generation.'
+      },
+      {
+        id: 'research-agent',
+        label: 'Research agent',
+        title: 'Multi-step research with source verification',
+        scenario:
+          'A research agent needs to answer complex questions by searching multiple sources, cross-referencing claims, and producing cited summaries.',
+        decision: 'Use a plan-and-execute architecture where a planner decomposes the question and an executor handles each sub-task.',
+        why: [
+          'Complex research requires planning: what information is needed and in what order.',
+          'Separating planning from execution enables replanning when new information changes the approach.',
+          'Citation tracking across multiple sources requires structured state management.'
+        ],
+        alternative:
+          'A ReAct agent without planning may take inefficient paths, searching randomly rather than strategically decomposing the question.',
+        outcome:
+          'Plan-and-execute produces more comprehensive answers for complex queries but at higher cost and latency than simpler patterns.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'Which agent architecture fits your task?',
+      options: [
+        {
+          id: 'react',
+          label: 'ReAct (Reasoning + Acting)',
+          bestFor: 'Tasks with clear tool-use patterns where each step informs the next.',
+          chooseWhen: [
+            'The task requires interleaving reasoning with tool calls.',
+            'Steps are relatively independent and can be decided one at a time.',
+            'Transparency of reasoning is important for debugging and safety.'
+          ],
+          tradeOffs: [
+            'Can get stuck in loops without proper termination conditions.',
+            'Each step requires a full LLM call, increasing latency and cost.',
+            'May not plan efficiently for tasks requiring long-horizon strategy.'
+          ],
+          alternativeOutcome:
+            'For simple tool-use tasks, ReAct may over-reason. Consider direct function calling for straightforward single-tool interactions.'
+        },
+        {
+          id: 'plan-execute',
+          label: 'Plan-and-Execute',
+          bestFor: 'Complex multi-step tasks where upfront planning improves efficiency.',
+          chooseWhen: [
+            'The task can be decomposed into clear sub-tasks before execution.',
+            'Sub-tasks have dependencies that benefit from ordering.',
+            'You want to parallelize independent sub-tasks for speed.'
+          ],
+          tradeOffs: [
+            'Initial plan may be wrong and require replanning (wasted tokens).',
+            'More complex to implement with plan validation and replanning logic.',
+            'Overhead of planning step may not be justified for simple tasks.'
+          ],
+          alternativeOutcome:
+            'Without planning, agents may take circuitous paths. With over-planning, they waste tokens on plans that need immediate revision.'
+        },
+        {
+          id: 'multi-agent',
+          label: 'Multi-Agent System',
+          bestFor: 'Tasks requiring diverse expertise where specialization improves quality.',
+          chooseWhen: [
+            'Different sub-tasks require fundamentally different capabilities or prompting.',
+            'You want to parallelize work across specialized agents.',
+            'The system benefits from debate or verification between agents.'
+          ],
+          tradeOffs: [
+            'Communication overhead between agents adds latency and complexity.',
+            'Coordination failures can produce inconsistent outputs.',
+            'Debugging multi-agent interactions is significantly harder.'
+          ],
+          alternativeOutcome:
+            'A single capable agent may outperform poorly coordinated multi-agent systems. Use multiple agents only when specialization clearly improves quality.'
+        }
+      ]
+    },
+    caseStudy: {
+      title: 'Building a production customer service agent',
+      context:
+        'You are designing an AI agent that handles customer support for an e-commerce platform. It must resolve common issues (order tracking, returns, billing) autonomously while escalating complex cases to humans.',
+      steps: [
+        {
+          phase: '1. Intent classification and routing',
+          decision: 'Classify customer intent first, then route to specialized sub-agents or deterministic workflows for common cases.',
+          why: 'Most support queries (70-80%) fall into known categories with deterministic solutions. Agents are needed only for ambiguous cases.',
+          whatIf: 'Using a general agent for every query wastes tokens on simple lookups and introduces unnecessary failure risk.'
+        },
+        {
+          phase: '2. Tool design with safety guardrails',
+          decision: 'Give the agent read access to order/account systems and limited write access (initiate return, update address) with confirmation gates for irreversible actions.',
+          why: 'Principle of least privilege: the agent can look up information freely but needs confirmation before modifying account state.',
+          whatIf: 'Without guardrails, a confused agent could issue refunds, cancel orders, or modify accounts incorrectly.'
+        },
+        {
+          phase: '3. Budget and escalation controls',
+          decision: 'Set step limits (max 5 tool calls), token budgets, and confidence thresholds. Escalate to humans when limits are reached or confidence is low.',
+          why: 'Bounded execution prevents runaway costs and ensures stuck agents get human help rather than looping.',
+          whatIf: 'An unbounded agent that encounters an edge case may loop indefinitely, consuming tokens and frustrating the customer.'
+        },
+        {
+          phase: '4. Continuous evaluation',
+          decision: 'Track resolution rate, escalation rate, customer satisfaction, and cost per resolution. A/B test agent improvements.',
+          why: 'Agent quality degrades with model updates, new product features, and changing customer behavior. Continuous evaluation catches regressions.',
+          whatIf: 'Without monitoring, agent quality can degrade silently for weeks before customer complaints surface the issue.'
+        }
+      ],
+      metrics: ['autonomous resolution rate', 'escalation rate', 'cost per resolution', 'customer satisfaction (CSAT)', 'mean steps per resolution']
+    },
+    mermaid: {
+      title: 'Production agent with safety layers',
+      caption: 'Route simple tasks deterministically, use agents for complex cases, and add safety guardrails at every level.',
+      code: `flowchart LR
+    Customer[Customer message] --> Classify[Intent classifier]
+    Classify -->|Simple| Workflow[Deterministic workflow]
+    Classify -->|Complex| Agent[AI agent]
+    Agent --> Tools[Tool calls]
+    Tools --> OrderDB[(Order system)]
+    Tools --> AccountDB[(Account system)]
+    Agent --> Safety{Safety check}
+    Safety -->|Pass| Response[Agent response]
+    Safety -->|Fail| Human[Human escalation]
+    Workflow --> Response
+    Agent --> Budget{Budget check}
+    Budget -->|Exceeded| Human
+      `
+    }
   }
 };
 

@@ -1,4 +1,5 @@
 import { rawDsaModules } from './dsaCourseData.js';
+import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 
 export const siteOverview = {
   "title": "System Design Copilot",
@@ -4101,6 +4102,23 @@ const flowDefinitions = [
     ],
     outcome: 'You should be able to identify common coding patterns quickly, explain trade-offs clearly, and complete structured mock rounds with less drift and fewer implementation mistakes.',
     moduleSlugs: rawDsaModules.map((module) => module.slug)
+  },
+  {
+    slug: 'ai-engineer',
+    shortTitle: 'AI/ML',
+    title: 'AI Engineer learning path',
+    summary: 'End-to-end AI/ML engineering from foundations through LLMs, RAG, agents, MLOps, and responsible AI for building production intelligent systems.',
+    description: 'Use this flow when you want to build or level up skills in machine learning, deep learning, large language models, AI agents, and production ML systems.',
+    audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and AI engineers looking to fill knowledge gaps.',
+    cadence: 'Progress module by module, building from ML fundamentals through advanced topics like agents and MLOps. Apply each module with a hands-on project.',
+    heroGuidance: 'Start with foundations, build intuition for model training and evaluation, then specialize in LLMs, agents, or production ML systems based on your career goals.',
+    focusAreas: [
+      'ML fundamentals, deep learning architectures, and model evaluation',
+      'LLMs, prompt engineering, RAG pipelines, and AI agents',
+      'MLOps, model serving, monitoring, and responsible AI practices'
+    ],
+    outcome: 'You should be able to design, build, deploy, and monitor AI-powered applications from prototype through production, making informed tradeoffs between model quality, cost, latency, and safety.',
+    moduleSlugs: rawAiEngineerModules.map((module) => module.slug)
   }
 ];
 
@@ -4121,7 +4139,8 @@ function normalizeModule(module, flowSlug) {
 export const modules = [
   ...rawModules.map((module) => normalizeModule(module, 'high-level-design')),
   ...rawLowLevelModules.map((module) => normalizeModule(module, 'low-level-design')),
-  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms'))
+  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms')),
+  ...rawAiEngineerModules.map((module) => normalizeModule(module, 'ai-engineer'))
 ];
 
 
@@ -4199,6 +4218,60 @@ export function getLessonPracticeSteps(lesson) {
   const pitfalls = lesson.pitfalls.slice(0, 2);
   const prompts = lesson.interviewPrompts.slice(0, 3);
   const isCaseStudy = lesson.moduleSlug === 'case-studies';
+  const aiModuleSlugs = ['ml-foundations', 'deep-learning', 'llms-and-nlp', 'prompt-engineering-and-rag', 'ai-agents', 'mlops-and-deployment', 'ai-safety-and-ethics', 'data-engineering-for-ml'];
+  const isAiEngineer = lesson.flowSlug === 'ai-engineer' || aiModuleSlugs.includes(lesson.moduleSlug);
+
+  if (isAiEngineer) {
+    const conceptStructure = ['Core intuition', 'Key algorithms or techniques', 'When to apply', 'Common variants'];
+    const implementationStructure = ['Architecture or pipeline', 'Key implementation decisions', 'Data and compute requirements', 'Integration points'];
+    const evaluationStructure = ['Metrics and evaluation', 'Failure modes', 'Production considerations', 'Next steps and improvements'];
+
+    return [
+      {
+        id: 'opening',
+        kind: 'interview',
+        title: 'Explain the concept',
+        objective: 'Demonstrate deep understanding by explaining the topic clearly, covering intuition, algorithms, and practical applications.',
+        prompt: `Explain "${lesson.title}" as if teaching a senior engineer who is new to AI/ML. Cover the core intuition, when and why you would use it, and the key algorithms or techniques involved.`,
+        guardrails: [
+          prompts[0] ?? `Start with the most important concept in ${lesson.title}.`,
+          ...sectionHeadings.slice(0, 2),
+          ...checklist.slice(0, 1)
+        ],
+        structure: conceptStructure,
+        template: buildPracticeTemplate(lesson.title, conceptStructure, currentPromptLabel(prompts[0], lesson.title))
+      },
+      {
+        id: 'design',
+        kind: 'design',
+        title: 'Implementation deep dive',
+        objective: 'Design the architecture, pipeline, or implementation for a real-world application of this topic.',
+        prompt: `Design a production system that applies "${lesson.title}". Describe the architecture, key implementation decisions, data/compute requirements, and how it integrates with other systems.`,
+        guardrails: [
+          ...sectionHeadings,
+          prompts[1] ?? `Identify the critical implementation decision and one scaling constraint for ${lesson.title}.`,
+          ...checklist.slice(1, 3)
+        ],
+        structure: implementationStructure,
+        template: buildPracticeTemplate(lesson.title, implementationStructure, currentPromptLabel(prompts[1], lesson.title))
+      },
+      {
+        id: 'tradeoffs',
+        kind: 'review',
+        title: 'Evaluation and production review',
+        objective: 'Complete your answer with evaluation metrics, failure modes, production concerns, and iterative improvement strategies.',
+        prompt: `Review your design for "${lesson.title}". Add the evaluation metrics you would track, failure modes to guard against, production deployment concerns, and how you would iterate on the solution.`,
+        guardrails: [
+          prompts[2] ?? `Name the most important evaluation metric for ${lesson.title}.`,
+          ...pitfalls,
+          `Use these checklist items as a final pass: ${checklist.join('; ')}`
+        ],
+        structure: evaluationStructure,
+        template: buildPracticeTemplate(lesson.title, evaluationStructure, currentPromptLabel(prompts[2], lesson.title))
+      }
+    ];
+  }
+
   const openingStructure = isCaseStudy
     ? ['Requirements and assumptions', 'Scale estimate', 'Core APIs', 'First diagram']
     : ['Definition', 'When to use it', 'Benefits', 'Trade-offs'];
