@@ -154,6 +154,15 @@
             </div>
           {/if}
         </div>
+        {#if section.codeExample}
+          <div class="lesson-code-example">
+            <div class="lesson-code-example-header">
+              <p class="eyebrow">Code example</p>
+              <h4>{section.codeExample.title}</h4>
+            </div>
+            <pre class="lesson-code-block"><code>{section.codeExample.code}</code></pre>
+          </div>
+        {/if}
       </article>
     {/each}
   </div>
