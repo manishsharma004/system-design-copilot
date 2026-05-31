@@ -3,8 +3,18 @@
   /** @type {any} */
   export let lesson;
 
-  $: codingExercises = lesson?.exercises?.filter((exercise) => exercise.type === 'coding') ?? [];
-  $: designExercises = lesson?.exercises?.filter((exercise) => exercise.type === 'design') ?? [];
+  /** @param {any} exercise */
+  function isCodingExercise(exercise) {
+    return exercise.type === 'coding';
+  }
+
+  /** @param {any} exercise */
+  function isDesignExercise(exercise) {
+    return exercise.type === 'design';
+  }
+
+  $: codingExercises = lesson?.exercises?.filter(isCodingExercise) ?? [];
+  $: designExercises = lesson?.exercises?.filter(isDesignExercise) ?? [];
   $: studyHighlights = lesson?.checklist?.slice(0, 4) ?? [];
   $: productionPitfalls = lesson?.pitfalls?.slice(0, 3) ?? [];
   $: practicePrompts = lesson?.interviewPrompts?.slice(0, 3) ?? [];
