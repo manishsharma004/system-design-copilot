@@ -195,139 +195,54 @@
   </header>
 
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
-    <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar">
-      <section class="sidebar-section sidebar-header">
-        <div class="sidebar-header-row">
-          <div>
-            <p class="eyebrow">Curriculum explorer</p>
-            <h2>{siteOverview.title}</h2>
-          </div>
-          <button class="sidebar-close" type="button" onclick={toggleNavigation}>
-            {isDesktop ? 'Collapse' : 'Close'}
-          </button>
-        </div>
-        <p class="muted">Browse one module at a time, keep the active lesson visible, and jump directly to the next useful topic.</p>
-      </section>
+    <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact">
+      <div class="sidebar-compact-header">
+        <input bind:value={query} type="search" placeholder="Search lessons…" class="sidebar-compact-search" />
+        <button class="sidebar-close" type="button" onclick={toggleNavigation}>✕</button>
+      </div>
 
-      <section class="sidebar-section sidebar-context-card">
-        <div>
-          <p class="eyebrow">You are here</p>
-          <h3>{contextTitle}</h3>
-        </div>
-        <p class="muted">{contextSubtitle}</p>
-        {#if activeModule}
-          <div class="sidebar-current-meta">
-            <span class="pill">{$moduleProgress[activeModule.slug]?.completed ?? 0} / {$moduleProgress[activeModule.slug]?.total ?? 0} complete</span>
-            <a class="action-link" href={moduleHref(activeModule.slug)}>{activeModule.title}</a>
-          </div>
-        {/if}
-        <div class="sidebar-quick-links">
-          <a class="action-link primary" href={homeHref}>Curriculum home</a>
-          {#if previousLesson}
-            <a class="action-link" href={lessonHref(activeModule?.slug ?? '', previousLesson.slug)}>← {previousLesson.title}</a>
-          {/if}
-          {#if nextLesson}
-            <a class="action-link" href={lessonHref(activeModule?.slug ?? '', nextLesson.slug)}>{nextLesson.title} →</a>
-          {/if}
-        </div>
-      </section>
-
-      <section class="sidebar-section sidebar-search">
-        <label>
-          <span class="eyebrow">Search lessons</span>
-          <input bind:value={query} type="search" placeholder="Search modules and topics" />
-        </label>
-      </section>
-
-      <section class="sidebar-section sidebar-stats sidebar-stats-wide">
-        <article class="stat">
-          <span class="eyebrow">Modules</span>
-          <strong>{modules.length}</strong>
-        </article>
-        <article class="stat">
-          <span class="eyebrow">Lessons</span>
-          <strong>{lessonTotal}</strong>
-        </article>
-        <article class="stat">
-          <span class="eyebrow">Progress</span>
-          <strong>{$progress.completedLessonIds.length}/{lessonTotal}</strong>
-        </article>
-      </section>
-
-      <section class="sidebar-section sidebar-menu-section">
-        <div class="sidebar-section-heading">
-          <div>
-            <p class="eyebrow">Browse by flow</p>
-            <h3>Switch interview mode</h3>
-          </div>
-          <span class="pill">{courseFlows.length} flows</span>
-        </div>
-
-        <div class="nav-links">
+      <nav class="sidebar-compact-nav">
+        <div class="sidebar-compact-group">
+          <span class="sidebar-compact-label">Flows</span>
           {#each courseFlows as flow}
-            <a class:active={normalizedPathname === flowHref(flow.slug)} class="nav-link" href={flowHref(flow.slug)}>
-              <div class="nav-link-row">
-                <strong>{flow.title}</strong>
-                <span class="pill">{flow.shortTitle}</span>
-              </div>
-              <small>{flow.summary}</small>
+            <a class:active={normalizedPathname === flowHref(flow.slug)} class="sidebar-compact-link" href={flowHref(flow.slug)}>
+              {flow.title}
             </a>
           {/each}
         </div>
-      </section>
-
-      <section class="sidebar-section sidebar-menu-section">
-        <div class="sidebar-section-heading">
-          <div>
-            <p class="eyebrow">Browse by module</p>
-            <h3>Open one thread at a time</h3>
-          </div>
-          <span class="pill">{visibleModules.length} shown</span>
-        </div>
 
         {#if visibleModules.length}
-          <div class="sidebar-module-list">
-            {#each visibleModules as module}
-              <section class:active-module={module.slug === activeModule?.slug} class="nav-module explorer-module">
-                <button
-                  class="module-toggle"
-                  type="button"
-                  aria-expanded={module.isExpanded}
-                  onclick={() => toggleModule(module.slug)}
-                >
-                  <div class="module-toggle-copy">
-                    <span class="module-chevron" aria-hidden="true">{module.isExpanded ? '−' : '+'}</span>
-                    <div class="module-toggle-text">
-                      <strong>{module.title}</strong>
-                      <small>{getFlowBySlug(module.flowSlug)?.shortTitle} flow</small>
-                      <small>{module.summary}</small>
-                    </div>
-                  </div>
-                  <div class="module-toggle-meta">
-                    <span class="pill">{$moduleProgress[module.slug]?.completed ?? 0} / {$moduleProgress[module.slug]?.total ?? 0}</span>
-                    <span class="module-toggle-label">{module.isExpanded ? 'Open' : 'Closed'}</span>
-                  </div>
-                </button>
-                {#if module.isExpanded}
-                  <div class="nav-links nav-links-dense">
-                    {#each module.lessons as lesson}
-                      <a class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)} class="nav-link nav-link-lesson" href={lessonHref(module.slug, lesson.slug)}>
-                        <div class="nav-link-row">
-                          <strong>{lesson.order}. {lesson.title}</strong>
-                          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Done' : 'Open'}</span>
-                        </div>
-                        <small>{lesson.summary}</small>
-                      </a>
-                    {/each}
-                  </div>
-                {/if}
-              </section>
-            {/each}
-          </div>
+          {#each visibleModules as module}
+            <div class="sidebar-compact-group">
+              <button
+                class="sidebar-compact-module"
+                class:active-module={module.slug === activeModule?.slug}
+                type="button"
+                aria-expanded={module.isExpanded}
+                onclick={() => toggleModule(module.slug)}
+              >
+                <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
+                <span class="sidebar-compact-module-title">{module.title}</span>
+                <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
+              </button>
+              {#if module.isExpanded}
+                <div class="sidebar-compact-lessons">
+                  {#each module.lessons as lesson}
+                    <a class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)} class="sidebar-compact-link sidebar-compact-lesson" href={lessonHref(module.slug, lesson.slug)}>
+                      <span>{lesson.order}. {lesson.title}</span>
+                      {#if $progress.completedLessonIds.includes(lesson.id)}
+                        <span class="sidebar-compact-done">✓</span>
+                      {/if}
+                    </a>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
         {:else}
-          <div class="empty-note">No lessons matched your search.</div>
+          <p class="sidebar-compact-empty">No lessons matched your search.</p>
         {/if}
-      </section>
+      </nav>
     </aside>
 
     <main class="page">
