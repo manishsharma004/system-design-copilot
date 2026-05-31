@@ -4,6 +4,7 @@
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
   import SimulationIDE from '$lib/components/SimulationIDE.svelte';
+  import AiLessonStudyGuide from '$lib/components/AiLessonStudyGuide.svelte';
   import { getFlowBySlug } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
@@ -12,6 +13,7 @@
 
   $: flow = getFlowBySlug(data.module.flowSlug);
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
+  $: isAiLesson = data.module.flowSlug === 'ai-engineer';
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
 
   /** @param {string} heading */
@@ -213,6 +215,10 @@
     {/if}
   </aside>
 </section>
+
+{#if isAiLesson}
+  <AiLessonStudyGuide lesson={data.lesson} />
+{/if}
 
 <LessonExplorer lesson={data.lesson} />
 {#if showSimulationLab}
