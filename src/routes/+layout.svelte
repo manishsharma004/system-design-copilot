@@ -85,7 +85,7 @@
   onMount(() => {
     loadSidebarState();
 
-    const mediaQuery = window.matchMedia('(min-width: 960px)');
+    const mediaQuery = window.matchMedia('(min-width: 1200px)');
     /** @param {MediaQueryList | MediaQueryListEvent} event */
     const syncViewport = (event) => {
       isDesktop = event.matches;
