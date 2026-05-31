@@ -61,25 +61,30 @@ test('curriculum covers a complete prep path', () => {
   ].forEach((title) => assert.ok(titles.has(title), `missing lesson: ${title}`));
 });
 
-test('course flows separate high-level, low-level, and DSA prep', () => {
-  assert.equal(courseFlows.length, 3);
+test('course flows separate high-level, low-level, DSA, and AI engineer prep', () => {
+  assert.equal(courseFlows.length, 4);
 
   const highLevelFlow = getFlowBySlug('high-level-design');
   const lowLevelFlow = getFlowBySlug('low-level-design');
   const dsaFlow = getFlowBySlug('data-structures-and-algorithms');
+  const aiFlow = getFlowBySlug('ai-engineer');
 
   assert.ok(highLevelFlow);
   assert.ok(lowLevelFlow);
   assert.ok(dsaFlow);
+  assert.ok(aiFlow);
   assert.match(highLevelFlow.title, /High-level design/i);
   assert.match(lowLevelFlow.title, /Low-level design/i);
   assert.match(dsaFlow.title, /data structures and algorithms/i);
+  assert.match(aiFlow.title, /AI Engineer/i);
   assert.ok(highLevelFlow.modules.length >= 7);
   assert.ok(lowLevelFlow.modules.length >= 4);
   assert.ok(dsaFlow.modules.length >= 4);
+  assert.ok(aiFlow.modules.length >= 5);
   assert.equal(getModulesByFlow('high-level-design').every((module) => module.flowSlug === 'high-level-design'), true);
   assert.equal(getModulesByFlow('low-level-design').every((module) => module.flowSlug === 'low-level-design'), true);
   assert.equal(getModulesByFlow('data-structures-and-algorithms').every((module) => module.flowSlug === 'data-structures-and-algorithms'), true);
+  assert.equal(getModulesByFlow('ai-engineer').every((module) => module.flowSlug === 'ai-engineer'), true);
 
   const lowLevelLessonTitles = new Set(getModulesByFlow('low-level-design').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
   [

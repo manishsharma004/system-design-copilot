@@ -1,4 +1,5 @@
 import { rawDsaModules } from './dsaCourseData.js';
+import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 
 export const siteOverview = {
   "title": "System Design Copilot",
@@ -4101,6 +4102,23 @@ const flowDefinitions = [
     ],
     outcome: 'You should be able to identify common coding patterns quickly, explain trade-offs clearly, and complete structured mock rounds with less drift and fewer implementation mistakes.',
     moduleSlugs: rawDsaModules.map((module) => module.slug)
+  },
+  {
+    slug: 'ai-engineer',
+    shortTitle: 'AI/ML',
+    title: 'AI Engineer learning path',
+    summary: 'End-to-end AI/ML engineering from foundations through LLMs, RAG, agents, MLOps, and responsible AI for building production intelligent systems.',
+    description: 'Use this flow when you want to build or level up skills in machine learning, deep learning, large language models, AI agents, and production ML systems.',
+    audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and AI engineers looking to fill knowledge gaps.',
+    cadence: 'Progress module by module, building from ML fundamentals through advanced topics like agents and MLOps. Apply each module with a hands-on project.',
+    heroGuidance: 'Start with foundations, build intuition for model training and evaluation, then specialize in LLMs, agents, or production ML systems based on your career goals.',
+    focusAreas: [
+      'ML fundamentals, deep learning architectures, and model evaluation',
+      'LLMs, prompt engineering, RAG pipelines, and AI agents',
+      'MLOps, model serving, monitoring, and responsible AI practices'
+    ],
+    outcome: 'You should be able to design, build, deploy, and monitor AI-powered applications from prototype through production, making informed tradeoffs between model quality, cost, latency, and safety.',
+    moduleSlugs: rawAiEngineerModules.map((module) => module.slug)
   }
 ];
 
@@ -4121,7 +4139,8 @@ function normalizeModule(module, flowSlug) {
 export const modules = [
   ...rawModules.map((module) => normalizeModule(module, 'high-level-design')),
   ...rawLowLevelModules.map((module) => normalizeModule(module, 'low-level-design')),
-  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms'))
+  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms')),
+  ...rawAiEngineerModules.map((module) => normalizeModule(module, 'ai-engineer'))
 ];
 
 
