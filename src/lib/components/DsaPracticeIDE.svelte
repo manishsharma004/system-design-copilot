@@ -1,7 +1,7 @@
 <svelte:options runes={false} />
 <script>
   import { browser } from '$app/environment'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
 
   import CodeEditor from '$lib/components/CodeEditor.svelte'
   import {
@@ -13,6 +13,8 @@
     parseInputLines,
     practiceLanguageCatalog
   } from '$lib/dsa/practice'
+  import { practiceAnswers } from '$lib/stores/practice'
+  import { getAttemptTimerElapsed, resolveAttemptTimer } from '$lib/stores/practiceTimer'
   import { ensureCppRuntime, runCppSource } from '$lib/dsa/wasmCppRuntime'
   import { ensureJavaRuntime, runJavaPractice } from '$lib/dsa/wasmJavaRuntime'
   import { ensurePythonRuntime, runPythonSource } from '$lib/dsa/wasmPythonRuntime'
@@ -30,6 +32,8 @@
   let runtimeStatus = 'idle'
   let runtimeMessage = 'Choose a runnable language to load its browser-side runtime.'
   let draftCache = {}
+  let timerNow = Date.now()
+  let timerIntervalId = null
   let runtimeReadyByLanguage = {
     python3: false,
     cpp: false,
@@ -49,6 +53,12 @@
   }
   $: activeLanguage = availableLanguages.find((language) => language.id === languageId) ?? availableLanguages[0] ?? null
   $: practiceCases = selectedQuestion?.practiceCases?.length ? selectedQuestion.practiceCases : []
+  $: attemptEntryKey = selectedQuestion ? `dsa-attempt:${lesson.id}:${selectedQuestion.frontendId}` : ''
+  $: activeAttemptTimer = resolveAttemptTimer(attemptEntryKey ? $practiceAnswers[attemptEntryKey]?.timer : null)
+  $: activeAttemptElapsedMs = getAttemptTimerElapsed(activeAttemptTimer, timerNow)
+  $: activeAttemptElapsedLabel = formatDuration(activeAttemptElapsedMs)
+  $: attemptStatusLabel = activeAttemptTimer.status === 'running' ? 'Running' : activeAttemptTimer.status === 'paused' ? 'Paused' : 'Idle'
+  $: lastAttemptLabel = activeAttemptTimer.lastCompletedMs ? formatDuration(activeAttemptTimer.lastCompletedMs) : 'No completed attempt yet'
 
   $: if (activeLanguage?.id && activeLanguage.id !== activeRuntimeLanguageId) {
     activeRuntimeLanguageId = activeLanguage.id
@@ -68,6 +78,20 @@
 
   $: if (practiceCases.length && !practiceCases.some((entry) => entry.id === activeCaseId)) {
     applyPracticeCase(practiceCases[0])
+  }
+
+  $: if (browser) {
+    const shouldTick = activeAttemptTimer.status === 'running'
+    if (shouldTick && !timerIntervalId) {
+      timerNow = Date.now()
+      timerIntervalId = window.setInterval(() => {
+        timerNow = Date.now()
+      }, 250)
+    } else if (!shouldTick && timerIntervalId) {
+      window.clearInterval(timerIntervalId)
+      timerIntervalId = null
+      timerNow = Date.now()
+    }
   }
 
   $: editorFiles = activeLanguage
@@ -97,6 +121,12 @@
     }
   })
 
+  onDestroy(() => {
+    if (timerIntervalId) {
+      window.clearInterval(timerIntervalId)
+    }
+  })
+
   function getReadyMessage(nextLanguageId) {
     if (nextLanguageId === 'cpp') {
       return 'C++ runtime is ready. The current file will compile to WebAssembly in-browser and run through a WASI adapter.'
@@ -109,6 +139,19 @@
 
   function getDraftKey(question, nextLanguageId) {
     return `dsa-practice:${lesson.id}:${question.frontendId}:${nextLanguageId}`
+  }
+
+  function formatDuration(totalMs) {
+    const totalSeconds = Math.max(0, Math.floor(totalMs / 1000))
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    }
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   }
 
   function loadDraft(question, nextLanguageId) {
@@ -251,6 +294,24 @@
     editorValue = event.detail.value
     saveDraft(editorValue)
   }
+
+  function startAttempt() {
+    if (!attemptEntryKey) return
+    practiceAnswers.startAttempt(attemptEntryKey)
+    timerNow = Date.now()
+  }
+
+  function pauseAttempt() {
+    if (!attemptEntryKey) return
+    practiceAnswers.pauseAttempt(attemptEntryKey)
+    timerNow = Date.now()
+  }
+
+  function stopAttempt() {
+    if (!attemptEntryKey) return
+    practiceAnswers.stopAttempt(attemptEntryKey)
+    timerNow = Date.now()
+  }
 </script>
 
 <section class="dsa-practice-shell panel hero-card">
@@ -330,6 +391,28 @@
         </article>
 
         <article class="workspace-pane">
+          <div class="attempt-timer-card">
+            <div class="attempt-timer-header">
+              <div>
+                <p class="eyebrow">Attempt timer</p>
+                <h3>{activeAttemptElapsedLabel}</h3>
+              </div>
+              <div class="attempt-timer-pill-row">
+                <span class="pill">{attemptStatusLabel}</span>
+                <span class="pill">{activeAttemptTimer.attemptCount} completed</span>
+                <span class="pill">Last {lastAttemptLabel}</span>
+              </div>
+            </div>
+            <p class="attempt-timer-copy">Track one timed attempt per question. Pause when you step away, then stop to record the finished time and reset for the next try.</p>
+            <div class="attempt-timer-actions">
+              <button class="action-link primary" type="button" onclick={startAttempt}>
+                {activeAttemptTimer.status === 'paused' ? 'Resume attempt' : activeAttemptTimer.attemptCount ? 'Start new attempt' : 'Start attempt'}
+              </button>
+              <button class="action-link" type="button" onclick={pauseAttempt} disabled={activeAttemptTimer.status !== 'running'}>Pause</button>
+              <button class="action-link" type="button" onclick={stopAttempt} disabled={activeAttemptTimer.status === 'idle' && activeAttemptElapsedMs === 0}>Stop</button>
+            </div>
+          </div>
+
           <div class="workspace-toolbar">
             <div class="language-switcher">
               {#each availableLanguages as language}
@@ -448,7 +531,9 @@
   .runtime-pill-stack,
   .tag-row,
   .language-switcher,
-  .case-pill-row {
+  .case-pill-row,
+  .attempt-timer-pill-row,
+  .attempt-timer-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.55rem;
@@ -510,10 +595,34 @@
   .workspace-pane,
   .test-card,
   .support-card,
-  .dsa-empty-state {
+  .dsa-empty-state,
+  .attempt-timer-card {
     background: rgba(11, 15, 24, 0.92);
     border: 1px solid rgba(118, 139, 186, 0.18);
     border-radius: 1.15rem;
+  }
+
+  .attempt-timer-card {
+    display: grid;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+    padding: 0.95rem 1rem;
+  }
+
+  .attempt-timer-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+
+  .attempt-timer-copy {
+    color: rgba(222, 230, 245, 0.78);
+    margin: 0;
+  }
+
+  .attempt-timer-card h3 {
+    margin: 0.15rem 0 0;
   }
 
   .problem-pane,

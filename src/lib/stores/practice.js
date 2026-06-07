@@ -1,8 +1,15 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
+import {
+  pauseAttemptTimer,
+  startAttemptTimer,
+  stopAttemptTimer
+} from './practiceTimer.js';
+
 const STORAGE_KEY = 'system-design-copilot-practice-v1';
-/** @typedef {{ answer: string, savedAt: string }} PracticeEntry */
+/** @typedef {{ status: 'idle' | 'running' | 'paused', elapsedMs: number, startedAt: string | null, lastCompletedMs: number, attemptCount: number, updatedAt: string | null }} AttemptTimer */
+/** @typedef {{ answer?: string, savedAt?: string, timer?: AttemptTimer }} PracticeEntry */
 /** @typedef {Record<string, PracticeEntry>} PracticeState */
 
 function createPracticeStore() {
@@ -42,8 +49,45 @@ function createPracticeStore() {
       update((state) => persist({
         ...state,
         [entryKey]: {
+          ...state[entryKey],
           answer,
           savedAt: new Date().toISOString()
+        }
+      }));
+    },
+    /**
+     * @param {string} entryKey
+     */
+    startAttempt(entryKey) {
+      update((state) => persist({
+        ...state,
+        [entryKey]: {
+          ...state[entryKey],
+          timer: startAttemptTimer(state[entryKey]?.timer)
+        }
+      }));
+    },
+    /**
+     * @param {string} entryKey
+     */
+    pauseAttempt(entryKey) {
+      update((state) => persist({
+        ...state,
+        [entryKey]: {
+          ...state[entryKey],
+          timer: pauseAttemptTimer(state[entryKey]?.timer)
+        }
+      }));
+    },
+    /**
+     * @param {string} entryKey
+     */
+    stopAttempt(entryKey) {
+      update((state) => persist({
+        ...state,
+        [entryKey]: {
+          ...state[entryKey],
+          timer: stopAttemptTimer(state[entryKey]?.timer)
         }
       }));
     },
