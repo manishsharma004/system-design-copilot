@@ -253,8 +253,8 @@ const rawModules = [
         ],
         "likelyAnswerPoints": [
           "For a notifications system, start by asking who sends and receives the notification, which channels matter, and what the most common delivery path looks like.",
-          "Clarify delivery semantics early: is best-effort acceptable, or do you need deduplication, ordering, retries, and stronger guarantees for some notification types?",
-          "Quantify peak fan-out, geographic spread, and latency expectations because those numbers decide whether you need queues, regional routing, or provider failover.",
+          "For notifications, clarify delivery semantics early: is best-effort acceptable, or do you need deduplication, ordering, retries, and stronger guarantees for some notification types?",
+          "For notifications, quantify peak fan-out, geographic spread, and latency expectations because those numbers decide whether you need queues, regional routing, or provider failover.",
           "Correctness often changes the architecture most because it determines where authoritative state lives and whether you need idempotency, transactions, or fail-closed behavior.",
           "For an internal admin tool, bias toward correctness, auditability, and a simpler architecture close to the source of truth; for a global consumer app, add multi-region latency, abuse controls, and graceful degradation much earlier."
         ],

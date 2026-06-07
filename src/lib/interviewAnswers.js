@@ -60,8 +60,8 @@ export function buildLessonAnswerContext(lesson) {
   const sectionBullets = lesson?.sections?.flatMap((section) => section.bullets ?? []) ?? [];
 
   return [
-    lesson?.whyItMatters,
     ...(lesson?.likelyAnswerPoints ?? []),
+    lesson?.whyItMatters,
     ...(lesson?.checklist ?? []),
     ...sectionBodies,
     ...sectionBullets,
