@@ -1,6 +1,7 @@
 <svelte:options runes={false} />
 <script>
   // @ts-nocheck
+  import MarkdownIt from 'markdown-it'
   import { getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
   import { llmSettings } from '$lib/stores/llm'
 
@@ -13,14 +14,64 @@
   let settingsOpen = false
   let loading = false
   let responseText = ''
+  let responseHtml = ''
   let errorText = ''
   let extraPrompt = ''
 
+  const markdown = new MarkdownIt({
+    html: false,
+    linkify: true,
+    breaks: true,
+    typographer: true
+  })
+
+  const defaultLinkRenderer = markdown.renderer.rules.link_open || function renderLink(tokens, idx, options, _env, self) {
+    return self.renderToken(tokens, idx, options)
+  }
+
+  markdown.renderer.rules.link_open = function renderSafeLink(tokens, idx, options, env, self) {
+    const targetIndex = tokens[idx].attrIndex('target')
+    const relIndex = tokens[idx].attrIndex('rel')
+
+    if (targetIndex < 0) {
+      tokens[idx].attrPush(['target', '_blank'])
+    } else {
+      tokens[idx].attrs[targetIndex][1] = '_blank'
+    }
+
+    if (relIndex < 0) {
+      tokens[idx].attrPush(['rel', 'noopener noreferrer nofollow'])
+    } else {
+      tokens[idx].attrs[relIndex][1] = 'noopener noreferrer nofollow'
+    }
+
+    return defaultLinkRenderer(tokens, idx, options, env, self)
+  }
+
   $: activeProvider = getLlmProvider($llmSettings.providerId)
   $: providerSupportsTemplates = Boolean(activeProvider?.supportsCustomTemplate)
+  $: responseHtml = renderResponseMarkdown(responseText)
 
   function updateField(field, event) {
     llmSettings.updateField(field, event.currentTarget.value)
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;')
+  }
+
+  function renderResponseMarkdown(value) {
+    if (!value?.trim()) return ''
+    try {
+      return markdown.render(value)
+    } catch {
+      return `<pre>${escapeHtml(value)}</pre>`
+    }
   }
 
   /**
@@ -154,7 +205,122 @@
   {#if responseText}
     <article class="content-card llm-response-card">
       <p class="eyebrow">Model response</p>
-      <pre>{responseText}</pre>
+      <div class="llm-markdown">{@html responseHtml}</div>
     </article>
   {/if}
 </section>
+
+<style>
+  .llm-response-card {
+    overflow: hidden;
+  }
+
+  .llm-markdown {
+    font-size: 0.96rem;
+    line-height: 1.72;
+    color: #cfd7ea;
+    overflow-wrap: anywhere;
+  }
+
+  .llm-markdown :global(h1),
+  .llm-markdown :global(h2),
+  .llm-markdown :global(h3),
+  .llm-markdown :global(h4) {
+    margin: 1.1rem 0 0.55rem;
+    line-height: 1.32;
+    color: #f8fbff;
+  }
+
+  .llm-markdown :global(h1) {
+    font-size: 1.35rem;
+  }
+
+  .llm-markdown :global(h2) {
+    font-size: 1.18rem;
+  }
+
+  .llm-markdown :global(h3) {
+    font-size: 1.05rem;
+  }
+
+  .llm-markdown :global(p),
+  .llm-markdown :global(ul),
+  .llm-markdown :global(ol),
+  .llm-markdown :global(blockquote),
+  .llm-markdown :global(table),
+  .llm-markdown :global(pre) {
+    margin: 0.6rem 0;
+  }
+
+  .llm-markdown :global(ul),
+  .llm-markdown :global(ol) {
+    padding-left: 1.3rem;
+  }
+
+  .llm-markdown :global(li) {
+    margin: 0.2rem 0;
+  }
+
+  .llm-markdown :global(blockquote) {
+    padding: 0.45rem 0.75rem;
+    border-left: 3px solid rgba(123, 145, 255, 0.7);
+    border-radius: 0.35rem;
+    background: rgba(91, 104, 190, 0.12);
+    color: #d9e2ff;
+  }
+
+  .llm-markdown :global(code) {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.88em;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.3rem;
+    background: rgba(76, 89, 141, 0.35);
+    color: #f2f7ff;
+  }
+
+  .llm-markdown :global(pre) {
+    padding: 0.85rem 0.95rem;
+    border-radius: 0.65rem;
+    background: #101522;
+    border: 1px solid rgba(140, 157, 214, 0.28);
+    overflow: auto;
+  }
+
+  .llm-markdown :global(pre code) {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .llm-markdown :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    display: block;
+    overflow: auto;
+  }
+
+  .llm-markdown :global(th),
+  .llm-markdown :global(td) {
+    border: 1px solid rgba(146, 162, 204, 0.35);
+    padding: 0.48rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .llm-markdown :global(th) {
+    background: rgba(80, 100, 173, 0.22);
+  }
+
+  .llm-markdown :global(a) {
+    color: #9dbdff;
+    text-decoration: underline;
+    text-underline-offset: 0.13rem;
+  }
+
+  @media (max-width: 760px) {
+    .llm-markdown {
+      font-size: 0.92rem;
+      line-height: 1.64;
+    }
+  }
+</style>
