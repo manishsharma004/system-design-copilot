@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allLessons, courseFlows, getFlowBySlug, getLessonPracticeSteps, getModulesByFlow, modules, siteOverview } from '../courseData.js';
 import { getInteractiveLesson } from '../src/lib/data/interactiveLessons.js';
+import { buildLessonAnswerContext, getLikelyAnswerPoints } from '../src/lib/interviewAnswers.js';
 import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
 
 const repoRoot = path.dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
@@ -134,6 +135,39 @@ test('every lesson has interview scaffolding and local diagrams resolve', () => 
       assert.equal(existsSync(imagePath), true, `missing diagram file for ${lesson.title}`);
     }
   });
+});
+
+test('curated likely-answer points are included in lesson answer context', () => {
+  const dnsLesson = allLessons.find((lesson) => lesson.id === 'edge-and-routing/dns');
+  assert.ok(dnsLesson?.likelyAnswerPoints?.length >= 3);
+
+  const context = buildLessonAnswerContext(dnsLesson);
+  assert.ok(context.includes(dnsLesson.likelyAnswerPoints[0]));
+});
+
+test('core lessons return curated likely answers for interview prompts', () => {
+  const framingLesson = allLessons.find((lesson) => lesson.id === 'foundations/problem-framing');
+  const dnsLesson = allLessons.find((lesson) => lesson.id === 'edge-and-routing/dns');
+
+  const framingAnswers = getLikelyAnswerPoints(
+    framingLesson.interviewPrompts[0],
+    buildLessonAnswerContext(framingLesson),
+    framingLesson.checklist
+  );
+  assert.ok(
+    framingAnswers.some((answer) => answer.includes('who sends and receives the notification')),
+    'expected curated framing answer for notifications prompt'
+  );
+
+  const dnsAnswers = getLikelyAnswerPoints(
+    dnsLesson.interviewPrompts[0],
+    buildLessonAnswerContext(dnsLesson),
+    dnsLesson.checklist
+  );
+  assert.ok(
+    dnsAnswers.some((answer) => answer.includes('coarse regional steering')),
+    'expected curated DNS answer for weighted routing prompt'
+  );
 });
 
 

@@ -251,6 +251,13 @@ const rawModules = [
           "Which requirement usually changes the architecture the most: latency, correctness, or cost? Why?",
           "How would your framing change for an internal admin tool versus a global consumer app?"
         ],
+        "likelyAnswerPoints": [
+          "For a notifications system, start by asking who sends and receives the notification, which channels matter, and what the most common delivery path looks like.",
+          "Clarify delivery semantics early: is best-effort acceptable, or do you need deduplication, ordering, retries, and stronger guarantees for some notification types?",
+          "Quantify peak fan-out, geographic spread, and latency expectations because those numbers decide whether you need queues, regional routing, or provider failover.",
+          "Correctness often changes the architecture most because it determines where authoritative state lives and whether you need idempotency, transactions, or fail-closed behavior.",
+          "For an internal admin tool, bias toward correctness, auditability, and a simpler architecture close to the source of truth; for a global consumer app, add multi-region latency, abuse controls, and graceful degradation much earlier."
+        ],
         "diagram": null,
         "related": [
           "capacity-estimation",
@@ -311,6 +318,12 @@ const rawModules = [
           "For a URL shortener with 100 million new links per month, what is the yearly storage requirement?",
           "How would a read-heavy social feed change your cache estimate?",
           "When is a rough estimate sufficient and when should you refine it?"
+        ],
+        "likelyAnswerPoints": [
+          "For 100 million new links per month, estimate about 1.2 billion links per year, then multiply by bytes per row plus index and replication overhead instead of giving one magic number without assumptions.",
+          "If each shortened URL record plus metadata is a few hundred bytes, the primary dataset lands around hundreds of gigabytes per year, and replicas, backups, and analytics copies push the real footprint into low-terabyte territory.",
+          "For a read-heavy social feed, size the cache from the hot working set: active users, timeline objects per session, object size, and TTL matter more than total historical posts.",
+          "A rough estimate is enough when it rules out bad architectures by order of magnitude; refine it when the decision depends on close cost, storage, or latency margins."
         ],
         "diagram": null,
         "related": [
@@ -373,6 +386,12 @@ const rawModules = [
           "When is vertical scaling the right answer?",
           "How would you explain scalability to a non-infrastructure stakeholder?"
         ],
+        "likelyAnswerPoints": [
+          "A single large relational database can perform very well early, but it scales poorly once one writer, one machine, or one failover domain becomes the bottleneck for every request.",
+          "Vertical scaling is the right answer when you need quick headroom, the workload still fits on one box, and the simplicity is more valuable than introducing distributed coordination too early.",
+          "Explain scalability as the ability to serve much more traffic and data without latency, downtime, or operator effort growing at the same rate.",
+          "A design is not truly scalable if every growth step requires a coordinated migration, a larger shared lock, or a bigger operations team just to stay even."
+        ],
         "diagram": null,
         "related": [
           "latency-throughput-slos",
@@ -434,6 +453,12 @@ const rawModules = [
           "How do queues change throughput without necessarily improving latency?",
           "Which percentile would you optimize for a checkout flow and why?"
         ],
+        "likelyAnswerPoints": [
+          "Retries improve availability only for transient failures, but each retry adds extra work, extends tail latency, and can amplify overload if you do not cap attempts with timeouts and jitter.",
+          "Queues can raise sustained throughput by smoothing bursts and decoupling producers from workers, but waiting in the queue still adds end-to-end latency for the user.",
+          "For checkout, optimize the tail percentile such as p95 or p99 because the slowest successful requests are the ones that cause abandoned carts and lost revenue.",
+          "Use SLOs to decide which paths deserve tighter latency goals, then combine back pressure, concurrency limits, and graceful fallbacks to protect that target."
+        ],
         "diagram": null,
         "related": [
           "availability-consistency-cap",
@@ -494,6 +519,12 @@ const rawModules = [
           "Which parts of a social feed can be eventually consistent?",
           "How would you design an order placement flow during a regional partition?",
           "When is temporary unavailability preferable to stale reads?"
+        ],
+        "likelyAnswerPoints": [
+          "In a social feed, counters, fan-out copies, ranking features, and recommendation surfaces can usually be eventually consistent, while auth checks, privacy settings, and block lists should be fresher.",
+          "During a regional partition, keep one authoritative write path for orders, payments, and inventory, use idempotent retries, and let non-critical side effects such as email or analytics reconcile asynchronously later.",
+          "Temporary unavailability is preferable when stale data would violate money movement, inventory reservations, access control, or compliance rules.",
+          "CAP discussions are strongest when you name the degraded mode explicitly: stale timeline, read-only account settings, or retriable checkout instead of vague AP or CP labels."
         ],
         "diagram": {
           "src": "/primer-images/bgLMI2u.png",
@@ -573,6 +604,12 @@ const rawModules = [
           "How do TTL choices affect planned cutovers?",
           "What happens if one region fails but clients still cache its record?"
         ],
+        "likelyAnswerPoints": [
+          "Use weighted DNS for coarse regional steering, canary shifts, or migrations when per-request path or header routing is unnecessary; use an L7 balancer when decisions must happen live on every request.",
+          "TTL controls how quickly changes can propagate, so lower it before a planned cutover, but assume some resolvers will still hold stale answers longer than you asked.",
+          "If a region fails while clients still cache its DNS record, some users keep hitting the dead endpoint until cache expiry, which is why DNS failover is never truly instant.",
+          "The safe pattern is DNS for broad traffic steering plus regional load balancers and health checks for fast local failover."
+        ],
         "diagram": {
           "src": "/primer-images/IOyLj4i.jpg",
           "alt": "DNS hierarchy diagram",
@@ -639,6 +676,12 @@ const rawModules = [
           "How would you roll out a new web bundle without stale asset bugs?",
           "Why can a CDN lower both latency and cost?"
         ],
+        "likelyAnswerPoints": [
+          "Avoid caching personalized, authenticated, payment, cart, admin, or otherwise sensitive responses at the CDN unless the cache key and privacy controls are extremely explicit.",
+          "Roll out bundles with fingerprinted asset filenames, long-lived immutable caching for JS and CSS, and a short-lived or purged HTML shell so clients discover new asset references quickly.",
+          "A CDN lowers latency by serving cache hits from a closer point of presence and lowers cost by offloading origin bandwidth, compute, and repeated TLS work.",
+          "Good CDN answers mention cache keys, TTLs, invalidation, and the difference between immutable static assets and fast-changing personalized content."
+        ],
         "diagram": {
           "src": "/primer-images/h9TAuGI.jpg",
           "alt": "CDN edge and origin diagram",
@@ -704,6 +747,12 @@ const rawModules = [
           "When does L7 routing justify the extra complexity?",
           "How would you keep deploys safe behind a load balancer?",
           "Why is session affinity usually a temporary compromise?"
+        ],
+        "likelyAnswerPoints": [
+          "L7 routing is worth the cost when you need host, path, header, cookie, or auth-aware decisions, plus features such as TLS termination, canaries, or application-level health checks.",
+          "Keep deploys safe by draining connections, removing a node from rotation before shutdown, using health checks to gate traffic, and rolling out gradually while watching backend error rates.",
+          "Session affinity is usually temporary because it hides stateful coupling, weakens elasticity and failover, and should eventually be replaced by stateless sessions or shared state.",
+          "A strong load-balancer answer also names the trade-off: L4 is cheaper and faster for simple transport routing, while L7 buys more control at higher operational cost."
         ],
         "diagram": {
           "src": "/primer-images/h81n9iK.png",

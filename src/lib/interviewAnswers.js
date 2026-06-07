@@ -61,6 +61,7 @@ export function buildLessonAnswerContext(lesson) {
 
   return [
     lesson?.whyItMatters,
+    ...(lesson?.likelyAnswerPoints ?? []),
     ...(lesson?.checklist ?? []),
     ...sectionBodies,
     ...sectionBullets,
