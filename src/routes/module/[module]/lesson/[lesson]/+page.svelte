@@ -9,12 +9,14 @@
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
   import DsaPracticeIDE from '$lib/components/DsaPracticeIDE.svelte';
+  import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
   export let data;
 
   $: flow = getFlowBySlug(data.module.flowSlug);
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
+  $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
 
   /** @param {string} heading */
   function sectionId(heading) {
@@ -201,9 +203,19 @@
     <article class="list-card lesson-rail-card">
       <p class="eyebrow">Interview prompts</p>
       <h3>Practice aloud</h3>
-      <ul class="prompts">
+      <ul class="prompts prompt-answer-list">
         {#each data.lesson.interviewPrompts as item}
-          <li>{item}</li>
+          <li>
+            <p>{item}</p>
+            <details class="prompt-answer-toggle">
+              <summary>Show likely answer</summary>
+              <ul>
+                {#each getLikelyAnswerPoints(item, lessonAnswerContext, data.lesson.checklist) as answerPoint}
+                  <li>{answerPoint}</li>
+                {/each}
+              </ul>
+            </details>
+          </li>
         {/each}
       </ul>
     </article>

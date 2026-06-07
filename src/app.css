@@ -1072,6 +1072,41 @@ button:disabled, .action-link[disabled] {
   padding: 1rem;
 }
 
+.prompt-answer-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.prompt-answer-list > li {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.prompt-answer-list > li > p {
+  margin: 0;
+}
+
+.prompt-answer-toggle {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.prompt-answer-toggle summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.prompt-answer-toggle ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
 .practice-nav {
   justify-content: space-between;
 }

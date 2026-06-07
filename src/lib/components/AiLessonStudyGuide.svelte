@@ -1,5 +1,7 @@
 <svelte:options runes={false} />
 <script>
+  import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
+
   /** @type {any} */
   export let lesson;
 
@@ -18,6 +20,15 @@
   $: studyHighlights = lesson?.checklist?.slice(0, 4) ?? [];
   $: productionPitfalls = lesson?.pitfalls?.slice(0, 3) ?? [];
   $: practicePrompts = lesson?.interviewPrompts?.slice(0, 3) ?? [];
+  $: lessonAnswerContext = buildLessonAnswerContext(lesson);
+
+  /** @param {any} exercise */
+  function exerciseAnswerContext(exercise) {
+    return [exercise?.description, ...(exercise?.hints ?? []), ...lessonAnswerContext]
+      .filter(Boolean)
+      .map((entry) => String(entry).trim())
+      .filter((entry) => entry.length > 0);
+  }
 </script>
 
 {#if lesson}
@@ -58,9 +69,19 @@
       <article class="list-card">
         <p class="eyebrow">Practice aloud</p>
         <h3>Questions worth rehearsing</h3>
-        <ul>
+        <ul class="prompt-answer-list">
           {#each practicePrompts as item}
-            <li>{item}</li>
+            <li>
+              <p>{item}</p>
+              <details class="prompt-answer-toggle">
+                <summary>Show likely answer</summary>
+                <ul>
+                  {#each getLikelyAnswerPoints(item, lessonAnswerContext, lesson?.checklist ?? []) as answerPoint}
+                    <li>{answerPoint}</li>
+                  {/each}
+                </ul>
+              </details>
+            </li>
           {/each}
         </ul>
       </article>
@@ -130,9 +151,19 @@
             <p>{exercise.description}</p>
             <div class="topic-detail-section">
               <h4>Use these prompts to deepen the study pass</h4>
-              <ul>
+              <ul class="prompt-answer-list">
                 {#each exercise.promptQuestions as question}
-                  <li>{question}</li>
+                  <li>
+                    <p>{question}</p>
+                    <details class="prompt-answer-toggle">
+                      <summary>Show likely answer</summary>
+                      <ul>
+                        {#each getLikelyAnswerPoints(question, exerciseAnswerContext(exercise), exercise?.hints ?? studyHighlights) as answerPoint}
+                          <li>{answerPoint}</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  </li>
                 {/each}
               </ul>
             </div>
