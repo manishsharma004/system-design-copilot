@@ -9,6 +9,7 @@
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
   import DsaPracticeIDE from '$lib/components/DsaPracticeIDE.svelte';
+  import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
   export let data;
 
@@ -177,13 +178,12 @@
           {/if}
         </div>
         {#if section.codeExample}
-          <div class="lesson-code-example">
-            <div class="lesson-code-example-header">
-              <p class="eyebrow">Code example</p>
-              <h4>{section.codeExample.title}</h4>
-            </div>
-            <pre class="lesson-code-block"><code>{section.codeExample.code}</code></pre>
-          </div>
+          <LessonCodeSnippet
+            title={section.codeExample.title}
+            language={section.codeExample.language ?? 'python'}
+            languageLabel={section.codeExample.languageLabel ?? 'Python'}
+            code={section.codeExample.code}
+          />
         {/if}
       </article>
     {/each}
