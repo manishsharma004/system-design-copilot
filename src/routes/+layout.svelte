@@ -4,6 +4,7 @@
   import '../app.css';
   import { page } from '$app/stores';
   import { allLessons, courseFlows, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
+  import { getVisibleSidebarModules } from '$lib/sidebar';
   import { progress } from '$lib/stores/progress';
   import { derived } from 'svelte/store';
   import { onMount } from 'svelte';
@@ -129,15 +130,7 @@
   $: nextLesson = activeModule && currentLessonIndex > -1 && currentLessonIndex < activeModule.lessons.length - 1
     ? activeModule.lessons[currentLessonIndex + 1]
     : null;
-  $: filteredModules = modules
-    .map((module) => ({
-      ...module,
-      lessons: module.lessons.filter((lesson) => {
-        const haystack = `${module.title} ${module.summary} ${lesson.title} ${lesson.summary}`.toLowerCase();
-        return haystack.includes(query.trim().toLowerCase());
-      })
-    }))
-    .filter((module) => query.trim() ? module.lessons.length > 0 || `${module.title} ${module.summary}`.toLowerCase().includes(query.trim().toLowerCase()) : true);
+  $: filteredModules = getVisibleSidebarModules({ modules, activeFlow, query });
   $: visibleModules = filteredModules.map((module) => ({
     ...module,
     isExpanded: query.trim()
@@ -205,7 +198,7 @@
         <div class="sidebar-compact-group">
           <span class="sidebar-compact-label">Flows</span>
           {#each courseFlows as flow}
-            <a class:active={normalizedPathname === flowHref(flow.slug)} class="sidebar-compact-link" href={flowHref(flow.slug)}>
+            <a class:active={activeFlow?.slug === flow.slug} class="sidebar-compact-link" href={flowHref(flow.slug)}>
               {flow.title}
             </a>
           {/each}
