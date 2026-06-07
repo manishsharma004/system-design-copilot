@@ -10,6 +10,7 @@
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
   import DsaPracticeIDE from '$lib/components/DsaPracticeIDE.svelte';
   import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
+  import MLPracticeIDE from '$lib/components/MLPracticeIDE.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
   export let data;
 
@@ -269,6 +270,7 @@
 
 {#if isAiLesson}
   <AiLessonStudyGuide lesson={data.lesson} />
+  <MLPracticeIDE lesson={data.lesson} />
 {/if}
 
 <LessonExplorer lesson={data.lesson} />
