@@ -2,7 +2,7 @@
 <script>
   // @ts-nocheck
   import MarkdownIt from 'markdown-it'
-  import { getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
+  import { buildSearchEngineUrls, getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
   import { llmSettings } from '$lib/stores/llm'
 
   export let title = 'AI copilot'
@@ -49,8 +49,16 @@
   }
 
   $: activeProvider = getLlmProvider($llmSettings.providerId)
+  $: isSearchEngineProvider = activeProvider?.id === 'search-engine'
   $: providerSupportsTemplates = Boolean(activeProvider?.supportsCustomTemplate)
   $: responseHtml = renderResponseMarkdown(responseText)
+
+  const searchEngineOptions = [
+    { id: 'all', label: 'All engines' },
+    { id: 'google', label: 'Google' },
+    { id: 'duckduckgo', label: 'DuckDuckGo' },
+    { id: 'perplexity', label: 'Perplexity' }
+  ]
 
   function updateField(field, event) {
     llmSettings.updateField(field, event.currentTarget.value)
@@ -93,9 +101,42 @@
         ? 'Produce a tighter system-design answer outline with concrete sections, missing considerations, and one suggested next edit.'
         : 'Review the draft, highlight missing trade-offs, missing APIs/data model details, and suggest the next three improvements.'
 
+      const userPrompt = `${basePrompt}\n\n${modePrompt}`
+
+      if (isSearchEngineProvider) {
+        const systemPrompt = $llmSettings.systemPrompt || 'You are a concise system design interview coach.'
+        const prompt = `System: ${systemPrompt}\nUser: ${userPrompt}`
+        const urls = buildSearchEngineUrls(prompt)
+        const selectedEngine = ($llmSettings.model || 'all').trim().toLowerCase()
+
+        if (selectedEngine === 'google') {
+          responseText = `Open in Google:\n\n[${urls.google}](${urls.google})`
+          return
+        }
+
+        if (selectedEngine === 'duckduckgo') {
+          responseText = `Open in DuckDuckGo:\n\n[${urls.duckduckgo}](${urls.duckduckgo})`
+          return
+        }
+
+        if (selectedEngine === 'perplexity') {
+          responseText = `Open in Perplexity:\n\n[${urls.perplexity}](${urls.perplexity})`
+          return
+        }
+
+        responseText = [
+          'Open this prompt in search engines:',
+          '',
+          `- Google: [${urls.google}](${urls.google})`,
+          `- DuckDuckGo: [${urls.duckduckgo}](${urls.duckduckgo})`,
+          `- Perplexity: [${urls.perplexity}](${urls.perplexity})`
+        ].join('\n')
+        return
+      }
+
       responseText = await requestLlmCompletion($llmSettings, [
         { role: 'system', content: $llmSettings.systemPrompt || 'You are a concise system design interview coach.' },
-        { role: 'user', content: `${basePrompt}\n\n${modePrompt}` }
+        { role: 'user', content: userPrompt }
       ])
     } catch (error) {
       errorText = error instanceof Error ? error.message : 'Unable to contact the configured model.'
@@ -133,37 +174,49 @@
 
       <label>
         <span class="eyebrow">Model</span>
-        <input value={$llmSettings.model} oninput={(event) => updateField('model', event)} />
+        {#if isSearchEngineProvider}
+          <select value={$llmSettings.model} onchange={(event) => llmSettings.updateField('model', event.currentTarget.value)}>
+            {#each searchEngineOptions as engine}
+              <option value={engine.id}>{engine.label}</option>
+            {/each}
+          </select>
+        {:else}
+          <input value={$llmSettings.model} oninput={(event) => updateField('model', event)} />
+        {/if}
       </label>
 
-      <label>
-        <span class="eyebrow">{activeProvider?.endpointLabel}</span>
-        <input value={$llmSettings.endpoint} oninput={(event) => updateField('endpoint', event)} />
-      </label>
+      {#if !isSearchEngineProvider}
+        <label>
+          <span class="eyebrow">{activeProvider?.endpointLabel}</span>
+          <input value={$llmSettings.endpoint} oninput={(event) => updateField('endpoint', event)} />
+        </label>
 
-      <label>
-        <span class="eyebrow">{activeProvider?.apiKeyLabel}</span>
-        <input type="password" autocomplete="off" value={$llmSettings.apiKey} oninput={(event) => updateField('apiKey', event)} />
-      </label>
+        <label>
+          <span class="eyebrow">{activeProvider?.apiKeyLabel}</span>
+          <input type="password" autocomplete="off" value={$llmSettings.apiKey} oninput={(event) => updateField('apiKey', event)} />
+        </label>
+      {/if}
 
-      {#if activeProvider?.requiresDeployment}
+      {#if activeProvider?.requiresDeployment && !isSearchEngineProvider}
         <label>
           <span class="eyebrow">Deployment</span>
           <input value={$llmSettings.deployment} oninput={(event) => updateField('deployment', event)} />
         </label>
       {/if}
 
-      <label>
-        <span class="eyebrow">Temperature</span>
-        <input type="number" min="0" max="2" step="0.1" value={$llmSettings.temperature} oninput={(event) => updateField('temperature', Number(event.currentTarget.value))} />
-      </label>
+      {#if !isSearchEngineProvider}
+        <label>
+          <span class="eyebrow">Temperature</span>
+          <input type="number" min="0" max="2" step="0.1" value={$llmSettings.temperature} oninput={(event) => updateField('temperature', Number(event.currentTarget.value))} />
+        </label>
+      {/if}
 
       <label class="llm-full">
         <span class="eyebrow">System prompt</span>
         <textarea rows="4" value={$llmSettings.systemPrompt} oninput={(event) => updateField('systemPrompt', event)}></textarea>
       </label>
 
-      {#if providerSupportsTemplates}
+      {#if providerSupportsTemplates && !isSearchEngineProvider}
         <label class="llm-full">
           <span class="eyebrow">Headers JSON</span>
           <textarea rows="4" value={$llmSettings.headersText} oninput={(event) => updateField('headersText', event)}></textarea>
@@ -178,7 +231,13 @@
         </label>
       {/if}
     </div>
-    <p class="muted">Keys and custom request templates are stored only in this browser. To add another adapter in TypeScript, extend <code>src/lib/llm/providers.js</code>.</p>
+    <p class="muted">
+      {#if isSearchEngineProvider}
+        Search links are generated locally in your browser from the composed prompt.
+      {:else}
+        Keys and custom request templates are stored only in this browser. To add another adapter in TypeScript, extend <code>src/lib/llm/providers.js</code>.
+      {/if}
+    </p>
   {/if}
 
   <label>

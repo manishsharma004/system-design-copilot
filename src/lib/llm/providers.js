@@ -1,5 +1,16 @@
 const builtInProviders = [
   {
+    id: 'search-engine',
+    label: 'Search Engine (DuckDuckGo / Google / Perplexity)',
+    family: 'search',
+    defaultModel: 'all',
+    defaultEndpoint: '',
+    endpointLabel: 'Search endpoint (not used)',
+    apiKeyLabel: 'API key (not used)',
+    supportsCustomTemplate: false,
+    note: 'Builds search links using your system prompt and request text; no API key required.'
+  },
+  {
     id: 'openai',
     label: 'OpenAI',
     family: 'cloud',
@@ -168,6 +179,30 @@ export function readResponsePath(data, path) {
     return JSON.stringify(current, null, 2)
   }
   return current === undefined || current === null ? '' : String(current)
+}
+
+/**
+ * @param {string} prompt
+ */
+export function buildSearchEngineUrls(prompt) {
+  const google = new URL(`https://www.google.com/search?${new URLSearchParams({
+    udm: '50',
+    q: prompt
+  })}`)
+
+  const duckduckgo = new URL(`https://duck.ai/?${new URLSearchParams({
+    q: prompt
+  })}`)
+
+  const perplexity = new URL(`https://www.perplexity.ai/?${new URLSearchParams({
+    q: prompt
+  })}`)
+
+  return {
+    google: google.toString(),
+    duckduckgo: duckduckgo.toString(),
+    perplexity: perplexity.toString()
+  }
 }
 
 /**

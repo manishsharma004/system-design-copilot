@@ -7,6 +7,7 @@ import {
   buildSimulationScriptMetadata
 } from '../src/lib/editor/exerciseMetadata.js'
 import {
+  buildSearchEngineUrls,
   buildRequest,
   readResponsePath,
   renderTemplate
@@ -92,4 +93,14 @@ test('template rendering and response path extraction handle nested arrays', () 
     readResponsePath({ choices: [{ message: { content: 'ready' } }] }, 'choices[0].message.content'),
     'ready'
   )
+})
+
+test('search engine URL builder includes google, duckduckgo, and perplexity', () => {
+  const urls = buildSearchEngineUrls('System: test\nUser: explain ml math')
+
+  assert.equal(urls.google.startsWith('https://www.google.com/search?'), true)
+  assert.equal(urls.duckduckgo.startsWith('https://duck.ai/?'), true)
+  assert.equal(urls.perplexity.startsWith('https://www.perplexity.ai/?'), true)
+  assert.equal(urls.google.includes('udm=50'), true)
+  assert.equal(urls.google.includes('q='), true)
 })
