@@ -122,9 +122,19 @@
         <div class="lesson-step-support">
           <div class="practice-guidance compact">
             <p class="eyebrow">What to say first</p>
-            <ul>
+            <ul class="prompt-answer-list">
               {#each data.lesson.checklist.slice(0, 3) as item}
-                <li>{item}</li>
+                <li>
+                  <p>{item}</p>
+                  <details class="prompt-answer-toggle">
+                    <summary>Show likely answer</summary>
+                    <ul>
+                      {#each getLikelyAnswerPoints(item, lessonAnswerContext, data.lesson.checklist) as answerPoint}
+                        <li>{answerPoint}</li>
+                      {/each}
+                    </ul>
+                  </details>
+                </li>
               {/each}
             </ul>
           </div>
@@ -148,9 +158,19 @@
           {#if section.bullets?.length}
             <div class="practice-guidance compact lesson-step-support">
               <p class="eyebrow">Call these points out explicitly</p>
-              <ul>
+              <ul class="prompt-answer-list">
                 {#each section.bullets as bullet}
-                  <li>{bullet}</li>
+                  <li>
+                    <p>{bullet}</p>
+                    <details class="prompt-answer-toggle">
+                      <summary>Show likely answer</summary>
+                      <ul>
+                        {#each getLikelyAnswerPoints(bullet, [section.body, ...(section.bullets ?? []), ...lessonAnswerContext], data.lesson.checklist) as answerPoint}
+                          <li>{answerPoint}</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  </li>
                 {/each}
               </ul>
             </div>
@@ -183,9 +203,19 @@
     <article class="list-card lesson-rail-card">
       <p class="eyebrow">Checklist</p>
       <h3>Things to say clearly</h3>
-      <ul class="checklist">
+      <ul class="checklist prompt-answer-list">
         {#each data.lesson.checklist as item}
-          <li>{item}</li>
+          <li>
+            <p>{item}</p>
+            <details class="prompt-answer-toggle">
+              <summary>Show likely answer</summary>
+              <ul>
+                {#each getLikelyAnswerPoints(item, lessonAnswerContext, data.lesson.checklist) as answerPoint}
+                  <li>{answerPoint}</li>
+                {/each}
+              </ul>
+            </details>
+          </li>
         {/each}
       </ul>
     </article>
