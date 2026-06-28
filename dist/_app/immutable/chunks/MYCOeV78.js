@@ -1,0 +1,1 @@
+import{c as e}from"./XN8zjh1y.js";function t(t,n){throw new e(t,n)}export{t};
