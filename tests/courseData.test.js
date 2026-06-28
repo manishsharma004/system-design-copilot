@@ -62,30 +62,43 @@ test('curriculum covers a complete prep path', () => {
   ].forEach((title) => assert.ok(titles.has(title), `missing lesson: ${title}`));
 });
 
-test('course flows separate high-level, low-level, DSA, and AI engineer prep', () => {
-  assert.equal(courseFlows.length, 4);
+test('course flows separate high-level, low-level, DSA, AI engineer, and question bank prep', () => {
+  assert.equal(courseFlows.length, 5);
 
   const highLevelFlow = getFlowBySlug('high-level-design');
   const lowLevelFlow = getFlowBySlug('low-level-design');
   const dsaFlow = getFlowBySlug('data-structures-and-algorithms');
   const aiFlow = getFlowBySlug('ai-engineer');
+  const questionBankFlow = getFlowBySlug('interview-questions');
 
   assert.ok(highLevelFlow);
   assert.ok(lowLevelFlow);
   assert.ok(dsaFlow);
   assert.ok(aiFlow);
+  assert.ok(questionBankFlow);
   assert.match(highLevelFlow.title, /High-level design/i);
   assert.match(lowLevelFlow.title, /Low-level design/i);
   assert.match(dsaFlow.title, /data structures and algorithms/i);
   assert.match(aiFlow.title, /AI Engineer/i);
+  assert.match(questionBankFlow.title, /question bank/i);
   assert.ok(highLevelFlow.modules.length >= 7);
   assert.ok(lowLevelFlow.modules.length >= 4);
   assert.ok(dsaFlow.modules.length >= 4);
   assert.ok(aiFlow.modules.length >= 5);
+  assert.ok(questionBankFlow.modules.length >= 4);
   assert.equal(getModulesByFlow('high-level-design').every((module) => module.flowSlug === 'high-level-design'), true);
   assert.equal(getModulesByFlow('low-level-design').every((module) => module.flowSlug === 'low-level-design'), true);
   assert.equal(getModulesByFlow('data-structures-and-algorithms').every((module) => module.flowSlug === 'data-structures-and-algorithms'), true);
   assert.equal(getModulesByFlow('ai-engineer').every((module) => module.flowSlug === 'ai-engineer'), true);
+  assert.equal(getModulesByFlow('interview-questions').every((module) => module.flowSlug === 'interview-questions'), true);
+
+  const questionBankLessonTitles = new Set(getModulesByFlow('interview-questions').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
+  [
+    'Top interview questions · Easy',
+    'Google question bank',
+    'Amazon question bank',
+    'Coding interview strategy'
+  ].forEach((title) => assert.ok(questionBankLessonTitles.has(title), `missing question bank lesson: ${title}`));
 
   const lowLevelLessonTitles = new Set(getModulesByFlow('low-level-design').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
   [
@@ -118,6 +131,37 @@ test('DSA lessons expose coding-practice metadata for the local WASM runner', ()
       assert.ok(question.languageTemplates?.python3?.defaultCode, `missing Python template for ${question.title}`);
       assert.ok(Array.isArray(question.practiceCases), `missing practice cases for ${question.title}`);
     });
+  });
+});
+
+test('question bank lessons reference a loadable dataset descriptor', () => {
+  const knownBankKeys = new Set([
+    'top-interview-questions-easy',
+    'top-interview-questions-medium',
+    'top-interview-questions-hard',
+    'google',
+    'amazon',
+    'facebook',
+    'apple',
+    'microsoft',
+    'adobe',
+    'bloomberg',
+    'linkedin',
+    'uber',
+    'yelp',
+    'coding-interview-strategy',
+    'leapai'
+  ]);
+
+  const bankLessons = getModulesByFlow('interview-questions').flatMap((module) => module.lessons);
+  assert.ok(bankLessons.length >= 13);
+
+  bankLessons.forEach((lesson) => {
+    assert.equal(lesson.practiceMode, 'question-bank');
+    assert.ok(lesson.questionBank, `missing questionBank descriptor for ${lesson.title}`);
+    assert.ok(lesson.questionBank.label, `missing questionBank label for ${lesson.title}`);
+    assert.ok(knownBankKeys.has(lesson.questionBank.key), `unknown questionBank key for ${lesson.title}: ${lesson.questionBank.key}`);
+    assert.ok(['company', 'category', 'strategy'].includes(lesson.questionBank.kind), `invalid questionBank kind for ${lesson.title}`);
   });
 });
 
