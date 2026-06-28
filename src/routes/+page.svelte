@@ -26,6 +26,7 @@
         <a class="action-link primary" href={`${base}/flow/high-level-design`}>Open HLD flow</a>
         <a class="action-link" href={`${base}/flow/low-level-design`}>Open LLD flow</a>
         <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</a>
+        <a class="action-link" href={`${base}/flow/interview-questions`}>Open question bank</a>
       </div>
       <div class="hero-stat-strip">
         <article class="hero-stat-card">

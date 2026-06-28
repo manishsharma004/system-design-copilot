@@ -1,5 +1,6 @@
 import { rawDsaModules } from './dsaCourseData.js';
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
+import { rawQuestionBankModules } from './questionBankCourseData.js';
 
 export const siteOverview = {
   "title": "System Design Copilot",
@@ -4168,6 +4169,23 @@ const flowDefinitions = [
     ],
     outcome: 'You should be able to design, build, deploy, and monitor AI-powered applications from prototype through production, making informed tradeoffs between model quality, cost, latency, and safety.',
     moduleSlugs: rawAiEngineerModules.map((module) => module.slug)
+  },
+  {
+    slug: 'interview-questions',
+    shortTitle: 'Questions',
+    title: 'Coding interview question bank',
+    summary: 'Browse and practice reported interview question banks by company and category, with in-browser code execution for runnable prompts.',
+    description: 'Use this flow when you want to grind real reported interview questions, organized by company and category, and practice the runnable ones directly in the browser without leaving the lesson.',
+    audience: 'Best for candidates who want targeted, high-volume question practice for specific companies or difficulty tiers alongside the structured DSA curriculum.',
+    cadence: 'Pick one bucket at a time, work a section by pattern, and mark questions complete so each study session stays resumable.',
+    heroGuidance: 'Choose a company or category bucket, target a specific section or pattern, then read, solve, and run the example cases before moving on.',
+    focusAreas: [
+      'Company-specific question banks for Google, Amazon, Meta, Apple, Microsoft, and more',
+      'Top interview question collections grouped by easy, medium, and hard difficulty',
+      'In-browser practice with per-question completion tracking and interview strategy reading'
+    ],
+    outcome: 'You should be able to work through targeted question banks efficiently, practice runnable prompts in the browser, and track your coverage across companies and difficulty tiers.',
+    moduleSlugs: rawQuestionBankModules.map((module) => module.slug)
   }
 ];
 
@@ -4189,7 +4207,8 @@ export const modules = [
   ...rawModules.map((module) => normalizeModule(module, 'high-level-design')),
   ...rawLowLevelModules.map((module) => normalizeModule(module, 'low-level-design')),
   ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms')),
-  ...rawAiEngineerModules.map((module) => normalizeModule(module, 'ai-engineer'))
+  ...rawAiEngineerModules.map((module) => normalizeModule(module, 'ai-engineer')),
+  ...rawQuestionBankModules.map((module) => normalizeModule(module, 'interview-questions'))
 ];
 
 

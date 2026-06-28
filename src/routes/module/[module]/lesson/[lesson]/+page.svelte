@@ -9,6 +9,7 @@
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
   import DsaPracticeIDE from '$lib/components/DsaPracticeIDE.svelte';
+  import QuestionBankIDE from '$lib/components/QuestionBankIDE.svelte';
   import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
   import MLPracticeIDE from '$lib/components/MLPracticeIDE.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
@@ -16,6 +17,7 @@
 
   $: flow = getFlowBySlug(data.module.flowSlug);
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
+  $: isQuestionBankLesson = data.module.flowSlug === 'interview-questions';
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
   $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
@@ -278,7 +280,9 @@
   <SimulationIDE lesson={data.lesson} />
 {/if}
 
-{#if isDsaLesson}
+{#if isQuestionBankLesson}
+  <QuestionBankIDE lesson={data.lesson} />
+{:else if isDsaLesson}
   <DsaPracticeIDE lesson={data.lesson} />
 {:else}
   <PracticeIDE lesson={data.lesson} />
