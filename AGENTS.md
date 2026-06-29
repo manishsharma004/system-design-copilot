@@ -2,6 +2,15 @@
 
 Mobile-friendly interview-prep web app built with SvelteKit and exported as a fully static site (deployed to GitHub Pages). It is a browser-only app with no backend or database; persistence is via browser IndexedDB and all code execution runs in-browser via WebAssembly (Pyodide for Python, YoWASP clang + Wasmer WASI for C/C++, CheerpJ for Java).
 
+## Project principles
+
+Keep this repo **light and small**:
+
+- **Minimize dependencies.** Do not add packages unless they clearly earn their weight. Prefer built-in browser APIs, existing project utilities, and `app.css` over new libraries.
+- **Minimize custom code.** Prefer plain HTML in Svelte templates plus semantic CSS classes (`pill`, `action-link`, `panel`, etc.) defined in `app.css`. Do **not** add Svelte UI wrapper components around a design system — that creates tech debt without reducing markup.
+- **Minimize user-facing code paths.** One obvious way to do things; avoid parallel abstractions for the same UI pattern.
+- **Preserve the dark theme.** The app uses a fixed dark palette (purple accent `#696cff`, surfaces `#232333` / `#2b2c40`). Do not switch to light mode or replace these colors without an explicit request.
+
 ## Cursor Cloud specific instructions
 
 - Package manager: use `npm` (Node v22 works; `npm install` is the install step). A `bun.lock` is also present but Bun is not installed in this environment, so prefer npm. The update script already runs `npm install` on startup.
@@ -13,28 +22,24 @@ Mobile-friendly interview-prep web app built with SvelteKit and exported as a fu
 - The optional in-app LLM assistant is configured at runtime in the browser (user supplies their own provider/key); no setup needed to run the rest of the app.
 
 <!-- ASTRYX:START -->
-Astryx v0.1.1 · 148 components
-CLI: run every command as `bunx astryx <cmd>` (shown below as `astryx ...`).
+## Astryx (reference only — SvelteKit)
 
-SETUP (once, in your app entry e.g. main.tsx) — without these, components render unstyled:
-  import "@astryxdesign/core/reset.css";
-  import "@astryxdesign/core/astryx.css";
+This project is **SvelteKit**, not React. Astryx (`@astryxdesign/core`) ships React components; **do not** add React, runtime Astryx packages, or custom Svelte wrappers that mirror Astryx components.
 
-WORKFLOW — discover, don't guess. Before writing UI:
-1. `astryx build "<idea>"` — START HERE: returns a kit (closest [page] + [block]s + [component]s). No args = full playbook.
-2. `astryx template <name> [--skeleton]` — scaffold the [page]/[block]s it named, or study their layout. Templates are reference code.
-3. `astryx component <Name>` — props + examples for every component you use.
+Use Astryx as a **design reference** via the CLI (dev dependency):
 
-RULES:
-- No <div> — components do all layout/spacing. Full page → AppShell; sidebar nav → SideNav.
-- Custom styling: component props first; else style/className with tokens — var(--color-*|--spacing-*|--radius-*). No raw hex/px. (No StyleX/Tailwind compiler here — don't use xstyle/utility classes.)
-- Tokens for every value (`astryx docs tokens`). Brand/accent via `astryx theme` — never override --color-* in :root.
+```bash
+npx astryx component Button    # props, patterns, accessibility
+npx astryx docs tokens         # spacing, color, radius naming
+npx astryx search "<query>"    # find relevant guidance
+```
 
-MORE CLI:
-  search "<query>"   find any component / hook / doc / template / block
-  component --list   148 components by category
-  template --list    page + block recipes
-  docs <topic>       color, elevation, icons, illustrations, migration, motion, principles, shape, spacing, styling, theme, tokens, typography
-  swizzle <Name>     eject component source (--gap reports why)
-  upgrade --apply    run after any @astryxdesign/core bump
+When building or changing UI:
+
+1. Check `npx astryx component <Name>` for the intended pattern.
+2. Implement with **plain markup** and existing classes in `src/app.css` (`pill`, `action-link`, `hero-card`, `eyebrow`, etc.).
+3. Reuse CSS variables from `:root` in `app.css` (`--accent`, `--panel`, `--border`, …) — do not introduce parallel token systems.
+4. IDE-specific chrome (Monaco, practice panes) may keep scoped component CSS; still use the shared dark palette.
+
+Do **not** install `@astryxdesign/core` or theme packages unless there is a deliberate, approved reason. Keep bloat out of `dependencies`.
 <!-- ASTRYX:END -->
