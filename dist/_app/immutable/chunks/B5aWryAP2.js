@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./DApQ8ffV2.js","./CJT2C_Xq.js","./B7BkTozs.js","./Byw8dKDK.js","./BerG0e1e.js","../assets/editor.CJEeZjoM.css"])))=>i.map(i=>d[i]);
+import{t as e}from"./B7BkTozs.js";import{t}from"./EpLZaWaZ.js";t({id:`python`,extensions:[`.py`,`.rpy`,`.pyw`,`.cpy`,`.gyp`,`.gypi`],aliases:[`Python`,`py`],firstLine:`^#!/.*\\bpython[0-9.-]*\\b`,loader:()=>e(()=>import(`./DApQ8ffV2.js`),__vite__mapDeps([0,1,2,3,4,5]),import.meta.url)});

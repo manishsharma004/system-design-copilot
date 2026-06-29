@@ -3,6 +3,7 @@
   import { base } from '$app/paths';
   import { getFlowBySlug, getModuleProgress } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
+  import { Badge, Button } from '$lib/ui';
   export let data;
 
   $: flow = getFlowBySlug(data.module.flowSlug);
@@ -117,16 +118,16 @@
 
     <div class="action-row">
       {#if flow}
-        <span class="pill">{flow.title}</span>
+        <Badge>{flow.title}</Badge>
       {/if}
-      <span class="pill">{data.module.lessons.length} lessons</span>
-      <span class="pill">{completedLessons}/{totalLessons} complete</span>
-      <span class="pill">Follow in order for best results</span>
+      <Badge>{data.module.lessons.length} lessons</Badge>
+      <Badge>{completedLessons}/{totalLessons} complete</Badge>
+      <Badge>Follow in order for best results</Badge>
       {#if flow}
-        <a class="action-link" href={`${base}/flow/${flow.slug}`}>Back to {flow.shortTitle} roadmap</a>
+        <Button variant="secondary" href={`${base}/flow/${flow.slug}`}>Back to {flow.shortTitle} roadmap</Button>
       {/if}
-      <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${nextLesson.slug}`}>{completedLessons ? 'Continue module' : 'Start module'}</a>
-      <a class="action-link" href="#lesson-runway">View lesson runway</a>
+      <Button variant="primary" href={`${base}/module/${data.module.slug}/lesson/${nextLesson.slug}`}>{completedLessons ? 'Continue module' : 'Start module'}</Button>
+      <Button variant="secondary" href="#lesson-runway">View lesson runway</Button>
     </div>
   </article>
 
@@ -140,8 +141,8 @@
       <li><strong>Only then advance.</strong> Move to the next lesson when you can defend the previous one without the notes open.</li>
     </ol>
     <div class="module-rhythm-meta">
-      <span class="pill">{flow?.shortTitle ?? 'Course'} sequence</span>
-      <span class="pill">Designed for interview recall</span>
+      <Badge>{flow?.shortTitle ?? 'Course'} sequence</Badge>
+      <Badge>Designed for interview recall</Badge>
     </div>
   </article>
 </section>
@@ -183,7 +184,7 @@
       <h2>Follow the sequence from first principles to fluency</h2>
       <p class="hero-subtitle">This is the core pattern borrowed from stronger learning products: show the path, make the next step obvious, and keep outcomes visible while the learner moves.</p>
     </div>
-    <span class="pill">{completedLessons}/{totalLessons} complete</span>
+    <Badge>{completedLessons}/{totalLessons} complete</Badge>
   </div>
 
   <div class="module-runway-grid">
@@ -195,8 +196,8 @@
         href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}
       >
         <div class="lesson-sequence-header">
-          <span class="pill">Lesson {lesson.order}</span>
-          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : lesson.id === nextLesson.id ? 'Next' : 'Open'}</span>
+          <Badge>Lesson {lesson.order}</Badge>
+          <Badge variant={$progress.completedLessonIds.includes(lesson.id) ? 'success' : 'neutral'}>{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : lesson.id === nextLesson.id ? 'Next' : 'Open'}</Badge>
         </div>
         <strong>{lesson.title}</strong>
         <p>{lesson.summary}</p>
@@ -219,7 +220,7 @@
             <p class="eyebrow">Lesson {lesson.order}</p>
             <h3>{lesson.title}</h3>
           </div>
-          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : 'Open'}</span>
+          <Badge variant={$progress.completedLessonIds.includes(lesson.id) ? 'success' : 'neutral'}>{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : 'Open'}</Badge>
         </div>
         <p>{lesson.summary}</p>
         <div class="lesson-detail-block">
@@ -230,7 +231,7 @@
           <p class="eyebrow">What you will cover</p>
           <div class="pill-row">
             {#each lesson.sections.slice(0, 3) as section}
-              <span class="pill">{section.heading}</span>
+              <Badge>{section.heading}</Badge>
             {/each}
           </div>
         </div>
@@ -243,9 +244,9 @@
           </ul>
         </div>
         <div class="card-meta">
-          <span class="pill">{lesson.duration}</span>
-          <span class="pill">{lesson.interviewPrompts.length} prompts</span>
-          <span class="pill">{lesson.sections.length} sections</span>
+          <Badge>{lesson.duration}</Badge>
+          <Badge>{lesson.interviewPrompts.length} prompts</Badge>
+          <Badge>{lesson.sections.length} sections</Badge>
         </div>
         <span class="lesson-card-cta">{$progress.completedLessonIds.includes(lesson.id) ? 'Review lesson' : 'Start lesson'}</span>
       </a>

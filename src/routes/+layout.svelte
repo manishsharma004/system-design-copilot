@@ -6,6 +6,7 @@
   import { allLessons, courseFlows, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
   import { getVisibleSidebarModules } from '$lib/sidebar';
   import { progress } from '$lib/stores/progress';
+  import { Badge, Button, TextInput } from '$lib/ui';
   import { derived } from 'svelte/store';
   import { onMount } from 'svelte';
 
@@ -176,22 +177,28 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
-      <button class="nav-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
+      <Badge class="topbar-progress">{`${$progress.completedLessonIds.length} / ${lessonTotal} complete`}</Badge>
+      <Button variant="secondary" size="sm" ariaExpanded={sidebarVisible} on:click={toggleNavigation}>
         {#if isDesktop}
           {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         {:else}
           {navOpen ? 'Close topics' : 'Browse topics'}
         {/if}
-      </button>
+      </Button>
     </div>
   </header>
 
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
     <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact">
       <div class="sidebar-compact-header">
-        <input bind:value={query} type="search" placeholder="Search lessons…" class="sidebar-compact-search" />
-        <button class="sidebar-close" type="button" onclick={toggleNavigation}>✕</button>
+        <TextInput
+          class="sidebar-compact-search"
+          bind:value={query}
+          placeholder="Search lessons…"
+          isLabelHidden={true}
+          label="Search lessons"
+        />
+        <Button variant="ghost" size="sm" label="Close sidebar" on:click={toggleNavigation}>✕</Button>
       </div>
 
       <nav class="sidebar-compact-nav">

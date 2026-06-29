@@ -3,6 +3,7 @@
   import { base } from '$app/paths';
   import { completedLessonCount, progress } from '$lib/stores/progress';
   import { courseFlows, defaultFlow, getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
+  import { Badge, Button } from '$lib/ui';
 
   const featuredModules = defaultFlow.modules.slice(0, 3);
 </script>
@@ -16,17 +17,17 @@
     <div class="hero-card hero-primary-card">
       <p class="eyebrow">Two interview tracks</p>
       <div class="hero-kicker-row">
-        <span class="pill">Self-paced SvelteKit guide</span>
-        <span class="pill">{courseFlows.length} focused prep flows</span>
+        <Badge>Self-paced SvelteKit guide</Badge>
+        <Badge>{courseFlows.length} focused prep flows</Badge>
       </div>
       <h1 class="hero-title">Prepare for system design, low-level design, and DSA interviews in one place.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
       <p class="hero-guidance">Pick the flow that matches the interview in front of you, then work the modules in order so your answers sound structured instead of improvised.</p>
       <div class="action-row">
-        <a class="action-link primary" href={`${base}/flow/high-level-design`}>Open HLD flow</a>
-        <a class="action-link" href={`${base}/flow/low-level-design`}>Open LLD flow</a>
-        <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</a>
-        <a class="action-link" href={`${base}/flow/interview-questions`}>Open question bank</a>
+        <Button variant="primary" href={`${base}/flow/high-level-design`}>Open HLD flow</Button>
+        <Button variant="secondary" href={`${base}/flow/low-level-design`}>Open LLD flow</Button>
+        <Button variant="secondary" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</Button>
+        <Button variant="secondary" href={`${base}/flow/interview-questions`}>Open question bank</Button>
       </div>
       <div class="hero-stat-strip">
         <article class="hero-stat-card">
@@ -46,9 +47,9 @@
         </article>
       </div>
       <div class="action-row">
-        <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
-        <span class="pill">Dedicated HLD and LLD landing pages</span>
-        <span class="pill">Interactive practice labs with saved drafts</span>
+        <Badge>{$completedLessonCount} / {allLessons.length} lessons complete</Badge>
+        <Badge>Dedicated HLD and LLD landing pages</Badge>
+        <Badge>Interactive practice labs with saved drafts</Badge>
       </div>
       <div class="hero-highlight-grid">
         {#each courseFlows as flow}
@@ -93,7 +94,7 @@
           <h2>{flow.title}</h2>
         </div>
         <div class="card-meta">
-          <span class="pill">{flow.modules.length} modules</span>
+          <Badge>{flow.modules.length} modules</Badge>
         </div>
       </div>
       <p>{flow.description}</p>
@@ -114,15 +115,15 @@
       <ol class="study-step-list">
         {#each flow.focusAreas as area, index}
           <li class="study-step-card">
-            <span class="pill">Focus {index + 1}</span>
+            <Badge>Focus {index + 1}</Badge>
             <strong>{area}</strong>
             <p>{flow.heroGuidance}</p>
           </li>
         {/each}
       </ol>
       <div class="action-row">
-        <a class="action-link primary" href={`${base}/flow/${flow.slug}`}>Open {flow.shortTitle} roadmap</a>
-        <a class="action-link" href={`${base}/module/${flow.modules[0].slug}`}>Start with {flow.modules[0].title}</a>
+        <Button variant="primary" href={`${base}/flow/${flow.slug}`}>Open {flow.shortTitle} roadmap</Button>
+        <Button variant="secondary" href={`${base}/module/${flow.modules[0].slug}`}>Start with {flow.modules[0].title}</Button>
       </div>
     </article>
   {/each}
@@ -136,7 +137,7 @@
       {#each featuredModules as module, index}
         <a class="featured-module-card" href={`${base}/module/${module.slug}`}>
           <div class="featured-module-header">
-            <span class="pill">0{index + 1}</span>
+            <Badge>0{index + 1}</Badge>
             <span class="eyebrow">{module.lessons.length} lessons</span>
           </div>
           <h3>{module.title}</h3>
@@ -180,7 +181,7 @@
           <h2>{track.title}</h2>
         </div>
         <div class="card-meta">
-          <span class="pill">{track.steps.length} detailed steps</span>
+          <Badge>{track.steps.length} detailed steps</Badge>
         </div>
       </div>
       <p>{track.summary}</p>
@@ -201,7 +202,7 @@
       <ol class="study-step-list">
         {#each track.steps as step, index}
           <li class="study-step-card">
-            <span class="pill">Step {index + 1}</span>
+            <Badge>Step {index + 1}</Badge>
             <strong>{step.title}</strong>
             <p>{step.detail}</p>
           </li>
@@ -249,7 +250,7 @@
       <h2>Modules and lesson progress</h2>
       <p class="hero-subtitle">Each module adds a new design muscle: estimation, interfaces, storage, distributed coordination, reliability, security, and finally full case-study synthesis.</p>
     </div>
-    <button class="reset-link" type="button" onclick={() => progress.reset()}>Reset progress</button>
+    <Button variant="ghost" size="sm" on:click={() => progress.reset()}>Reset progress</Button>
   </div>
   <div class="module-grid">
     {#each modules as module}
@@ -266,8 +267,8 @@
             {/each}
           </ul>
           <div class="card-meta">
-            <span class="pill">{module.lessons.length} lessons</span>
-            <span class="pill">{getModuleProgress($progress.completedLessonIds, module.slug).completed}/{getModuleProgress($progress.completedLessonIds, module.slug).total} complete</span>
+            <Badge>{module.lessons.length} lessons</Badge>
+            <Badge>{getModuleProgress($progress.completedLessonIds, module.slug).completed}/{getModuleProgress($progress.completedLessonIds, module.slug).total} complete</Badge>
           </div>
         </a>
       </article>
