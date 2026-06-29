@@ -246,6 +246,11 @@ img { display: block; max-width: 100%; }
   font-size: 0.8rem;
 }
 
+.sidebar-toggle {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .sidebar-close {
   flex-shrink: 0;
   min-width: 2rem;
