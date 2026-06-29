@@ -3,6 +3,7 @@
   import { base } from '$app/paths';
   import { getModuleProgress } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
+  import { Badge, Button } from '$lib/ui';
 
   export let data;
 
@@ -59,11 +60,11 @@
     </div>
 
     <div class="action-row">
-      <span class="pill">{data.flow.modules.length} modules</span>
-      <span class="pill">{totalLessons} lessons</span>
-      <span class="pill">{data.flow.shortTitle} roadmap</span>
-      <a class="action-link primary" href={`${base}/module/${nextModule.slug}`}>Open next module</a>
-      <a class="action-link" href="#flow-modules">Browse modules</a>
+      <Badge>{data.flow.modules.length} modules</Badge>
+      <Badge>{totalLessons} lessons</Badge>
+      <Badge>{data.flow.shortTitle} roadmap</Badge>
+      <Button variant="primary" href={`${base}/module/${nextModule.slug}`}>Open next module</Button>
+      <Button variant="secondary" href="#flow-modules">Browse modules</Button>
     </div>
   </article>
 
@@ -76,8 +77,8 @@
       {/each}
     </ol>
     <div class="module-rhythm-meta">
-      <span class="pill">{data.flow.shortTitle} specific</span>
-      <span class="pill">Reusable module sequence</span>
+      <Badge>{data.flow.shortTitle} specific</Badge>
+      <Badge>Reusable module sequence</Badge>
     </div>
   </article>
 </section>
@@ -119,7 +120,7 @@
       <h2>Follow the {data.flow.shortTitle} sequence from first module to capstone</h2>
       <p class="hero-subtitle">Each module builds one interview muscle before the next one adds more complexity.</p>
     </div>
-    <span class="pill">{completedLessons}/{totalLessons} complete</span>
+    <Badge>{completedLessons}/{totalLessons} complete</Badge>
   </div>
 
   <div class="module-grid">
@@ -137,8 +138,8 @@
             {/each}
           </ul>
           <div class="card-meta">
-            <span class="pill">{module.lessons.length} lessons</span>
-            <span class="pill">{getModuleProgress($progress.completedLessonIds, module.slug).completed}/{module.lessons.length} complete</span>
+            <Badge>{module.lessons.length} lessons</Badge>
+            <Badge>{getModuleProgress($progress.completedLessonIds, module.slug).completed}/{module.lessons.length} complete</Badge>
           </div>
         </a>
       </article>

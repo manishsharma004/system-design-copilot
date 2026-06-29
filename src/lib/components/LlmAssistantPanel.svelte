@@ -4,6 +4,7 @@
   import MarkdownIt from 'markdown-it'
   import { buildSearchEngineUrls, getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
   import { llmSettings } from '$lib/stores/llm'
+  import { Badge, Button, TextArea, TextInput } from '$lib/ui'
 
   export let title = 'AI copilot'
   export let objective = ''
@@ -154,10 +155,10 @@
       <p class="practice-copy">{activeProvider?.note}</p>
     </div>
     <div class="llm-header-actions">
-      <span class="pill">{activeProvider?.label}</span>
-      <button class="action-link" type="button" onclick={() => (settingsOpen = !settingsOpen)}>
+      <Badge>{activeProvider?.label}</Badge>
+      <Button variant="secondary" size="sm" on:click={() => (settingsOpen = !settingsOpen)}>
         {settingsOpen ? 'Hide model settings' : 'Configure model'}
-      </button>
+      </Button>
     </div>
   </div>
 
@@ -240,18 +241,20 @@
     </p>
   {/if}
 
-  <label>
-    <span class="eyebrow">Specific guidance request</span>
-    <textarea rows="3" bind:value={extraPrompt} placeholder="Ask for missing trade-offs, sharper APIs, or a better scaling plan."></textarea>
-  </label>
+  <TextArea
+    label="Specific guidance request"
+    bind:value={extraPrompt}
+    rows={3}
+    placeholder="Ask for missing trade-offs, sharper APIs, or a better scaling plan."
+  />
 
   <div class="action-row">
-    <button class="action-link primary" type="button" onclick={() => runAssistant('outline')} disabled={loading}>
+    <Button variant="primary" disabled={loading} on:click={() => runAssistant('outline')}>
       {loading ? 'Generating…' : 'Generate outline'}
-    </button>
-    <button class="action-link" type="button" onclick={() => runAssistant('review')} disabled={loading || !draft.trim()}>
+    </Button>
+    <Button variant="secondary" disabled={loading || !draft.trim()} on:click={() => runAssistant('review')}>
       Review current draft
-    </button>
+    </Button>
   </div>
 
   {#if errorText}
@@ -275,9 +278,9 @@
   }
 
   .llm-markdown {
-    font-size: 0.96rem;
+    font-size: var(--font-size-base);
     line-height: 1.72;
-    color: #cfd7ea;
+    color: var(--color-text-primary);
     overflow-wrap: anywhere;
   }
 
@@ -285,9 +288,9 @@
   .llm-markdown :global(h2),
   .llm-markdown :global(h3),
   .llm-markdown :global(h4) {
-    margin: 1.1rem 0 0.55rem;
+    margin: var(--spacing-4) 0 var(--spacing-2);
     line-height: 1.32;
-    color: #f8fbff;
+    color: var(--color-text-primary);
   }
 
   .llm-markdown :global(h1) {
@@ -321,27 +324,27 @@
   }
 
   .llm-markdown :global(blockquote) {
-    padding: 0.45rem 0.75rem;
-    border-left: 3px solid rgba(123, 145, 255, 0.7);
-    border-radius: 0.35rem;
-    background: rgba(91, 104, 190, 0.12);
-    color: #d9e2ff;
+    padding: var(--spacing-2) var(--spacing-3);
+    border-left: 3px solid var(--color-border-blue);
+    border-radius: var(--radius-inner);
+    background: var(--color-background-blue);
+    color: var(--color-text-blue);
   }
 
   .llm-markdown :global(code) {
-    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-family: var(--font-family-code);
     font-size: 0.88em;
-    padding: 0.1rem 0.3rem;
-    border-radius: 0.3rem;
-    background: rgba(76, 89, 141, 0.35);
-    color: #f2f7ff;
+    padding: var(--spacing-0-5) var(--spacing-1);
+    border-radius: var(--radius-inner);
+    background: var(--color-background-muted);
+    color: var(--color-text-primary);
   }
 
   .llm-markdown :global(pre) {
-    padding: 0.85rem 0.95rem;
-    border-radius: 0.65rem;
-    background: #101522;
-    border: 1px solid rgba(140, 157, 214, 0.28);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-element);
+    background: var(--color-background-body);
+    border: 1px solid var(--color-border);
     overflow: auto;
   }
 
@@ -360,18 +363,18 @@
 
   .llm-markdown :global(th),
   .llm-markdown :global(td) {
-    border: 1px solid rgba(146, 162, 204, 0.35);
-    padding: 0.48rem 0.6rem;
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-2);
     text-align: left;
     vertical-align: top;
   }
 
   .llm-markdown :global(th) {
-    background: rgba(80, 100, 173, 0.22);
+    background: var(--color-background-muted);
   }
 
   .llm-markdown :global(a) {
-    color: #9dbdff;
+    color: var(--color-text-accent);
     text-decoration: underline;
     text-underline-offset: 0.13rem;
   }

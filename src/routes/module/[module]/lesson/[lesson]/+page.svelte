@@ -13,6 +13,7 @@
   import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
   import MLPracticeIDE from '$lib/components/MLPracticeIDE.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
+  import { Badge, Button } from '$lib/ui';
   export let data;
 
   $: flow = getFlowBySlug(data.module.flowSlug);
@@ -50,20 +51,18 @@
     <h1>{data.lesson.title}</h1>
     <p class="hero-subtitle">{data.lesson.summary}</p>
     <div class="action-row">
-      <span class="pill">{data.lesson.duration}</span>
+      <Badge>{data.lesson.duration}</Badge>
       {#if flow}
-        <span class="pill">{flow.shortTitle} flow</span>
+        <Badge>{flow.shortTitle} flow</Badge>
       {/if}
-      <span class="pill">{data.module.title}</span>
-      <span class="pill">{data.lesson.sections.length + 1} guided stops</span>
-      <button
-        class:done={$progress.completedLessonIds.includes(data.lesson.id)}
-        class="lesson-toggle"
-        type="button"
-        onclick={() => progress.toggleLesson(data.lesson.id)}
+      <Badge>{data.module.title}</Badge>
+      <Badge>{data.lesson.sections.length + 1} guided stops</Badge>
+      <Button
+        variant={$progress.completedLessonIds.includes(data.lesson.id) ? 'secondary' : 'primary'}
+        on:click={() => progress.toggleLesson(data.lesson.id)}
       >
         {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
-      </button>
+      </Button>
     </div>
   </article>
 
@@ -94,7 +93,7 @@
           <p class="eyebrow">Guided walkthrough</p>
           <h2>Move through the lesson in a clear interview order</h2>
         </div>
-        <span class="pill">{data.lesson.sections.length + 1} steps</span>
+        <Badge>{data.lesson.sections.length + 1} steps</Badge>
       </div>
       <p class="practice-copy">Start with the framing, walk the concept in order, then use the right rail for prompts, pitfalls, and visual anchors.</p>
       <div class="lesson-anchor-grid">
@@ -298,12 +297,12 @@
   </div>
   <div class="action-row">
     {#if data.previousLesson}
-      <a class="action-link" href={`${base}/module/${data.module.slug}/lesson/${data.previousLesson.slug}`}>← {data.previousLesson.title}</a>
+      <Button variant="secondary" href={`${base}/module/${data.module.slug}/lesson/${data.previousLesson.slug}`}>← {data.previousLesson.title}</Button>
     {/if}
     {#if data.nextLesson}
-      <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${data.nextLesson.slug}`}>{data.nextLesson.title} →</a>
+      <Button variant="primary" href={`${base}/module/${data.module.slug}/lesson/${data.nextLesson.slug}`}>{data.nextLesson.title} →</Button>
     {:else}
-      <a class="action-link primary" href={`${base}/`}>Back to curriculum</a>
+      <Button variant="primary" href={`${base}/`}>Back to curriculum</Button>
     {/if}
   </div>
 </section>
