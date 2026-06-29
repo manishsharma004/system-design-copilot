@@ -520,7 +520,6 @@ img { display: block; max-width: 100%; }
   padding-bottom: 1rem;
 }
 
-.module-hero-grid,
 .lesson-hero-grid,
 .lesson-section-preview,
 .link-stack,
@@ -870,8 +869,10 @@ img { display: block; max-width: 100%; }
 }
 
 .hero-kicker-row {
-  grid-auto-flow: column;
-  justify-content: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .hero-stat-strip {
@@ -943,7 +944,12 @@ img { display: block; max-width: 100%; }
 }
 
 .compact-list {
+  display: grid;
   gap: 0.55rem;
+}
+
+.hero-featured-modules {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }
 
 .emphasis-card {
@@ -1021,6 +1027,16 @@ img { display: block; max-width: 100%; }
 .module-runway-grid {
   display: grid;
   gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module-rhythm-list li {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .module-rhythm-meta {

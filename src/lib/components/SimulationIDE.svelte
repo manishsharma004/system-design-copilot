@@ -49,6 +49,18 @@
   $: activeProfile = simulation?.workloadProfiles?.find((/** @type {any} */ entry) => entry.id === activeProfileId) ?? null
   $: compatibleProfiles = simulation?.workloadProfiles?.filter((/** @type {any} */ entry) => entry.endpointId === activeApiId) ?? []
   $: readmeContent = simulation ? `# ${simulation.title}\n\n${simulation.summary}\n\n## APIs\n${simulation.apis?.map((/** @type {any} */ a) => `- ${a.label}: ${a.method} ${a.path}`).join('\n') ?? ''}\n\n## Workload Profiles\n${simulation.workloadProfiles?.map((/** @type {any} */ p) => `- ${p.label} (${p.rps} rps)`).join('\n') ?? ''}` : ''
+  /** @param {string} id */
+  function configFilename(id) {
+    return `${id}.json`
+  }
+
+  /** @param {string} id */
+  function configPath(id) {
+    return `config/${id}.json`
+  }
+
+  $: apiConfigFilename = activeApi ? configFilename(activeApi.id) : 'api.json'
+  $: profileConfigFilename = activeProfile ? configFilename(activeProfile.id) : 'profile.json'
   $: apiConfigContent = activeApi ? JSON.stringify(activeApi, null, 2) : '{}'
   $: profileConfigContent = activeProfile ? JSON.stringify(activeProfile, null, 2) : '{}'
   $: editorFiles = [
@@ -72,9 +84,9 @@
     },
     {
       id: '_api_config',
-      label: `${activeApi?.label ?? 'api'}.json`,
-      filename: `${activeApi?.label ?? 'api'}.json`,
-      path: `config/${activeApi?.label ?? 'api'}.json`,
+      label: apiConfigFilename,
+      filename: apiConfigFilename,
+      path: activeApi ? configPath(activeApi.id) : 'config/api.json',
       language: 'json',
       icon: '⚙',
       persistContent: false,
@@ -82,9 +94,9 @@
     },
     {
       id: '_profile_config',
-      label: `${activeProfile?.label ?? 'profile'}.json`,
-      filename: `${activeProfile?.label ?? 'profile'}.json`,
-      path: `config/${activeProfile?.label ?? 'profile'}.json`,
+      label: profileConfigFilename,
+      filename: profileConfigFilename,
+      path: activeProfile ? configPath(activeProfile.id) : 'config/profile.json',
       language: 'json',
       icon: '⚙',
       persistContent: false,
@@ -146,8 +158,8 @@
         id: 'config',
         label: 'config',
         children: [
-          { id: '_api_config', label: `${activeApi?.label ?? 'api'}.json`, icon: '⚙️' },
-          { id: '_profile_config', label: `${activeProfile?.label ?? 'profile'}.json`, icon: '⚙️' }
+          { id: '_api_config', label: apiConfigFilename, icon: '⚙️' },
+          { id: '_profile_config', label: profileConfigFilename, icon: '⚙️' }
         ]
       },
       { type: 'file', id: '_readme', label: 'README.md', icon: 'ℹ️' }
@@ -303,7 +315,6 @@
     </div>
 
     <IDEWorkspace
-      workspaceId={`simulation:${lesson.id}`}
       files={editorFiles}
       explorerTitle="EXPLORER"
       projectName={simulation.title.toUpperCase().slice(0, 24)}
