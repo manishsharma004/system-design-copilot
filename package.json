@@ -21,9 +21,6 @@
     "url": "https://github.com/manishsharma004/system-design-copilot/issues"
   },
   "homepage": "https://github.com/manishsharma004/system-design-copilot#readme",
-  "astryx": {
-    "theme": "@astryxdesign/theme-neutral"
-  },
   "overrides": {
     "cookie": "^1.1.1"
   },
@@ -39,8 +36,6 @@
     "vite": "^8.0.7"
   },
   "dependencies": {
-    "@astryxdesign/core": "^0.1.1",
-    "@astryxdesign/theme-neutral": "^0.1.1",
     "@wasmer/wasi": "^1.2.2",
     "@yowasp/clang": "^22.0.0-git20542-10",
     "buffer": "^6.0.3",
