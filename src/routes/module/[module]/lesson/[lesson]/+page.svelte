@@ -84,18 +84,18 @@
   </article>
 </section>
 
-<nav class="lesson-step-nav" aria-label="Lesson steps">
-  {#each lessonSteps as step}
-    <a class="lesson-step-nav-link" href={`#${step.id}`}>
-      <span class="lesson-step-nav-index">Step {step.index}</span>
-      <strong>{step.title}</strong>
-      <span>{step.summary}</span>
-    </a>
-  {/each}
-</nav>
-
 <section class="lesson-shell">
   <div class="lesson-main-stack">
+    <nav class="lesson-step-nav" aria-label="Lesson steps">
+      {#each lessonSteps as step}
+        <a class="lesson-step-nav-link" href={`#${step.id}`}>
+          <span class="lesson-step-nav-index">Step {step.index}</span>
+          <strong>{step.title}</strong>
+          <span>{step.summary}</span>
+        </a>
+      {/each}
+    </nav>
+
     <article class="panel hero-card lesson-step-panel" id="lesson-framing">
       <div class="lesson-step-header">
         <div class="lesson-step-badge">1</div>

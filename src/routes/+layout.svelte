@@ -3,7 +3,6 @@
   import { base } from '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
-  import { Accordion, AppBar } from '@skeletonlabs/skeleton-svelte';
   import { allLessons, courseFlows, defaultFlow, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
   import { headerNavHref, headerNavItems, isHeaderNavActive } from '$lib/navigation';
   import { getVisibleSidebarModules } from '$lib/sidebar';
@@ -15,10 +14,10 @@
   let desktopNavOpen = true;
   let isDesktop = false;
   let query = '';
-  /** @type {string[]} */
-  let accordionValue = [];
+  /** @type {Record<string, boolean>} */
+  let expandedModules = {};
 
-  const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v2';
+  const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v3';
 
   function loadSidebarState() {
     try {
@@ -29,8 +28,8 @@
           if (typeof parsed.desktopNavOpen === 'boolean') {
             desktopNavOpen = parsed.desktopNavOpen;
           }
-          if (Array.isArray(parsed.accordionValue)) {
-            accordionValue = parsed.accordionValue;
+          if (parsed.expandedModules && typeof parsed.expandedModules === 'object') {
+            expandedModules = parsed.expandedModules;
           }
         }
       }
@@ -43,7 +42,7 @@
     try {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({
         desktopNavOpen,
-        accordionValue
+        expandedModules
       }));
     } catch {
       // ignore storage errors
@@ -62,6 +61,15 @@
   /** @param {string} moduleSlug @param {string} lessonSlug */
   const lessonHref = (moduleSlug, lessonSlug) => `${base}/module/${moduleSlug}/lesson/${lessonSlug}`;
 
+  /** @param {string} moduleSlug */
+  function toggleModule(moduleSlug) {
+    expandedModules = {
+      ...expandedModules,
+      [moduleSlug]: !(expandedModules[moduleSlug] ?? false)
+    };
+    saveSidebarState();
+  }
+
   function toggleNavigation() {
     if (isDesktop) {
       desktopNavOpen = !desktopNavOpen;
@@ -74,12 +82,6 @@
 
   function closeNavigation() {
     navOpen = false;
-  }
-
-  /** @param {{ value: string[] }} event */
-  function handleAccordionChange(event) {
-    accordionValue = event.value;
-    saveSidebarState();
   }
 
   onMount(() => {
@@ -124,17 +126,20 @@
         ? `${activeFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`
         : `${sidebarFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`;
   $: filteredModules = getVisibleSidebarModules({ modules, activeFlow: sidebarFlow, query });
-  $: if (!accordionValue.length && activeModule) {
-    accordionValue = [activeModule.slug];
+  $: visibleModules = filteredModules.map((module) => ({
+    ...module,
+    isExpanded: query.trim()
+      ? true
+      : expandedModules[module.slug] ?? module.slug === activeModule?.slug
+  }));
+  $: if (!Object.keys(expandedModules).length) {
+    expandedModules = Object.fromEntries(filteredModules.map((module) => [module.slug, module.slug === activeModule?.slug]));
   }
-  $: if (!accordionValue.length && filteredModules.length) {
-    accordionValue = [filteredModules[0].slug];
-  }
-  $: if (activeModule && !query.trim() && !accordionValue.includes(activeModule.slug)) {
-    accordionValue = [...accordionValue, activeModule.slug];
-  }
-  $: if (pathname) {
-    navOpen = false;
+  $: if (activeModule && !query.trim() && !expandedModules[activeModule.slug]) {
+    expandedModules = {
+      ...expandedModules,
+      [activeModule.slug]: true
+    };
   }
   $: sidebarVisible = isDesktop ? desktopNavOpen : navOpen;
 </script>
@@ -149,32 +154,24 @@
 <div class="shell">
   <header class="app-header">
     <div class="app-header-top">
-      <AppBar background="bg-[#2b2c40]" border="border-b-0" padding="p-0" spacing="space-x-3">
-        {#snippet lead()}
-          <a class="app-header-brand" href={homeHref}>
-            <strong>{siteOverview.title}</strong>
-            <span>{$progress.completedLessonIds.length} / {lessonTotal} lessons complete</span>
-          </a>
-        {/snippet}
-        {#snippet center()}
-          <div class="app-header-context">
-            <strong>{contextTitle}</strong>
-            <span>{contextSubtitle}</span>
-          </div>
-        {/snippet}
-        {#snippet trail()}
-          <div class="app-header-actions">
-            <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
-            <button class="btn preset-tonal-surface" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
-              {#if isDesktop}
-                {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-              {:else}
-                {navOpen ? 'Close topics' : 'Browse topics'}
-              {/if}
-            </button>
-          </div>
-        {/snippet}
-      </AppBar>
+      <a class="app-header-brand" href={homeHref}>
+        <strong>{siteOverview.title}</strong>
+        <span>{$progress.completedLessonIds.length} / {lessonTotal} lessons complete</span>
+      </a>
+      <div class="app-header-context">
+        <strong>{contextTitle}</strong>
+        <span>{contextSubtitle}</span>
+      </div>
+      <div class="app-header-actions">
+        <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
+        <button class="nav-toggle sidebar-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
+          {#if isDesktop}
+            {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          {:else}
+            {navOpen ? 'Close topics' : 'Browse topics'}
+          {/if}
+        </button>
+      </div>
     </div>
 
     <nav class="app-header-nav" aria-label="Primary">
@@ -196,10 +193,10 @@
   </header>
 
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
-    <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact card preset-tonal-surface border border-surface-800-200 p-2">
+    <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact">
       <div class="sidebar-compact-header">
-        <input bind:value={query} type="search" placeholder="Search lessons…" class="input sidebar-compact-search" />
-        <button class="btn-icon preset-tonal-surface sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
+        <input bind:value={query} type="search" placeholder="Search lessons…" class="sidebar-compact-search" />
+        <button class="sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
       </div>
 
       <div class="sidebar-flow-context">
@@ -209,36 +206,38 @@
       </div>
 
       <nav class="sidebar-compact-nav" aria-label="Course topics">
-        {#if filteredModules.length}
-          <Accordion value={accordionValue} onValueChange={handleAccordionChange} multiple collapsible>
-            {#each filteredModules as module}
-              <Accordion.Item value={module.slug}>
-                {#snippet control()}
-                  <div class="sidebar-accordion-control">
-                    <span class="sidebar-accordion-title">{module.title}</span>
-                    <span class="sidebar-accordion-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
-                  </div>
-                {/snippet}
-                {#snippet panel()}
-                  <div class="sidebar-accordion-panel">
-                    {#each module.lessons as lesson}
-                      <a
-                        class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)}
-                        class="sidebar-compact-link sidebar-compact-lesson"
-                        href={lessonHref(module.slug, lesson.slug)}
-                      >
-                        <span>{lesson.order}. {lesson.title}</span>
-                        {#if $progress.completedLessonIds.includes(lesson.id)}
-                          <span class="sidebar-compact-done">✓</span>
-                        {/if}
-                      </a>
-                    {/each}
-                  </div>
-                {/snippet}
-              </Accordion.Item>
-              <hr class="hr" />
-            {/each}
-          </Accordion>
+        {#if visibleModules.length}
+          {#each visibleModules as module}
+            <div class="sidebar-compact-group">
+              <button
+                class="sidebar-compact-module"
+                class:active-module={module.slug === activeModule?.slug}
+                type="button"
+                aria-expanded={module.isExpanded}
+                onclick={() => toggleModule(module.slug)}
+              >
+                <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
+                <span class="sidebar-compact-module-title">{module.title}</span>
+                <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
+              </button>
+              {#if module.isExpanded}
+                <div class="sidebar-compact-lessons">
+                  {#each module.lessons as lesson}
+                    <a
+                      class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)}
+                      class="sidebar-compact-link sidebar-compact-lesson"
+                      href={lessonHref(module.slug, lesson.slug)}
+                    >
+                      <span>{lesson.order}. {lesson.title}</span>
+                      {#if $progress.completedLessonIds.includes(lesson.id)}
+                        <span class="sidebar-compact-done">✓</span>
+                      {/if}
+                    </a>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
         {:else}
           <p class="sidebar-compact-empty">No lessons matched your search.</p>
         {/if}
