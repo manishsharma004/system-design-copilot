@@ -21,6 +21,20 @@
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
   $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
+  $: lessonSteps = [
+    {
+      id: 'lesson-framing',
+      index: 1,
+      title: 'Interview framing',
+      summary: data.lesson.whyItMatters
+    },
+    ...data.lesson.sections.map((section, index) => ({
+      id: sectionId(section.heading),
+      index: index + 2,
+      title: section.heading,
+      summary: section.bullets?.[0] ?? section.body
+    }))
+  ];
 
   /** @param {string} heading */
   function sectionId(heading) {
@@ -33,84 +47,55 @@
   <meta name="description" content={data.lesson.summary} />
 </svelte:head>
 
-<section class="lesson-hero-grid">
-  <article class="panel hero-card">
-    <div class="breadcrumb">
-      <a href={`${base}/`}>Curriculum</a>
+<section class="panel hero-card lesson-hero-single">
+  <div class="breadcrumb">
+    <a href={`${base}/`}>Curriculum</a>
+    <span>→</span>
+    {#if flow}
+      <a href={`${base}/flow/${flow.slug}`}>{flow.title}</a>
       <span>→</span>
-      {#if flow}
-        <a href={`${base}/flow/${flow.slug}`}>{flow.title}</a>
-        <span>→</span>
-      {/if}
-      <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
-      <span>→</span>
-      <span>{data.lesson.title}</span>
-    </div>
-    <p class="eyebrow">Lesson {data.lesson.order} of {data.module.lessons.length}</p>
-    <h1>{data.lesson.title}</h1>
-    <p class="hero-subtitle">{data.lesson.summary}</p>
-    <div class="action-row">
-      <span class="pill">{data.lesson.duration}</span>
-      {#if flow}
-        <span class="pill">{flow.shortTitle} flow</span>
-      {/if}
-      <span class="pill">{data.module.title}</span>
-      <span class="pill">{data.lesson.sections.length + 1} guided stops</span>
-      <button
-        class:done={$progress.completedLessonIds.includes(data.lesson.id)}
-        class="lesson-toggle"
-        type="button"
-        onclick={() => progress.toggleLesson(data.lesson.id)}
-      >
-        {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
-      </button>
-    </div>
-  </article>
-
-  <article class="list-card lesson-summary-card">
-    <p class="eyebrow">Study map</p>
-    <h3>What this lesson helps you explain</h3>
+    {/if}
+    <a href={`${base}/module/${data.module.slug}`}>{data.module.title}</a>
+    <span>→</span>
+    <span>{data.lesson.title}</span>
+  </div>
+  <p class="eyebrow">Lesson {data.lesson.order} of {data.module.lessons.length}</p>
+  <h1>{data.lesson.title}</h1>
+  <p class="hero-subtitle">{data.lesson.summary}</p>
+  <div class="action-row">
+    <span class="pill">{data.lesson.duration}</span>
+    {#if flow}
+      <span class="pill">{flow.shortTitle} flow</span>
+    {/if}
+    <span class="pill">{data.module.title}</span>
+    <span class="pill">{lessonSteps.length} guided stops</span>
+    <button
+      class:done={$progress.completedLessonIds.includes(data.lesson.id)}
+      class="lesson-toggle"
+      type="button"
+      onclick={() => progress.toggleLesson(data.lesson.id)}
+    >
+      {$progress.completedLessonIds.includes(data.lesson.id) ? 'Mark incomplete' : 'Mark complete'}
+    </button>
+  </div>
+  <article class="lesson-why-card">
+    <p class="eyebrow">Why this lesson matters</p>
     <p>{data.lesson.whyItMatters}</p>
-    <div class="lesson-anchor-grid compact">
-      <a class="section-chip" href="#lesson-framing">
-        <strong>Start here</strong>
-        <span>Frame the trade-off before diving into architecture.</span>
-      </a>
-      {#each data.lesson.sections as section, index}
-        <a class="section-chip" href={`#${sectionId(section.heading)}`}>
-          <strong>{index + 1}. {section.heading}</strong>
-          <span>{section.bullets?.[0] ?? section.body}</span>
-        </a>
-      {/each}
-    </div>
   </article>
 </section>
 
+<nav class="lesson-step-nav" aria-label="Lesson steps">
+  {#each lessonSteps as step}
+    <a class="lesson-step-nav-link" href={`#${step.id}`}>
+      <span class="lesson-step-nav-index">Step {step.index}</span>
+      <strong>{step.title}</strong>
+      <span>{step.summary}</span>
+    </a>
+  {/each}
+</nav>
+
 <section class="lesson-shell">
   <div class="lesson-main-stack">
-    <article class="panel hero-card lesson-roadmap-card">
-      <div class="practice-card-header">
-        <div>
-          <p class="eyebrow">Guided walkthrough</p>
-          <h2>Move through the lesson in a clear interview order</h2>
-        </div>
-        <span class="pill">{data.lesson.sections.length + 1} steps</span>
-      </div>
-      <p class="practice-copy">Start with the framing, walk the concept in order, then use the right rail for prompts, pitfalls, and visual anchors.</p>
-      <div class="lesson-anchor-grid">
-        <a class="section-chip" href="#lesson-framing">
-          <strong>1. Interview framing</strong>
-          <span>{data.lesson.whyItMatters}</span>
-        </a>
-        {#each data.lesson.sections as section, index}
-          <a class="section-chip" href={`#${sectionId(section.heading)}`}>
-            <strong>{index + 2}. {section.heading}</strong>
-            <span>{section.bullets?.[0] ?? section.body}</span>
-          </a>
-        {/each}
-      </div>
-    </article>
-
     <article class="panel hero-card lesson-step-panel" id="lesson-framing">
       <div class="lesson-step-header">
         <div class="lesson-step-badge">1</div>

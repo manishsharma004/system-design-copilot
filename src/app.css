@@ -1,4 +1,12 @@
 
+@import 'tailwindcss';
+
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
+@import './copilot-theme.css';
+
+@source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
+
 :root {
   color-scheme: dark;
   --bg: #232333;
@@ -40,6 +48,99 @@ img { display: block; max-width: 100%; }
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: grid;
+  gap: 0;
+  background: #2b2c40;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.app-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.95rem;
+}
+
+.app-header-brand {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.app-header-brand strong {
+  font-size: 1rem;
+}
+
+.app-header-brand span,
+.app-header-context span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.app-header-context {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--border);
+}
+
+.app-header-context strong {
+  font-size: 0.96rem;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.app-header-nav {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0 0.95rem 0.65rem;
+  scrollbar-width: thin;
+}
+
+.app-header-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.app-header-nav-link:hover {
+  color: var(--text);
+  background: rgba(105, 108, 255, 0.08);
+}
+
+.app-header-nav-link.active {
+  color: #fff;
+  border-color: rgba(105, 108, 255, 0.45);
+  background: rgba(105, 108, 255, 0.18);
+}
+
+.app-header-nav-link .nav-short {
+  display: none;
 }
 
 .topbar {
@@ -292,7 +393,128 @@ img { display: block; max-width: 100%; }
 .sidebar-compact-empty {
   padding: 0.5rem;
   color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.sidebar-flow-context {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgba(105, 108, 255, 0.06);
+}
+
+.sidebar-flow-context strong {
+  font-size: 0.92rem;
+}
+
+.sidebar-flow-context span {
+  color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.sidebar-accordion-panel {
+  display: grid;
+  gap: 0.2rem;
+  padding-top: 0.35rem;
+}
+
+.sidebar-accordion-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.sidebar-accordion-title {
+  min-width: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sidebar-accordion-count {
+  color: var(--muted);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.lesson-step-nav {
+  position: sticky;
+  top: 7.5rem;
+  z-index: 20;
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: rgba(35, 35, 51, 0.94);
+  backdrop-filter: blur(8px);
+  scrollbar-width: thin;
+}
+
+.lesson-step-nav-link {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 10.5rem;
+  max-width: 14rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: #2b2c40;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.lesson-step-nav-link:hover {
+  border-color: rgba(105, 108, 255, 0.35);
+}
+
+.lesson-step-nav-link strong {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.lesson-step-nav-link span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lesson-step-nav-index {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lesson-hero-single {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.lesson-why-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgba(105, 108, 255, 0.06);
+}
+
+.lesson-why-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .panel, .hero-card, .module-card, .lesson-card, .content-card, .diagram-card, .list-card {
@@ -1064,6 +1286,22 @@ img { display: block; max-width: 100%; }
 }
 
 @media (max-width: 719px) {
+  .app-header-top {
+    flex-wrap: wrap;
+  }
+
+  .app-header-context {
+    display: none;
+  }
+
+  .app-header-nav-link .nav-full {
+    display: none;
+  }
+
+  .app-header-nav-link .nav-short {
+    display: inline;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: stretch;
@@ -1111,7 +1349,7 @@ img { display: block; max-width: 100%; }
   }
   .lesson-rail {
     position: sticky;
-    top: 4.5rem;
+    top: 7.5rem;
   }
   .lesson-step-grid {
     grid-template-columns: minmax(0, 1.1fr) minmax(14rem, 0.9fr);
@@ -1126,7 +1364,7 @@ img { display: block; max-width: 100%; }
   .sidebar {
     position: sticky;
     inset: auto;
-    top: 4.5rem;
+    top: 7.5rem;
     width: auto;
     max-height: calc(100vh - 5.25rem);
     transform: none;
