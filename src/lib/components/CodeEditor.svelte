@@ -663,6 +663,8 @@
   })
 
   $: if (ready) {
+    resolvedActiveFileId
+    normalizedFiles
     syncModelsFromProps()
   }
 
