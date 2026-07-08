@@ -21,3 +21,10 @@ test('sidebar search stays within the selected flow', () => {
   assert.equal(visibleModules.some((module) => module.flowSlug !== 'data-structures-and-algorithms'), false);
   assert.deepEqual(visibleModules.map((module) => module.slug), ['dsa-company-rounds']);
 });
+
+test('sidebar can show all modules while a flow is active', () => {
+  const dsaFlow = courseFlows.find((flow) => flow.slug === 'data-structures-and-algorithms');
+  const visibleModules = getVisibleSidebarModules({ modules, activeFlow: dsaFlow, showAllModules: true });
+
+  assert.equal(visibleModules.length, modules.length);
+});

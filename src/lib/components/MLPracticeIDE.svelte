@@ -140,7 +140,7 @@ plt.show()
   }[status] ?? status
 </script>
 
-<section class="ml-practice-shell panel hero-card">
+<section id="practice-lab" class="ml-practice-shell panel hero-card">
   <div class="ml-heading-row">
     <div>
       <p class="eyebrow">ML playground</p>

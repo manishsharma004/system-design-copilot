@@ -278,7 +278,7 @@
 </script>
 
 {#if simulation}
-  <section class="simulation-ide-section">
+  <section id="simulation-lab" class="simulation-ide-section">
     <div class="simulation-ide-header">
       <div>
         <p class="eyebrow">Simulation lab</p>

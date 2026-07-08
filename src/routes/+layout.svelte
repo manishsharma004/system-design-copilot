@@ -14,8 +14,11 @@
   let desktopNavOpen = true;
   let isDesktop = false;
   let query = '';
+  let showAllModules = false;
   /** @type {Record<string, boolean>} */
   let expandedModules = {};
+  /** @type {HTMLInputElement | null} */
+  let searchInput = null;
 
   const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v3';
 
@@ -27,6 +30,9 @@
         if (parsed && typeof parsed === 'object') {
           if (typeof parsed.desktopNavOpen === 'boolean') {
             desktopNavOpen = parsed.desktopNavOpen;
+          }
+          if (typeof parsed.showAllModules === 'boolean') {
+            showAllModules = parsed.showAllModules;
           }
           if (parsed.expandedModules && typeof parsed.expandedModules === 'object') {
             expandedModules = parsed.expandedModules;
@@ -42,6 +48,7 @@
     try {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({
         desktopNavOpen,
+        showAllModules,
         expandedModules
       }));
     } catch {
@@ -84,6 +91,18 @@
     navOpen = false;
   }
 
+  /** @param {KeyboardEvent} event */
+  function handleGlobalKeydown(event) {
+    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = /** @type {HTMLElement | null} */ (event.target);
+    if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    if (!sidebarVisible && !isDesktop) {
+      navOpen = true;
+    }
+    searchInput?.focus();
+  }
+
   onMount(() => {
     loadSidebarState();
 
@@ -98,8 +117,12 @@
 
     syncViewport(mediaQuery);
     mediaQuery.addEventListener('change', syncViewport);
+    window.addEventListener('keydown', handleGlobalKeydown);
 
-    return () => mediaQuery.removeEventListener('change', syncViewport);
+    return () => {
+      mediaQuery.removeEventListener('change', syncViewport);
+      window.removeEventListener('keydown', handleGlobalKeydown);
+    };
   });
 
   $: pathname = $page.url.pathname;
@@ -125,7 +148,12 @@
       : activeFlow
         ? `${activeFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`
         : `${sidebarFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`;
-  $: filteredModules = getVisibleSidebarModules({ modules, activeFlow: sidebarFlow, query });
+  $: filteredModules = getVisibleSidebarModules({
+    modules,
+    activeFlow: activeFlow ?? sidebarFlow,
+    query,
+    showAllModules
+  });
   $: visibleModules = filteredModules.map((module) => ({
     ...module,
     isExpanded: query.trim()
@@ -142,12 +170,18 @@
     };
   }
   $: sidebarVisible = isDesktop ? desktopNavOpen : navOpen;
+  $: progressLabel = activeFlow
+    ? `${activeFlowCompleted}/${activeFlowLessonTotal} · ${activeFlow.shortTitle}`
+    : `${$progress.completedLessonIds.length}/${lessonTotal} lessons`;
+  $: scopeFlowLabel = activeFlow?.shortTitle ?? sidebarFlow.shortTitle;
 </script>
 
 <svelte:head>
   <title>{siteOverview.title}</title>
   <meta name="description" content={siteOverview.description} />
 </svelte:head>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
 <button aria-label="Close navigation" class:open={!isDesktop && navOpen} class="backdrop" type="button" onclick={closeNavigation}></button>
 
@@ -156,14 +190,13 @@
     <div class="app-header-top">
       <a class="app-header-brand" href={homeHref}>
         <strong>{siteOverview.title}</strong>
-        <span>{$progress.completedLessonIds.length} / {lessonTotal} lessons complete</span>
       </a>
       <div class="app-header-context">
         <strong>{contextTitle}</strong>
         <span>{contextSubtitle}</span>
       </div>
       <div class="app-header-actions">
-        <span class="pill topbar-progress">{$progress.completedLessonIds.length} / {lessonTotal} complete</span>
+        <span class="pill topbar-progress" title="Lesson completion progress">{progressLabel}</span>
         <button class="nav-toggle sidebar-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
           {#if isDesktop}
             {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -195,7 +228,10 @@
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
     <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact">
       <div class="sidebar-compact-header">
-        <input bind:value={query} type="search" placeholder="Search lessons…" class="sidebar-compact-search" />
+        <label class="sidebar-search-label">
+          <span class="sidebar-search-label-text">Search lessons</span>
+          <input bind:this={searchInput} bind:value={query} type="search" placeholder="Search lessons… (press /)" class="sidebar-compact-search" />
+        </label>
         <button class="sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
       </div>
 
@@ -203,6 +239,15 @@
         <span class="eyebrow">{sidebarFlow.shortTitle} track</span>
         <strong>{sidebarFlow.title}</strong>
         <span>{activeFlowCompleted}/{activeFlowLessonTotal} lessons complete in this track</span>
+      </div>
+
+      <div class="sidebar-scope-toggle">
+        <button class="sidebar-scope-button" class:active={!showAllModules} type="button" onclick={() => { showAllModules = false; saveSidebarState(); }}>
+          {scopeFlowLabel} only
+        </button>
+        <button class="sidebar-scope-button" class:active={showAllModules} type="button" onclick={() => { showAllModules = true; saveSidebarState(); }}>
+          All topics
+        </button>
       </div>
 
       <nav class="sidebar-compact-nav" aria-label="Course topics">
@@ -244,7 +289,7 @@
       </nav>
     </aside>
 
-    <main class="page">
+    <main id="main-content" class="page">
       <slot />
     </main>
   </div>

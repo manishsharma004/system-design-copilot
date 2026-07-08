@@ -32,7 +32,7 @@
 </script>
 
 {#if lesson}
-  <section class="panel hero-card ai-study-guide">
+  <section id="topic-lab" class="panel hero-card ai-study-guide">
     <div class="practice-card-header">
       <div>
         <p class="eyebrow">AI study companion</p>

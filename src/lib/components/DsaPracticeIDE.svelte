@@ -314,7 +314,7 @@
   }
 </script>
 
-<section class="dsa-practice-shell panel hero-card">
+<section id="practice-lab" class="dsa-practice-shell panel hero-card">
   <div class="practice-heading-row">
     <div>
       <p class="eyebrow">Coding practice</p>

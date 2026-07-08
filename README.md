@@ -1,16 +1,22 @@
 
 # system-design-copilot
 
-Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site. The lesson workspace now includes a structured in-browser editor, reveal-on-demand sample answers, Mermaid-powered interactive diagrams, decision labs that compare real design choices, and a browser-only simulation lab for authored case-study scenarios.
+Mobile-friendly system design interview prep material built with SvelteKit and exported as a static site. The lesson workspace includes a structured in-browser editor, reveal-on-demand sample answers, Mermaid-powered interactive diagrams, decision labs, and a browser-only simulation lab.
+
+See [IMPROVEMENTS_PLAN.md](./IMPROVEMENTS_PLAN.md) for the active product roadmap.
 
 ## Run locally
+
+Requires **Node.js 20.19+** (see `.nvmrc`).
 
 ```bash
 npm install
 npm start
 ```
 
-Then open `http://localhost:4173` in a browser.
+Then open **http://localhost:4173/system-design-copilot/** in a browser.
+
+(`npm` or `bun` both work; CI uses `npm ci`.)
 
 ## Build static output
 
@@ -18,7 +24,7 @@ Then open `http://localhost:4173` in a browser.
 npm run build
 ```
 
-The generated static site is written to `dist/` so it can be hosted directly.
+The generated static site is written to `dist/` for GitHub Pages (base path `/system-design-copilot`).
 
 ## Validate
 

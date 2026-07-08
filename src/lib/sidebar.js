@@ -5,9 +5,9 @@
  *   query?: string
  * }} options
  */
-export function getVisibleSidebarModules({ modules, activeFlow = null, query = '' }) {
+export function getVisibleSidebarModules({ modules, activeFlow = null, query = '', showAllModules = false }) {
   const normalizedQuery = query.trim().toLowerCase();
-  const scopedModules = activeFlow?.modules?.length ? activeFlow.modules : modules;
+  const scopedModules = (!showAllModules && activeFlow?.modules?.length) ? activeFlow.modules : modules;
 
   return scopedModules
     .map((module) => ({

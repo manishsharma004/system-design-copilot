@@ -48,7 +48,7 @@
 </script>
 
 {#if canReveal}
-  <section class="panel hero-card solution-lab">
+  <section id="solution-reveal" class="panel hero-card solution-lab">
     <div class="action-row" style="justify-content: space-between; align-items: end;">
       <div>
         <p class="eyebrow">Solution reveal</p>

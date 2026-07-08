@@ -2,9 +2,22 @@
 <script>
   import { base } from '$app/paths';
   import { completedLessonCount, progress } from '$lib/stores/progress';
-  import { courseFlows, defaultFlow, getModuleProgress, modules, siteOverview, allLessons } from '$lib/data/courseData';
+  import ProgressControls from '$lib/components/ProgressControls.svelte';
+  import {
+    courseFlows,
+    defaultFlow,
+    getModuleProgress,
+    getResumeLesson,
+    modules,
+    siteOverview,
+    allLessons
+  } from '$lib/data/courseData';
 
   const featuredModules = defaultFlow.modules.slice(0, 3);
+  let showExtendedResources = false;
+
+  $: resumeLesson = getResumeLesson($progress.completedLessonIds);
+  $: resumeFlow = resumeLesson ? courseFlows.find((flow) => flow.slug === resumeLesson.flowSlug) : null;
 </script>
 
 <svelte:head>
@@ -14,25 +27,26 @@
 <section class="hero panel">
   <div class="hero-grid home-hero-grid">
     <div class="hero-card hero-primary-card">
-      <p class="eyebrow">Two interview tracks</p>
+      <p class="eyebrow">Four prep flows</p>
       <div class="hero-kicker-row">
         <span class="pill">Self-paced SvelteKit guide</span>
-        <span class="pill">{courseFlows.length} focused prep flows</span>
+        <span class="pill">{courseFlows.length} focused prep flows · {allLessons.length} lessons</span>
       </div>
-      <h1 class="hero-title">Prepare for system design, low-level design, and DSA interviews in one place.</h1>
+      <h1 class="hero-title">Prepare for system design, low-level design, DSA, and AI engineering interviews in one place.</h1>
       <p class="hero-subtitle">{siteOverview.description}</p>
       <p class="hero-guidance">Pick the flow that matches the interview in front of you, then work the modules in order so your answers sound structured instead of improvised.</p>
       <div class="action-row">
         <a class="action-link primary" href={`${base}/flow/high-level-design`}>Open HLD flow</a>
         <a class="action-link" href={`${base}/flow/low-level-design`}>Open LLD flow</a>
         <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</a>
+        <a class="action-link" href={`${base}/flow/ai-engineer`}>Open AI flow</a>
         <a class="action-link" href={`${base}/flow/interview-questions`}>Open question bank</a>
       </div>
       <div class="hero-stat-strip">
         <article class="hero-stat-card">
-          <span class="eyebrow">Tracks</span>
-          <strong>{courseFlows.length}</strong>
-          <p>Separate paths for architecture-heavy HLD rounds, object-design-heavy LLD rounds, and coding-focused DSA loops.</p>
+          <span class="eyebrow">Progress</span>
+          <strong>{$completedLessonCount}/{allLessons.length}</strong>
+          <p>Saved locally. Export a backup anytime so you do not lose drafts or completion state.</p>
         </article>
         <article class="hero-stat-card">
           <span class="eyebrow">Modules</span>
@@ -40,23 +54,10 @@
           <p>Organized into flow-specific sequences so the next step stays obvious.</p>
         </article>
         <article class="hero-stat-card">
-          <span class="eyebrow">Progress</span>
-          <strong>{$completedLessonCount}/{allLessons.length}</strong>
-          <p>Saved locally so you can move between modules without losing your place.</p>
+          <span class="eyebrow">Practice labs</span>
+          <strong>3</strong>
+          <p>Simulation, markdown practice IDE, and browser-side DSA runtimes with saved answers.</p>
         </article>
-      </div>
-      <div class="action-row">
-        <span class="pill">{$completedLessonCount} / {allLessons.length} lessons complete</span>
-        <span class="pill">Dedicated HLD and LLD landing pages</span>
-        <span class="pill">Interactive practice labs with saved drafts</span>
-      </div>
-      <div class="hero-highlight-grid">
-        {#each courseFlows as flow}
-          <article class="section-chip">
-            <strong>{flow.title}</strong>
-            <span>{flow.summary}</span>
-          </article>
-        {/each}
       </div>
     </div>
     <article class="hero-card study-loop-card">
@@ -84,6 +85,30 @@
   </div>
 </section>
 
+{#if resumeLesson}
+  <section class="panel hero-card home-resume-card">
+    <div class="curriculum-map-header">
+      <div>
+        <p class="eyebrow">Resume where you left off</p>
+        <h2>{resumeLesson.title}</h2>
+        <p class="hero-subtitle">
+          {#if resumeFlow}
+            {resumeFlow.shortTitle} · {resumeLesson.moduleTitle}
+          {:else}
+            {resumeLesson.moduleTitle}
+          {/if}
+        </p>
+      </div>
+      <a
+        class="action-link primary"
+        href={`${base}/module/${resumeLesson.moduleSlug}/lesson/${resumeLesson.slug}`}
+      >
+        Continue lesson
+      </a>
+    </div>
+  </section>
+{/if}
+
 <section class="section-grid hero-featured-grid">
   {#each courseFlows as flow}
     <article class="module-card study-track-card">
@@ -106,20 +131,7 @@
           <strong>Cadence</strong>
           <span>{flow.cadence}</span>
         </article>
-        <article class="section-chip">
-          <strong>Outcome</strong>
-          <span>{flow.outcome}</span>
-        </article>
       </div>
-      <ol class="study-step-list">
-        {#each flow.focusAreas as area, index}
-          <li class="study-step-card">
-            <span class="pill">Focus {index + 1}</span>
-            <strong>{area}</strong>
-            <p>{flow.heroGuidance}</p>
-          </li>
-        {/each}
-      </ol>
       <div class="action-row">
         <a class="action-link primary" href={`${base}/flow/${flow.slug}`}>Open {flow.shortTitle} roadmap</a>
         <a class="action-link" href={`${base}/module/${flow.modules[0].slug}`}>Start with {flow.modules[0].title}</a>
@@ -166,95 +178,91 @@
   </article>
 </section>
 
-<section class="track-grid study-track-grid">
-  <article class="hero-card home-detail-card">
-    <p class="eyebrow">High-level design study modes</p>
-    <h2>These guided tracks still map to the HLD curriculum when you want structured repetition.</h2>
-    <p>{siteOverview.heroGuidance}</p>
-  </article>
-  {#each siteOverview.studyTracks as track}
-    <article class="module-card study-track-card">
-      <div class="study-track-heading">
-        <div>
-          <p class="eyebrow">Study path</p>
-          <h2>{track.title}</h2>
-        </div>
-        <div class="card-meta">
-          <span class="pill">{track.steps.length} detailed steps</span>
-        </div>
-      </div>
-      <p>{track.summary}</p>
-      <div class="study-track-meta">
-        <article class="section-chip">
-          <strong>Best for</strong>
-          <span>{track.bestFor}</span>
-        </article>
-        <article class="section-chip">
-          <strong>Cadence</strong>
-          <span>{track.cadence}</span>
-        </article>
-        <article class="section-chip">
-          <strong>What success looks like</strong>
-          <span>{track.outcome}</span>
-        </article>
-      </div>
-      <ol class="study-step-list">
-        {#each track.steps as step, index}
-          <li class="study-step-card">
-            <span class="pill">Step {index + 1}</span>
-            <strong>{step.title}</strong>
-            <p>{step.detail}</p>
-          </li>
-        {/each}
-      </ol>
-    </article>
-  {/each}
-</section>
+<details class="panel hero-card home-collapsible" bind:open={showExtendedResources}>
+  <summary class="home-collapsible-summary">
+    <span>
+      <p class="eyebrow">Extended resources</p>
+      <strong>Study tracks, reading list, and curriculum depth map</strong>
+    </span>
+    <span class="pill">{siteOverview.studyTracks.length} study tracks · {siteOverview.recommendedReading.length} books</span>
+  </summary>
 
-<section class="section-grid home-reference-grid">
-  <article class="hero-card home-detail-card">
-    <p class="eyebrow">How the map builds depth</p>
-    <h2>Move from design vocabulary to product-shaped systems.</h2>
-    <div class="study-section-list">
-      {#each siteOverview.studyMapSections as section}
-        <article class="study-section-card">
-          <strong>{section.title}</strong>
-          <p>{section.summary}</p>
-        </article>
-      {/each}
-    </div>
-  </article>
-  <article class="hero-card home-detail-card">
-    <p class="eyebrow">Helpful design books</p>
-    <h2>Use these references to deepen the lessons, not replace practice.</h2>
-    <div class="reading-list">
-      {#each siteOverview.recommendedReading as book}
-        <article class="reading-card">
+  <section class="track-grid study-track-grid home-collapsible-body">
+    <article class="hero-card home-detail-card">
+      <p class="eyebrow">High-level design study modes</p>
+      <h2>Structured repetition paths mapped to the HLD curriculum.</h2>
+      <p>{siteOverview.heroGuidance}</p>
+    </article>
+    {#each siteOverview.studyTracks as track}
+      <article class="module-card study-track-card">
+        <div class="study-track-heading">
           <div>
-            <strong>{book.title}</strong>
-            <p class="reading-author">{book.author}</p>
+            <p class="eyebrow">Study path</p>
+            <h2>{track.title}</h2>
           </div>
-          <p>{book.focus}</p>
-          <span>{book.whyItFits}</span>
-        </article>
-      {/each}
-    </div>
-  </article>
-</section>
+          <div class="card-meta">
+            <span class="pill">{track.steps.length} steps</span>
+          </div>
+        </div>
+        <p>{track.summary}</p>
+        <ol class="study-step-list">
+          {#each track.steps as step, index}
+            <li class="study-step-card">
+              <span class="pill">Step {index + 1}</span>
+              <strong>{step.title}</strong>
+              <p>{step.detail}</p>
+            </li>
+          {/each}
+        </ol>
+      </article>
+    {/each}
+  </section>
+
+  <section class="section-grid home-reference-grid home-collapsible-body">
+    <article class="hero-card home-detail-card">
+      <p class="eyebrow">How the map builds depth</p>
+      <h2>Move from design vocabulary to product-shaped systems.</h2>
+      <div class="study-section-list">
+        {#each siteOverview.studyMapSections as section}
+          <article class="study-section-card">
+            <strong>{section.title}</strong>
+            <p>{section.summary}</p>
+          </article>
+        {/each}
+      </div>
+    </article>
+    <article class="hero-card home-detail-card">
+      <p class="eyebrow">Helpful design books</p>
+      <h2>Use these references to deepen the lessons, not replace practice.</h2>
+      <div class="reading-list">
+        {#each siteOverview.recommendedReading as book}
+          <article class="reading-card">
+            <div>
+              <strong>{book.title}</strong>
+              <p class="reading-author">{book.author}</p>
+            </div>
+            <p>{book.focus}</p>
+            <span>{book.whyItFits}</span>
+          </article>
+        {/each}
+      </div>
+    </article>
+  </section>
+</details>
 
 <section class="panel hero-card">
   <div class="curriculum-map-header">
     <div>
       <p class="eyebrow">Curriculum map</p>
-      <h2>Modules and lesson progress</h2>
-      <p class="hero-subtitle">Each module adds a new design muscle: estimation, interfaces, storage, distributed coordination, reliability, security, and finally full case-study synthesis.</p>
+      <h2>All modules and lesson progress</h2>
+      <p class="hero-subtitle">Browse every module across HLD, LLD, DSA, and AI flows. Progress is tracked per lesson.</p>
     </div>
-    <button class="reset-link" type="button" onclick={() => progress.reset()}>Reset progress</button>
+    <ProgressControls />
   </div>
   <div class="module-grid">
     {#each modules as module}
       <article class="module-card">
-          <a class="topic-card-link" href={`${base}/module/${module.slug}`}>
+        <a class="topic-card-link" href={`${base}/module/${module.slug}`}>
           <div>
             <p class="eyebrow">Module</p>
             <h3>{module.title}</h3>

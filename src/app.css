@@ -56,6 +56,32 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -3rem;
+  z-index: 1000;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
 body {
   margin: 0;
   background: #232333;
@@ -310,6 +336,49 @@ img { display: block; max-width: 100%; }
   padding: 0.25rem 0.25rem 0.5rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.4rem;
+}
+
+.sidebar-search-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sidebar-search-label-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sidebar-scope-toggle {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-lg);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-scope-button {
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+}
+
+.sidebar-scope-button.active {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: rgba(105, 108, 255, 0.12);
 }
 
 .sidebar-compact-search {
@@ -1348,8 +1417,49 @@ img { display: block; max-width: 100%; }
   }
 
   .topbar-context {
-    display: none;
+    min-width: 0;
   }
+
+  .topbar-context strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.92rem;
+  }
+
+  .topbar-context span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+  }
+}
+
+.home-collapsible {
+  gap: 0.75rem;
+}
+
+.home-collapsible-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.home-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-collapsible-body {
+  margin-top: 0.75rem;
+}
+
+.home-resume-card {
+  margin-bottom: 0.75rem;
 }
 
 @media (min-width: 960px) {

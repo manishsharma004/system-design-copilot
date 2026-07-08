@@ -12,7 +12,9 @@
   import QuestionBankIDE from '$lib/components/QuestionBankIDE.svelte';
   import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
   import MLPracticeIDE from '$lib/components/MLPracticeIDE.svelte';
+  import LessonSectionNav from '$lib/components/LessonSectionNav.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
+  import { solutionLessonIds } from '$lib/data/solutionLoader';
   export let data;
 
   $: flow = getFlowBySlug(data.module.flowSlug);
@@ -20,6 +22,8 @@
   $: isQuestionBankLesson = data.module.flowSlug === 'interview-questions';
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
+  $: showTopicLab = Boolean(data.lesson.interactive) || isAiLesson;
+  $: showSolutionReveal = solutionLessonIds.has(data.lesson.id);
   $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
   $: lessonSteps = [
     {
@@ -34,6 +38,13 @@
       title: section.heading,
       summary: section.bullets?.[0] ?? section.body
     }))
+  ];
+  $: lessonSections = [
+    { id: 'lesson-content', label: 'Read' },
+    ...(showTopicLab ? [{ id: 'topic-lab', label: 'Topic lab' }] : []),
+    ...(showSimulationLab ? [{ id: 'simulation-lab', label: 'Simulate' }] : []),
+    { id: 'practice-lab', label: 'Practice' },
+    ...(showSolutionReveal ? [{ id: 'solution-reveal', label: 'Solutions' }] : [])
   ];
 
   /** @param {string} heading */
@@ -84,7 +95,9 @@
   </article>
 </section>
 
-<section class="lesson-shell">
+<LessonSectionNav sections={lessonSections} />
+
+<section class="lesson-shell" id="lesson-content">
   <div class="lesson-main-stack">
     <nav class="lesson-step-nav" aria-label="Lesson steps">
       {#each lessonSteps as step}
@@ -95,7 +108,6 @@
         </a>
       {/each}
     </nav>
-
     <article class="panel hero-card lesson-step-panel" id="lesson-framing">
       <div class="lesson-step-header">
         <div class="lesson-step-badge">1</div>

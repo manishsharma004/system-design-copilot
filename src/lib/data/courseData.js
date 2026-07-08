@@ -4430,3 +4430,10 @@ function buildPracticeTemplate(lessonTitle, structure, prompt) {
     '```'
   ].join('\n');
 }
+
+/**
+ * @param {string[]} completedLessonIds
+ */
+export function getResumeLesson(completedLessonIds) {
+  return allLessons.find((lesson) => !completedLessonIds.includes(lesson.id)) ?? allLessons[0] ?? null;
+}

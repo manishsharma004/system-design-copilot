@@ -150,7 +150,7 @@
   ];
 </script>
 
-<section class="practice-ide-section">
+<section id="practice-lab" class="practice-ide-section">
   <div class="practice-ide-header">
     <div>
       <p class="eyebrow">Interactive practice lab</p>

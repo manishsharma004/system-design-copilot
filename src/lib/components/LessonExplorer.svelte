@@ -46,7 +46,7 @@
 </script>
 
 {#if interactive}
-  <section class="panel hero-card topic-lab">
+  <section id="topic-lab" class="panel hero-card topic-lab">
     <div class="topic-lab-header">
       <div>
         <p class="eyebrow">Interactive topic lab</p>
