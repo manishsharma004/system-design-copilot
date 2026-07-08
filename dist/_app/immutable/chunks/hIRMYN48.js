@@ -1,0 +1,1 @@
+import{t as e}from"./CIXUsTjZ.js";import{t}from"./DKXPbXsm.js";t({id:`c`,extensions:[`.c`,`.h`],aliases:[`C`,`c`],loader:()=>e(()=>import(`./C7h46wYY2.js`),[],import.meta.url)}),t({id:`cpp`,extensions:[`.cpp`,`.cc`,`.cxx`,`.hpp`,`.hh`,`.hxx`],aliases:[`C++`,`Cpp`,`cpp`],loader:()=>e(()=>import(`./C7h46wYY2.js`),[],import.meta.url)});

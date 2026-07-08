@@ -324,7 +324,7 @@
   onDestroy(() => {})
 </script>
 
-<section class="bank-shell panel hero-card">
+<section id="practice-lab" class="bank-shell panel hero-card">
   <div class="bank-heading-row">
     <div>
       <p class="eyebrow">Question bank</p>
