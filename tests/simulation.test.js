@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { allLessons } from '../src/lib/data/courseData.js'
 import { getSimulationLesson } from '../src/lib/data/simulationLessons.js'
-import { compileFlowGraph } from '../src/lib/simulation/graphCompiler.js'
+import { compileFlowGraph, serializeFlowGraph } from '../src/lib/simulation/graphCompiler.js'
 import { runSimulation } from '../src/lib/simulation/engine.js'
 import { parseSimulationScript } from '../src/lib/simulation/scriptApi.js'
 
@@ -82,4 +82,18 @@ test('simulation engine blocks runs when the topology no longer supports the API
 
   assert.equal(result.ok, false)
   assert.equal(result.errors.some((message) => message.includes('Missing link shortener -> primary')), true)
+})
+
+test('serialized topology remains runnable by the simulation engine', () => {
+  const simulation = getSimulationLesson('case-studies/url-shortener')
+  const compiled = compileFlowGraph(simulation.starterDiagram)
+  const serialized = serializeFlowGraph(compiled)
+  const result = runSimulation({
+    scenario: simulation,
+    diagramText: serialized,
+    apiId: simulation.apis[0].id,
+    profileId: simulation.workloadProfiles[0].id,
+    scriptText: ''
+  })
+  assert.equal(result.ok, true)
 })

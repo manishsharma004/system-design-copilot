@@ -1,0 +1,41 @@
+# Practice modes
+
+Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.svelte`.
+
+## Markdown Practice IDE (HLD / LLD / AI)
+
+- Component: `PracticeIDE.svelte` → `IDEWorkspace` + Monaco markdown
+- Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review; AI uses ML-oriented structures)
+- Workspace id: `practice:{lesson.id}` (IndexedDB)
+- Drafts: `practiceAnswers` store (`persistence.mdc`)
+- Optional coach: embeds `LlmAssistantPanel` (`llm.mdc`)
+
+## DSA Practice IDE
+
+- Component: `DsaPracticeIDE.svelte`
+- Questions from `lesson.questionHighlights` (curated runnable set)
+- Languages + WASM: `runtimes.mdc`; harness via `dsa/practice.js`
+- Attempt timer: `practiceTimer.js` nested in practice store
+
+## Question bank IDE
+
+- Component: `QuestionBankIDE.svelte`
+- Lesson field: `questionBank: { key, label, kind }` from `questionBankCourseData.js`
+- Lazy-loads matching JSON under `src/lib/data/`; normalize with `dsa/questionBank.js`
+- Section browser, search, per-question completion in localStorage
+- Same Python/C++/Java WASM runners as DSA
+
+## ML Practice IDE (AI)
+
+- Component: `MLPracticeIDE.svelte`
+- Runs default/sklearn-style scripts in `static/ml-py-worker.js`
+- Shown with AI study guide on ai-engineer lessons
+
+## Heuristics and solutions
+
+- “Show likely answer” under prompts: `interviewAnswers.js` (+ optional `likelyAnswerPoints` on lessons)
+- Enhanced walkthroughs (9 HLD case studies): `LessonSolutionPanel` + `solutionLoader.js` / `lessonEnhancements.js`
+
+## Orphans
+
+`PracticeWorkspace.svelte` is unused by routes — prefer `PracticeIDE` for new markdown practice.

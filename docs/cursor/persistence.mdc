@@ -1,0 +1,38 @@
+# Persistence
+
+Two layers: **localStorage** for app state; **IndexedDB** for IDE virtual filesystems.
+
+## localStorage keys
+
+Canonical list: `BACKUP_STORAGE_KEYS` in `src/lib/backup.js`.
+
+| Key | Store / owner | Contents |
+|-----|---------------|----------|
+| `system-design-copilot-progress-v4` | `stores/progress.js` | `completedLessonIds[]` |
+| `system-design-copilot-practice-v1` | `stores/practice.js` | Per-key drafts `{ answer, savedAt, timer? }` — keys like `{lessonId}/{stepId}` or `dsa-attempt:…` |
+| `system-design-copilot-simulation-v1` | `stores/simulation.js` | Per-`lessonId` simulation session |
+| `system-design-copilot-llm-v1` | `stores/llm.js` | Provider, endpoint, model, apiKey, templates, systemPrompt |
+| `system-design-copilot-sidebar-v3` | `+layout.svelte` | Sidebar open/filter UI (not a store) |
+
+Question-bank completion flags also use localStorage keys like `question-bank:{key}:completed` (see `QuestionBankIDE.svelte`).
+
+Timer state machine helpers: `stores/practiceTimer.js` (nested under practice answers).
+
+## IndexedDB workspaces
+
+- Module: `src/lib/editor/indexedDbWorkspace.js`
+- DB: `system-design-copilot-workspaces`, store: `workspaces`
+- Used by `IDEWorkspace` / editor layer for multi-file snapshots (practice, simulation, DSA, etc.)
+- Workspace ids are namespaced (e.g. `practice:{lesson.id}`)
+
+Editor core: `editor/workspaceCore.js`, `editor/workspace.js`.
+
+## Backup
+
+`src/lib/backup.js` + `ProgressControls.svelte` — export/import all backup keys and IndexedDB workspaces; reset progress.
+
+## Agent notes
+
+- Do not assume IndexedDB alone holds user progress — most durable state is localStorage.
+- Bump key suffixes carefully; update `backup.js` and docs together.
+- Tests: `tests/backup.test.js`, `tests/workspace.test.js`.

@@ -1,0 +1,48 @@
+# Architecture
+
+> Agent-maintained snapshot. Update when structure or major flows change.
+
+## Stack
+
+- **SvelteKit 2** + **Svelte 5** (many components still use legacy `export let` / `runes={false}`)
+- **adapter-static** → `dist/`; **base path** `/system-design-copilot` (GitHub Pages)
+- **CSS**: Tailwind 4 + Skeleton tokens in `src/app.css` / `src/copilot-theme.css`; prefer semantic classes (`pill`, `panel`, `hero-card`, …)
+- **Diagrams**: Mermaid + static primer images; **Markdown**: `markdown-it` (LLM replies)
+- **Persistence**: localStorage (progress/practice/simulation/LLM/sidebar) + IndexedDB (IDE workspaces)
+- **Code execution**: in-browser WASM — see `runtimes.mdc`
+
+Setup: `README.md`, `AGENTS.md`. Dev URL: `http://localhost:4173/system-design-copilot/` (bare `/` 404s).
+
+## Module map
+
+```
+src/
+  routes/           Home, flow, module, lesson (+ layout shell)
+  lib/
+    components/     Lesson chrome, IDEs, labs, LLM panel
+    data/           Course JSON, banks, interactive/simulation metadata
+    dsa/            Practice parsing + WASM runners + bank builder
+    editor/         Monaco, virtual FS, IndexedDB workspaces
+    stores/         progress, practice, simulation, llm, practiceTimer
+    simulation/     Graph compiler, engine, script API, diagnostics
+    llm/            Provider presets + request builders
+    backup.js       Export/import all local state
+    browserRuntimes.js  Runtime registry
+    navigation.js / sidebar.js / interviewAnswers.js
+```
+
+## Key constraints
+
+- Minimize dependencies; no React / Astryx runtime packages (`AGENTS.md`)
+- Prefer plain markup + `app.css` classes over new UI wrapper components
+- Fixed dark theme (`--accent` `#696cff`, surfaces `#232333` / `#2b2c40`)
+- WASM / Monaco load lazily on first use; exclude `@yowasp/clang` and `@wasmer/wasi` from Vite dep optimize (`vite.config.js`)
+
+## Build / CI
+
+- Scripts: `dev`/`start`, `build`, `preview`, `check`, `test` (`package.json`)
+- Node `>=20.19`; CI: `.github/workflows/static.yml` → check, test, build, Pages deploy
+
+## Related docs
+
+`intent.mdc`, `routes.mdc`, `components.mdc`, `data.mdc`, `persistence.mdc`, `runtimes.mdc`, `practice.mdc`, `simulation.mdc`, `llm.mdc`

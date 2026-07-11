@@ -1,0 +1,35 @@
+# Simulation lab
+
+HLD-only interactive lab: edit a topology, run a workload, inspect diagnostics. Shown when `getSimulationLesson(lesson.id)` returns config (authored or generated for every HLD lesson).
+
+## Entry points
+
+- UI: `SimulationIDE.svelte` + `TopologyBuilder.svelte`
+- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback
+- Engine: `src/lib/simulation/` — `graphCompiler.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`
+- Session store: `stores/simulation.js` → localStorage `system-design-copilot-simulation-v1`
+
+## Virtual workspace files
+
+Paths from `SIMULATION_PATHS` in `editor/workspaceCore.js` (typical):
+
+- `src/topology.flow` — topology DSL
+- `src/overrides.ts` — script overrides
+- `src/topology.layout.json` — visual layout for `TopologyBuilder`
+
+Persisted via IndexedDB workspace snapshots like other IDEs.
+
+## Runtime model
+
+1. `compileFlowGraph()` turns DSL (+ layout) into a runnable graph
+2. `runSimulation()` applies workload profiles and optional failure injection
+3. Diagnostics surface bottlenecks / misconfig for the learner
+
+Registry tag: `native-flow` in `browserRuntimes.js` (plain JS, not WASM).
+
+## Agent notes
+
+- Do not show simulation on non-HLD flows unless product intent changes (`intent.mdc` / lesson page guards).
+- Prefer extending `simulationLessons.js` authored entries over one-off UI forks.
+- Orphan: `SimulationLab.svelte` — unused; use `SimulationIDE`.
+- Tests: `tests/simulation.test.js`.

@@ -4,6 +4,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
 
   import { getMonaco, MONACO_THEME } from '$lib/editor/monaco'
+  import { codiconSvg, fileCodicon } from '$lib/editor/codicons'
 
   export let value = ''
   export let readOnly = false
@@ -284,6 +285,21 @@
     const fileId = [...models.entries()].find(([, candidate]) => candidate === model)?.[0]
     if (!fileId) return
     dispatchFileState(fileId, model.getValue())
+  }
+
+  /**
+   * @param {string} fileId
+   * @param {string} nextValue
+   */
+  export function applyExternalFileContent(fileId, nextValue) {
+    const model = models.get(fileId)
+    if (!model || model.getValue() === nextValue) {
+      return
+    }
+    mutedModelSync = true
+    model.setValue(nextValue)
+    mutedModelSync = false
+    applyMetadata(fileId)
   }
 
   /**
@@ -672,6 +688,8 @@
     applyMetadata(currentFile.id)
   }
 
+  $: breadcrumbSegments = (currentFile?.path ?? currentFile?.filename ?? '').split('/').filter(Boolean)
+
   $: if (ready) {
     registerEditorActions()
   }
@@ -688,11 +706,12 @@
             type="button"
             onclick={() => activateFile(file.id)}
           >
-            <span class="tab-icon">{file.language === 'typescript' ? '📘' : file.language === 'javascript' ? '📒' : file.language === 'markdown' ? '📝' : '🔷'}</span>
+            <span class="tab-icon">{@html codiconSvg(fileCodicon(file.filename ?? file.label ?? '', file.language))}</span>
             <span class="tab-label">{file.label ?? file.filename ?? file.id}</span>
             {#if file.id === resolvedActiveFileId && currentText !== (file.value ?? '')}
               <span class="tab-modified">●</span>
             {/if}
+            <span class="tab-close" role="presentation">×</span>
           </button>
         {/each}
       </div>
@@ -712,6 +731,15 @@
           Cmd
         </button>
       </div>
+    </div>
+  {/if}
+
+  {#if currentFile && breadcrumbSegments.length}
+    <div class="code-editor-breadcrumbs" aria-label="Breadcrumb">
+      {#each breadcrumbSegments as segment, index}
+        {#if index > 0}<span class="breadcrumb-sep">›</span>{/if}
+        <span class="breadcrumb-segment">{segment}</span>
+      {/each}
     </div>
   {/if}
 
@@ -803,11 +831,46 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    border-radius: 0.35rem;
-    border: 1px solid #2f3340;
-    background: #11131a;
+    border-radius: 0;
+    border: none;
+    background: var(--vscode-editor-bg, #1e1e1e);
     height: 100%;
     font-family: 'Segoe WPC', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .code-editor-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.65rem;
+    background: #1e1e1e;
+    border-bottom: 1px solid var(--vscode-border, #2b2b2b);
+    font-size: 0.72rem;
+    color: var(--vscode-descriptionForeground, #858585);
+    min-height: 1.35rem;
+  }
+
+  .breadcrumb-sep {
+    opacity: 0.7;
+  }
+
+  .breadcrumb-segment:last-child {
+    color: var(--vscode-foreground, #cccccc);
+  }
+
+  .tab-icon :global(svg) {
+    display: block;
+  }
+
+  .tab-close {
+    margin-left: 0.35rem;
+    opacity: 0;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .code-editor-tab:hover .tab-close {
+    opacity: 0.7;
   }
 
   .code-editor-tabbar {

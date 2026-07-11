@@ -5,6 +5,12 @@
   import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte';
   import { getLessonPracticeSteps } from '$lib/data/courseData';
   import { buildMarkdownMetadata, markdownCompletions } from '$lib/editor/exerciseMetadata';
+  import {
+    buildWorkspaceId,
+    createSeedFile,
+    findFileByPath,
+    resetWorkspace
+  } from '$lib/editor/workspace';
 
   /** @type {any} */
   export let lesson;
@@ -14,20 +20,25 @@
   let currentStepIndex = 0;
   let activeKey = '';
   let draft = '';
+  let workspaceReady = false;
+  /** @type {any} */
+  let ideWorkspace;
 
   $: steps = getLessonPracticeSteps(lesson);
   $: currentStep = steps[currentStepIndex];
-  $: currentKey = `${lesson.id}/${currentStep.id}`;
+  $: currentKey = `${lesson.id}/${currentStep?.id ?? ''}`;
   $: savedEntry = $practiceAnswers[currentKey] ?? null;
+  $: workspaceId = buildWorkspaceId('practice', lesson.id);
   $: if (activeKey !== currentKey) {
     activeKey = currentKey;
-    draft = savedEntry?.answer ?? '';
+    draft = savedEntry?.answer ?? findStepDraft(currentStepIndex);
   }
   $: savedCount = steps.filter((step) => $practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt).length;
   $: isSaved = Boolean(savedEntry?.savedAt) && (savedEntry?.answer ?? '') === draft;
   $: canSave = draft.trim().length > 0 && !isSaved;
   $: canAdvance = isSaved && currentStepIndex < steps.length - 1;
   $: draftMetadata = buildMarkdownMetadata(draft);
+  $: activeFileId = `step-${currentStepIndex}`;
   $: editorSnippetActions = [
     ...markdownCompletions.map((item) => ({
       label: item.label,
@@ -38,26 +49,75 @@
       insertText: ['```ts', '// Add an API, schema, worker loop, or core algorithm here.', '```'].join('\n')
     }
   ];
-  $: editorFiles = [
-    {
-      id: 'answer',
-      label: `step-${currentStepIndex + 1}-answer.md`,
-      filename: `step-${currentStepIndex + 1}-answer.md`,
-      language: 'markdown',
-      value: draft
-    }
-  ];
-  $: explorerNodes = buildExplorerNodes();
-  $: previewContent = buildPreviewContent();
+  $: legacyMigrationFiles = steps.map((step, index) => ({
+    path: stepPath(index),
+    value: $practiceAnswers[`${lesson.id}/${step.id}`]?.answer ?? ''
+  })).filter((entry) => entry.value)
 
-  function buildExplorerNodes() {
-    return steps.map((step, index) => ({
-      type: 'file',
-      id: `step-${index}`,
-      label: `step-${index + 1}-answer.md`,
-      icon: $practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt ? '✅' : '📝',
-      badge: index === currentStepIndex ? '●' : ''
+  $: seedFiles = buildSeedFiles();
+  $: previewContent = buildPreviewContent();
+  $: markersByFile = buildMarkersByFile();
+  $: summaryByFile = buildSummaryByFile();
+  $: previewItemsByFile = buildPreviewItemsByFile();
+
+  /** @param {number} index */
+  function stepPath(index) {
+    return `steps/step-${index + 1}-answer.md`;
+  }
+
+  /** @param {number} index */
+  function stepFileId(index) {
+    return `step-${index}`;
+  }
+
+  function buildSeedFiles() {
+    return steps.map((step, index) => createSeedFile({
+      id: stepFileId(index),
+      path: stepPath(index),
+      value: '',
+      language: 'markdown'
     }));
+  }
+
+  /** @param {number} index */
+  function findStepDraft(index) {
+    const files = ideWorkspace?.getWorkspaceFiles?.() ?? [];
+    return findFileByPath(files, stepPath(index))?.value
+      ?? $practiceAnswers[`${lesson.id}/${steps[index]?.id}`]?.answer
+      ?? '';
+  }
+
+  function buildMarkersByFile() {
+    /** @type {Record<string, any[]>} */
+    const map = {};
+    steps.forEach((_, index) => {
+      if (index === currentStepIndex) {
+        map[stepFileId(index)] = draftMetadata.markers;
+      }
+    });
+    return map;
+  }
+
+  function buildSummaryByFile() {
+    /** @type {Record<string, string>} */
+    const map = {};
+    steps.forEach((_, index) => {
+      if (index === currentStepIndex) {
+        map[stepFileId(index)] = draftMetadata.summary;
+      }
+    });
+    return map;
+  }
+
+  function buildPreviewItemsByFile() {
+    /** @type {Record<string, any[]>} */
+    const map = {};
+    steps.forEach((_, index) => {
+      if (index === currentStepIndex) {
+        map[stepFileId(index)] = draftMetadata.previewItems;
+      }
+    });
+    return map;
   }
 
   function buildPreviewContent() {
@@ -79,31 +139,44 @@
     return text;
   }
 
+  /** @param {CustomEvent} event */
+  function handleWorkspaceHydrated(event) {
+    draft = findStepDraft(currentStepIndex)
+    workspaceReady = true
+  }
+
   function saveCurrent() {
     if (!draft.trim()) return;
     practiceAnswers.saveAnswer(currentKey, draft.trim());
   }
 
-  function clearLessonAnswers() {
+  async function clearLessonAnswers() {
     practiceAnswers.clearLesson(lesson.id);
     draft = '';
+    await resetWorkspace(workspaceId, buildSeedFiles());
+    workspaceReady = false;
   }
 
   /** @param {number} index */
   function goToStep(index) {
     currentStepIndex = index;
+    draft = findStepDraft(index);
   }
 
   function goToPrevious() {
     if (currentStepIndex > 0) currentStepIndex -= 1;
+    draft = findStepDraft(currentStepIndex);
   }
 
   function goToNext() {
-    if (canAdvance) currentStepIndex += 1;
+    if (canAdvance) {
+      currentStepIndex += 1;
+      draft = findStepDraft(currentStepIndex);
+    }
   }
 
   /** @param {CustomEvent} event */
-  function handleFileSelect(event) {
+  function handleStepFileChange(event) {
     const { fileId } = event.detail;
     const match = fileId?.match?.(/^step-(\d+)$/);
     if (match) {
@@ -114,16 +187,12 @@
   /** @param {CustomEvent} event */
   function handleEditorChange(event) {
     const nextFiles = event.detail?.files ?? [];
-    const answer = nextFiles.find((/** @type {any} */ f) => f.id === 'answer');
-    if (answer) {
-      draft = answer.value;
+    const nextActiveId = event.detail?.activeFileId ?? activeFileId;
+    const active = nextFiles.find((/** @type {any} */ f) => f.id === nextActiveId)
+      ?? findFileByPath(nextFiles, stepPath(currentStepIndex));
+    if (active) {
+      draft = active.value;
     }
-  }
-
-  /** @param {string | undefined} savedAt */
-  function formatSavedAt(savedAt) {
-    if (!savedAt) return 'Not saved yet';
-    return `Saved ${new Date(savedAt).toLocaleString()}`;
   }
 
   $: commandActions = [
@@ -150,7 +219,7 @@
   ];
 </script>
 
-<section id="practice-lab" class="practice-ide-section">
+<section class="practice-ide-section">
   <div class="practice-ide-header">
     <div>
       <p class="eyebrow">Interactive practice lab</p>
@@ -188,22 +257,28 @@
     </div>
   </div>
 
+  <div id="practice-lab" class="practice-ide-workspace">
   <IDEWorkspace
-    files={editorFiles}
+    bind:this={ideWorkspace}
+    files={seedFiles}
+    {workspaceId}
+    legacyFiles={legacyMigrationFiles}
+    {activeFileId}
     explorerTitle="PRACTICE STEPS"
     projectName={lesson.title.toUpperCase().slice(0, 24)}
-    {explorerNodes}
     sidePanelEyebrow="PRACTICE GUIDE"
     sidePanelTitle={currentStep?.title ?? 'Preview'}
     sidePanelDescription={currentStep?.objective ?? ''}
-    previewItemsByFile={{ answer: draftMetadata.previewItems }}
-    markersByFile={{ answer: draftMetadata.markers }}
-    summaryByFile={{ answer: draftMetadata.summary }}
+    {previewItemsByFile}
+    {markersByFile}
+    {summaryByFile}
     snippetActions={editorSnippetActions}
     {commandActions}
     {previewContent}
+    on:workspacehydrated={handleWorkspaceHydrated}
     on:fileschange={handleEditorChange}
-    on:fileselect={handleFileSelect}
+    on:fileselect={handleStepFileChange}
+    on:tabchange={handleStepFileChange}
   >
     <div slot="preview">
       {#if previewContent}
@@ -213,6 +288,7 @@
       {/if}
     </div>
   </IDEWorkspace>
+  </div>
 
   <LlmAssistantPanel
     title="Practice answer copilot"
@@ -231,6 +307,10 @@
   .practice-ide-section {
     display: grid;
     gap: 1rem;
+  }
+
+  .practice-ide-workspace {
+    scroll-margin-top: 5.5rem;
   }
 
   .practice-ide-header {
@@ -350,11 +430,9 @@
     display: grid;
     gap: 0.85rem;
     padding: 1.1rem 1.15rem;
-    border-radius: 0.9rem;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    background:
-      linear-gradient(180deg, rgba(105, 108, 255, 0.08), rgba(17, 19, 26, 0.98) 6rem),
-      #11131a;
+    border-radius: 0;
+    border: none;
+    background: var(--vscode-editor-bg, #1e1e1e);
     color: #cfd5e9;
     font-size: 0.9rem;
     line-height: 1.75;

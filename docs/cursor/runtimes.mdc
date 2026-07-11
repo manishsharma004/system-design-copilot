@@ -1,0 +1,38 @@
+# Runtimes
+
+In-browser editors and WASM runners. Lazy-load on first use (often 10–30s cold). Registry: `src/lib/browserRuntimes.js` (`native-flow`, `wasm-python`, `wasm-cpp`, `wasm-java`; `wasm-lua` reserved/unavailable).
+
+## Monaco
+
+- Loader: `src/lib/editor/monaco.js` → `getMonaco()`
+- UI: `CodeEditor.svelte` → all IDEs
+- Custom language `flow-graph`; simulation completions from `editor/exerciseMetadata.js`
+- Icons: `editor/codicons.js`
+
+## DSA / question-bank languages
+
+Catalog: `src/lib/dsa/practice.js` → `practiceLanguageCatalog` (python3, cpp, java).
+
+| Runtime | Loader | Notes |
+|---------|--------|-------|
+| **Python** | `dsa/wasmPythonRuntime.js` | Pyodide `0.29.4` CDN; `runPythonSource()` |
+| **C++** | `dsa/wasmCppRuntime.js` | `@yowasp/clang` + `@wasmer/wasi`; Vite `optimizeDeps.exclude` |
+| **Java** | `dsa/wasmJavaRuntime.js` | CheerpJ 4.3 CDN + ECJ JAR at `{base}/cheerpj/ecj-4.6.1.jar` |
+
+Consumers: `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte`. Test-case parsing from LeetCode HTML lives in `dsa/practice.js`.
+
+## ML (AI flow)
+
+- Worker: `static/ml-py-worker.js` (off-thread Pyodide)
+- Packages: numpy, pandas, matplotlib, scikit-learn
+- UI: `MLPracticeIDE.svelte`
+
+## Simulation (native JS)
+
+Not WASM — `simulation/graphCompiler.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`. See `simulation.mdc`.
+
+## Agent notes
+
+- Do not add new language runtimes without updating `browserRuntimes.js`, practice catalog, and this doc.
+- First-run latency is expected; no server-side install step.
+- Tests touching runners/parsing: `tests/dsaPractice.test.js`, `tests/editorAndLlm.test.js`.

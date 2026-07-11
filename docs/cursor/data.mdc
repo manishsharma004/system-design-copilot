@@ -1,0 +1,42 @@
+# Data and curriculum
+
+Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
+
+## Assembly (`courseData.js`)
+
+- `siteOverview` — marketing copy, study tracks, study loop, reading list
+- `rawModules` — HLD; LLD modules inline in same file
+- `flowDefinitions` → `courseFlows`, `modules`, `allLessons`, indexes
+- Helpers: `getFlowBySlug`, `getModuleBySlug`, `getLessonBySlug`, `getModuleProgress`, `getLessonPracticeSteps`, `getResumeLesson`
+
+## Flow-specific sources
+
+| File | Flow |
+|------|------|
+| `courseData.js` | HLD + LLD lessons |
+| `dsaCourseData.js` | DSA modules; highlights from embedded/company JSON |
+| `aiEngineerCourseData.js` | AI modules; lessons may include `exercises[]` |
+| `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
+
+## Modules by flow
+
+- **HLD (9):** foundations, edge-and-routing, application-architecture, data-storage, performance-and-resilience, security-and-operations, distributed-systems, product-patterns, case-studies
+- **LLD (4):** lld-foundations, lld-modeling, lld-extensibility, lld-machine-coding
+- **DSA (4):** dsa-foundations, dsa-core-patterns, dsa-company-rounds, dsa-mock-loops
+- **AI (8):** ml-foundations, deep-learning, llms-and-nlp, prompt-engineering-and-rag, ai-agents, mlops-and-deployment, ai-safety-and-ethics, data-engineering-for-ml
+- **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
+
+## Lesson shape (typical)
+
+`slug`, `title`, `summary`, `duration`, `whyItMatters`, `sections[]` (`heading`, `body`, `bullets?`, `codeExample?`), `checklist[]`, `pitfalls[]`, `interviewPrompts[]`, `diagram|null`, `related[]`. Optional: `likelyAnswerPoints`, `practiceMode`, `runtimeTarget`, `questionHighlights`, `questionBank`, `exercises`, `interactive`.
+
+Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
+
+## Banks and extras
+
+- Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
+- DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`)
+- `simulationLessons.js` — authored + generated HLD sims (`getSimulationLesson`)
+- `lessonEnhancements.js` + `solutionLoader.js` — rich solutions for 9 case studies
+- Diagrams: `/primer-images/*` under `static/` (asserted in `tests/courseData.test.js`)

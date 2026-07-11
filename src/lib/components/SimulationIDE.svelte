@@ -1,7 +1,10 @@
 <svelte:options runes={false} />
 <script>
+  import { onDestroy, onMount } from 'svelte'
+  import { browser } from '$app/environment'
   import IDEWorkspace from '$lib/components/IDEWorkspace.svelte'
-  import MermaidDiagram from '$lib/components/MermaidDiagram.svelte'
+  import TopologyBuilder from '$lib/components/TopologyBuilder.svelte'
+  import { codiconSvg } from '$lib/editor/codicons'
   import {
     FLOW_GRAPH_LANGUAGE,
     buildFlowGraphMetadata,
@@ -9,6 +12,13 @@
     flowGraphCompletions,
     simulationScriptCompletions
   } from '$lib/editor/exerciseMetadata'
+  import {
+    buildWorkspaceId,
+    createSeedFile,
+    findFileByPath,
+    resetWorkspace,
+    SIMULATION_PATHS
+  } from '$lib/editor/workspace'
   import { simulationSessions } from '$lib/stores/simulation'
   import { compileFlowGraph } from '$lib/simulation/graphCompiler'
   import { runSimulation } from '$lib/simulation/engine'
@@ -34,12 +44,22 @@
   let activeProfileId = ''
   let diagramText = ''
   let scriptText = ''
+  let layoutJson = '{}'
   let hydratedLessonId = ''
+  let workspaceReady = false
+  /** @type {'editor' | 'builder'} */
+  let lastChangeSource = 'editor'
   /** @type {any} */
   let latestRun = null
-  let editorFiles = []
+  /** @type {any} */
+  let ideWorkspace
+  /** @type {HTMLDivElement | undefined} */
+  let fullscreenShell
+  let isFullscreen = false
+  let overlayFullscreen = false
 
   $: simulation = lesson?.simulation ?? null
+  $: workspaceId = simulation ? buildWorkspaceId('simulation', lesson.id) : ''
   $: sessions = $simulationSessions
   $: session = simulation ? sessions[lesson.id] ?? null : null
   $: compilePreview = simulation ? compileFlowGraph(diagramText || simulation.starterDiagram) : null
@@ -49,91 +69,39 @@
   $: activeProfile = simulation?.workloadProfiles?.find((/** @type {any} */ entry) => entry.id === activeProfileId) ?? null
   $: compatibleProfiles = simulation?.workloadProfiles?.filter((/** @type {any} */ entry) => entry.endpointId === activeApiId) ?? []
   $: readmeContent = simulation ? `# ${simulation.title}\n\n${simulation.summary}\n\n## APIs\n${simulation.apis?.map((/** @type {any} */ a) => `- ${a.label}: ${a.method} ${a.path}`).join('\n') ?? ''}\n\n## Workload Profiles\n${simulation.workloadProfiles?.map((/** @type {any} */ p) => `- ${p.label} (${p.rps} rps)`).join('\n') ?? ''}` : ''
-  /** @param {string} id */
-  function configFilename(id) {
-    return `${id}.json`
-  }
+  $: legacyMigrationFiles = session ? [
+    ...(session.diagramText ? [{ path: SIMULATION_PATHS.topology, value: session.diagramText }] : []),
+    ...(session.scriptText ? [{ path: SIMULATION_PATHS.overrides, value: session.scriptText }] : [])
+  ] : []
 
   /** @param {string} id */
   function configPath(id) {
     return `config/${id}.json`
   }
 
-  $: apiConfigFilename = activeApi ? configFilename(activeApi.id) : 'api.json'
-  $: profileConfigFilename = activeProfile ? configFilename(activeProfile.id) : 'profile.json'
-  $: apiConfigContent = activeApi ? JSON.stringify(activeApi, null, 2) : '{}'
-  $: profileConfigContent = activeProfile ? JSON.stringify(activeProfile, null, 2) : '{}'
-  $: editorFiles = [
-    {
-      id: 'diagram',
-      label: 'topology.flow',
-      filename: 'topology.flow',
-      path: 'src/topology.flow',
-      language: FLOW_GRAPH_LANGUAGE,
-      icon: '🔷',
-      value: diagramText
-    },
-    {
-      id: 'script',
-      label: 'overrides.ts',
-      filename: 'overrides.ts',
-      path: 'src/overrides.ts',
-      language: 'typescript',
-      icon: '📘',
-      value: scriptText
-    },
-    {
-      id: '_api_config',
-      label: apiConfigFilename,
-      filename: apiConfigFilename,
-      path: activeApi ? configPath(activeApi.id) : 'config/api.json',
-      language: 'json',
-      icon: '⚙',
-      persistContent: false,
-      value: apiConfigContent
-    },
-    {
-      id: '_profile_config',
-      label: profileConfigFilename,
-      filename: profileConfigFilename,
-      path: activeProfile ? configPath(activeProfile.id) : 'config/profile.json',
-      language: 'json',
-      icon: '⚙',
-      persistContent: false,
-      value: profileConfigContent
-    },
-    {
-      id: '_readme',
-      label: 'README.md',
-      filename: 'README.md',
-      path: 'README.md',
-      language: 'markdown',
-      icon: '📝',
-      persistContent: false,
-      value: readmeContent
-    }
-  ]
+  $: seedFiles = simulation ? buildSeedFiles() : []
   $: editorSnippetActions = [
     ...flowGraphCompletions.map((item) => ({
       label: item.label,
       insertText: item.insertText,
-      fileId: 'diagram'
+      fileId: SIMULATION_PATHS.topology
     })),
     ...simulationScriptCompletions.map((item) => ({
       label: item.label,
       insertText: item.insertText,
-      fileId: 'script'
+      fileId: SIMULATION_PATHS.overrides
     }))
   ]
-  $: explorerNodes = buildExplorerNodes()
   $: resultsText = buildResultsText(latestRun) ?? 'Click ▶ Run to execute the simulation and see metrics here.'
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id
+    workspaceReady = false
     activeApiId = session?.activeApiId ?? simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
     activeProfileId = session?.activeProfileId ?? simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
     diagramText = session?.diagramText ?? simulation.starterDiagram
     scriptText = session?.scriptText ?? simulation.scriptTemplate
+    layoutJson = '{}'
     latestRun = session?.lastRun ?? null
   }
 
@@ -141,29 +109,78 @@
     activeProfileId = compatibleProfiles[0].id
   }
 
-  function buildExplorerNodes() {
+  function buildSeedFiles() {
     if (!simulation) return []
     return [
-      {
-        type: 'folder',
-        id: 'src',
-        label: 'src',
-        children: [
-          { id: 'diagram', label: 'topology.flow', icon: '🔷', badge: 'M' },
-          { id: 'script', label: 'overrides.ts', icon: '📘', badge: '' }
-        ]
-      },
-      {
-        type: 'folder',
-        id: 'config',
-        label: 'config',
-        children: [
-          { id: '_api_config', label: apiConfigFilename, icon: '⚙️' },
-          { id: '_profile_config', label: profileConfigFilename, icon: '⚙️' }
-        ]
-      },
-      { type: 'file', id: '_readme', label: 'README.md', icon: 'ℹ️' }
+      createSeedFile({
+        path: SIMULATION_PATHS.topology,
+        value: simulation.starterDiagram,
+        language: FLOW_GRAPH_LANGUAGE
+      }),
+      createSeedFile({
+        path: SIMULATION_PATHS.overrides,
+        value: simulation.scriptTemplate,
+        language: 'typescript'
+      }),
+      createSeedFile({
+        path: SIMULATION_PATHS.layout,
+        value: '{}',
+        language: 'json'
+      }),
+      createSeedFile({
+        path: activeApi ? configPath(activeApi.id) : 'config/api.json',
+        value: activeApi ? JSON.stringify(activeApi, null, 2) : '{}',
+        readOnly: true,
+        language: 'json'
+      }),
+      createSeedFile({
+        path: activeProfile ? configPath(activeProfile.id) : 'config/profile.json',
+        value: activeProfile ? JSON.stringify(activeProfile, null, 2) : '{}',
+        readOnly: true,
+        language: 'json'
+      }),
+      createSeedFile({
+        path: 'README.md',
+        value: readmeContent,
+        readOnly: true,
+        language: 'markdown'
+      })
     ]
+  }
+
+  /** @param {CustomEvent} event */
+  function handleWorkspaceHydrated(event) {
+    syncFromWorkspaceFiles(event.detail.files ?? ideWorkspace?.getWorkspaceFiles?.() ?? [])
+    workspaceReady = true
+  }
+
+  /** @param {any[]} files */
+  function syncFromWorkspaceFiles(files) {
+    diagramText = findFileByPath(files, SIMULATION_PATHS.topology)?.value ?? diagramText
+    scriptText = findFileByPath(files, SIMULATION_PATHS.overrides)?.value ?? scriptText
+    layoutJson = findFileByPath(files, SIMULATION_PATHS.layout)?.value ?? layoutJson
+  }
+
+  /** @param {CustomEvent<{ files: any[] }>} event */
+  function syncEditorFiles(event) {
+    if (lastChangeSource === 'builder') {
+      lastChangeSource = 'editor'
+      return
+    }
+    syncFromWorkspaceFiles(event.detail.files ?? [])
+  }
+
+  /** @param {{ diagramText: string, layoutJson: string }} detail */
+  function handleTopologyBuilderChange(detail) {
+    const { diagramText: nextDiagram, layoutJson: nextLayout } = detail
+    if (!nextDiagram) return
+    lastChangeSource = 'builder'
+    diagramText = nextDiagram
+    layoutJson = nextLayout ?? layoutJson
+    ideWorkspace?.updateFileByPath?.(SIMULATION_PATHS.topology, nextDiagram)
+    if (nextLayout !== undefined) {
+      ideWorkspace?.updateFileByPath?.(SIMULATION_PATHS.layout, nextLayout)
+    }
   }
 
   /** @param {any} run */
@@ -223,27 +240,21 @@
     simulationSessions.saveSession(lesson.id, {
       activeApiId,
       activeProfileId,
-      diagramText,
-      scriptText,
       lastRun: latestRun
     })
   }
 
-  function resetSession() {
+  async function resetSession() {
     if (!simulation) return
     activeApiId = simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
     activeProfileId = simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
     diagramText = simulation.starterDiagram
     scriptText = simulation.scriptTemplate
+    layoutJson = '{}'
     latestRun = null
     simulationSessions.clearSession(lesson.id)
-  }
-
-  /** @param {CustomEvent<{ files: { id: string, value: string }[] }>} event */
-  function syncEditorFiles(event) {
-    const nextFiles = event.detail.files ?? []
-    diagramText = nextFiles.find((file) => file.id === 'diagram')?.value ?? diagramText
-    scriptText = nextFiles.find((file) => file.id === 'script')?.value ?? scriptText
+    await resetWorkspace(workspaceId, buildSeedFiles())
+    workspaceReady = false
   }
 
   /** @param {number | undefined} value */
@@ -257,6 +268,49 @@
     if (value === undefined || value === null) return '—'
     return Intl.NumberFormat('en-US', { maximumFractionDigits: value >= 100 ? 0 : 2 }).format(value)
   }
+
+  function syncFullscreenState() {
+    if (!browser) return
+    isFullscreen = document.fullscreenElement === fullscreenShell || overlayFullscreen
+  }
+
+  async function toggleFullscreen() {
+    if (!browser || !fullscreenShell) return
+    try {
+      if (document.fullscreenElement === fullscreenShell) {
+        await document.exitFullscreen()
+        overlayFullscreen = false
+      } else if (typeof fullscreenShell.requestFullscreen === 'function') {
+        await fullscreenShell.requestFullscreen()
+        overlayFullscreen = false
+      } else {
+        overlayFullscreen = !overlayFullscreen
+      }
+    } catch {
+      overlayFullscreen = !overlayFullscreen
+    }
+    syncFullscreenState()
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleFullscreenKeydown(event) {
+    if (event.key !== 'Escape' || !overlayFullscreen) return
+    overlayFullscreen = false
+    syncFullscreenState()
+  }
+
+  onMount(() => {
+    if (!browser) return
+    document.addEventListener('fullscreenchange', syncFullscreenState)
+  })
+
+  onDestroy(() => {
+    if (!browser) return
+    document.removeEventListener('fullscreenchange', syncFullscreenState)
+    if (document.fullscreenElement === fullscreenShell) {
+      void document.exitFullscreen()
+    }
+  })
 
   $: commandActions = [
     {
@@ -273,12 +327,24 @@
       id: 'reset-simulation',
       label: 'Simulation: Reset current scenario',
       run: resetSession
+    },
+    {
+      id: 'toggle-simulation-fullscreen',
+      label: isFullscreen ? 'Simulation: Exit full screen' : 'Simulation: Enter full screen',
+      run: toggleFullscreen
     }
   ]
 </script>
 
+<svelte:window onkeydown={handleFullscreenKeydown} />
+
 {#if simulation}
-  <section id="simulation-lab" class="simulation-ide-section">
+  <section class="simulation-ide-section">
+    <div
+      class="simulation-ide-shell"
+      class:is-fullscreen={isFullscreen}
+      bind:this={fullscreenShell}
+    >
     <div class="simulation-ide-header">
       <div>
         <p class="eyebrow">Simulation lab</p>
@@ -310,45 +376,57 @@
           </button>
           <button class="ide-save-btn" type="button" onclick={saveSession}>Save</button>
           <button class="ide-reset-btn" type="button" onclick={resetSession}>Reset</button>
+          <button
+            class="ide-fullscreen-btn"
+            type="button"
+            title={isFullscreen ? 'Exit full screen (Esc)' : 'Enter full screen'}
+            aria-pressed={isFullscreen}
+            onclick={toggleFullscreen}
+          >
+            <span class="ide-fullscreen-icon">{@html codiconSvg(isFullscreen ? 'fullscreen-exit' : 'fullscreen')}</span>
+            <span>{isFullscreen ? 'Exit' : 'Full screen'}</span>
+          </button>
         </div>
       </div>
     </div>
 
+    <div id="simulation-lab" class="simulation-ide-workspace">
     <IDEWorkspace
-      files={editorFiles}
+      bind:this={ideWorkspace}
+      files={seedFiles}
+      {workspaceId}
+      legacyFiles={legacyMigrationFiles}
       explorerTitle="EXPLORER"
       projectName={simulation.title.toUpperCase().slice(0, 24)}
-      {explorerNodes}
       sidebarHelpersTitle="NODE HELPERS"
       previewItemsByFile={{
-        diagram: diagramMetadata.previewItems,
-        script: scriptMetadata.previewItems
+        [SIMULATION_PATHS.topology]: diagramMetadata.previewItems,
+        [SIMULATION_PATHS.overrides]: scriptMetadata.previewItems
       }}
       markersByFile={{
-        diagram: diagramMetadata.markers,
-        script: scriptMetadata.markers
+        [SIMULATION_PATHS.topology]: diagramMetadata.markers,
+        [SIMULATION_PATHS.overrides]: scriptMetadata.markers
       }}
       summaryByFile={{
-        diagram: diagramMetadata.summary,
-        script: scriptMetadata.summary
+        [SIMULATION_PATHS.topology]: diagramMetadata.summary,
+        [SIMULATION_PATHS.overrides]: scriptMetadata.summary
       }}
       snippetActions={editorSnippetActions}
       {commandActions}
-      sidePanelEyebrow="INTERACTIVE DIAGRAM"
-      sidePanelTitle="Compiled topology"
-      sidePanelDescription="Generated from current flow-graph."
-      previewContent={compilePreview?.mermaid || latestRun?.mermaid ? 'diagram' : null}
+      sidePanelEyebrow="TOPOLOGY"
+      sidePanelTitle="Interactive diagram"
+      sidePanelDescription="Edit visually or in topology.flow."
+      previewContent="topology"
       resultsContent={resultsText}
+      on:workspacehydrated={handleWorkspaceHydrated}
       on:fileschange={syncEditorFiles}
     >
-      <div slot="preview">
-        <MermaidDiagram
-          variant="extension"
-          diagram={{
-            title: 'Compiled topology',
-            caption: 'Generated from current flow-graph.',
-            code: latestRun?.mermaid ?? compilePreview?.mermaid
-          }}
+      <div slot="preview" class="topology-panel-slot">
+        <TopologyBuilder
+          diagramText={diagramText || simulation.starterDiagram}
+          layoutJson={layoutJson}
+          compileErrors={compilePreview?.errors ?? []}
+          onDiagramChange={handleTopologyBuilderChange}
         />
       </div>
       <div slot="results">
@@ -357,17 +435,8 @@
         {/if}
       </div>
     </IDEWorkspace>
-
-    {#if compilePreview?.errors?.length}
-      <div class="simulation-note danger">
-        <p class="eyebrow">Topology issues</p>
-        <ul>
-          {#each compilePreview.errors as error}
-            <li>{error}</li>
-          {/each}
-        </ul>
-      </div>
-    {/if}
+    </div>
+    </div>
   </section>
 {/if}
 
@@ -375,6 +444,42 @@
   .simulation-ide-section {
     display: grid;
     gap: 1rem;
+  }
+
+  .simulation-ide-workspace {
+    scroll-margin-top: 5.5rem;
+  }
+
+  .simulation-ide-shell {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .simulation-ide-shell:fullscreen,
+  .simulation-ide-shell.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--vscode-editor-bg, #1e1e1e);
+    overflow: hidden;
+  }
+
+  .simulation-ide-shell:fullscreen .simulation-ide-header,
+  .simulation-ide-shell.is-fullscreen .simulation-ide-header {
+    flex: 0 0 auto;
+  }
+
+  .simulation-ide-shell:fullscreen :global(.ide-workspace),
+  .simulation-ide-shell.is-fullscreen :global(.ide-workspace) {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    resize: none;
   }
 
   .simulation-ide-header {
@@ -428,13 +533,38 @@
 
   .ide-run-btn,
   .ide-save-btn,
-  .ide-reset-btn {
+  .ide-reset-btn,
+  .ide-fullscreen-btn {
     border-radius: 0.6rem;
     border: 1px solid rgba(148, 163, 184, 0.16);
     padding: 0.5rem 0.9rem;
     font-size: 0.82rem;
     font-weight: 600;
     min-height: 32px;
+  }
+
+  .ide-fullscreen-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #1b1f2a;
+    color: #cfd3ec;
+    cursor: pointer;
+  }
+
+  .ide-fullscreen-btn:hover {
+    background: #2a3040;
+    color: #eef2ff;
+  }
+
+  .ide-fullscreen-icon {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .ide-fullscreen-icon :global(svg) {
+    display: block;
   }
 
   .ide-run-btn {
@@ -464,6 +594,15 @@
   .ide-reset-btn:hover {
     color: #cfd3ec;
     background: rgba(148, 163, 184, 0.08);
+  }
+
+  .topology-panel-slot {
+    height: 100%;
+    min-height: 18rem;
+  }
+
+  .topology-panel-slot :global(.topology-builder) {
+    height: 100%;
   }
 
   :global(.ide-terminal-output) {

@@ -21,7 +21,7 @@ test('getResumeLesson falls back to the first lesson when everything is complete
 
 test('backup payload includes version metadata and storage keys', () => {
   const payload = exportLocalData();
-  assert.equal(payload.version, BACKUP_VERSION);
+  assert.equal(payload.version, 2);
   assert.ok(typeof payload.exportedAt === 'string');
   assert.deepEqual(Object.keys(BACKUP_STORAGE_KEYS).sort(), ['llm', 'practice', 'progress', 'sidebar', 'simulation']);
 });

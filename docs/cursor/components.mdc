@@ -1,0 +1,47 @@
+# Components
+
+Major Svelte UI under `src/lib/components/`. Prefer extending these over new parallel shells.
+
+## Lesson chrome
+
+| Component | Use when |
+|-----------|----------|
+| `LessonSectionNav.svelte` | Sticky sub-nav: Read · Topic lab · Simulate · Practice · Solutions |
+| `LessonCodeSnippet.svelte` | Read-only code in lesson body |
+| `MermaidDiagram.svelte` | Mermaid in topic labs |
+
+## Interactive / study
+
+| Component | Use when |
+|-----------|----------|
+| `LessonExplorer.svelte` | Topic lab (`lesson.interactive` / `interactiveLessons.js`) |
+| `AiLessonStudyGuide.svelte` | AI-flow topic lab (`#topic-lab`) |
+| `LessonSolutionPanel.svelte` | Enhanced case-study solutions (`solutionLoader.js`) |
+
+## IDE / practice shells
+
+| Component | Use when |
+|-----------|----------|
+| `IDEWorkspace.svelte` | VS Code–like explorer + Monaco + bottom panels; IndexedDB FS |
+| `CodeEditor.svelte` | Monaco wrapper (multi-file, snippets, palette) |
+| `PracticeIDE.svelte` | Markdown 3-step mock answers + LLM panel (HLD/LLD/AI) |
+| `DsaPracticeIDE.svelte` | Curated DSA highlights, languages, WASM tests, timer |
+| `QuestionBankIDE.svelte` | Lazy JSON banks + same WASM stack |
+| `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js` |
+| `SimulationIDE.svelte` | Topology editor + run engine (HLD) |
+| `TopologyBuilder.svelte` | Visual topology; syncs with `.flow` DSL |
+
+## App chrome / assistant
+
+| Component | Use when |
+|-----------|----------|
+| `ProgressControls.svelte` | Export/import backup, reset progress |
+| `LlmAssistantPanel.svelte` | Provider settings + completions (embedded in Practice IDE) |
+
+## Orphans (exist, not routed)
+
+`SimulationLab.svelte`, `PracticeWorkspace.svelte` — do not wire new flows through these without cleaning up; prefer `SimulationIDE` / `PracticeIDE`.
+
+## UI rule of thumb
+
+Plain markup + `app.css` classes first. Scoped CSS OK for IDE chrome; keep the shared dark palette.

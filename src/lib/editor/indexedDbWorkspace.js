@@ -107,3 +107,31 @@ export async function clearWorkspaceSnapshot(workspaceId) {
     // Ignore persistence failures and keep the in-memory workspace usable.
   }
 }
+
+/** @returns {Promise<Record<string, any>>} */
+export async function listWorkspaceSnapshots() {
+  try {
+    const db = await openDatabase()
+    if (!db) {
+      return {}
+    }
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly')
+      const store = transaction.objectStore(STORE_NAME)
+      const request = store.getAllKeys()
+      request.onsuccess = async () => {
+        const keys = /** @type {string[]} */ (request.result ?? [])
+        /** @type {Record<string, any>} */
+        const snapshots = {}
+        for (const key of keys) {
+          const snapshot = await loadWorkspaceSnapshot(key)
+          snapshots[key] = snapshot
+        }
+        resolve(snapshots)
+      }
+      request.onerror = () => reject(request.error ?? new Error('Unable to list workspace snapshots.'))
+    })
+  } catch {
+    return {}
+  }
+}

@@ -1,0 +1,28 @@
+# LLM assistant
+
+Optional in-browser coach. No app backend — the browser calls the user’s provider with their key.
+
+## Where it appears
+
+- UI: `LlmAssistantPanel.svelte` embedded in `PracticeIDE.svelte` (markdown practice)
+- Settings store: `src/lib/stores/llm.js` → localStorage `system-design-copilot-llm-v1`
+- Providers + HTTP builders: `src/lib/llm/providers.js`
+
+## Built-in providers
+
+`search-engine`, `openai`, `azure-openai`, `gemini`, `anthropic`, `ollama`, `lm-studio`, `comfyui`, `custom`
+
+Default provider preset: **OpenAI** (`getLlmProvider('openai')`). Search-engine mode builds DuckDuckGo/Google/Perplexity links (no API key).
+
+## API surface
+
+- `buildRequest()`, `requestLlmCompletion()`, `buildSearchEngineUrls()`
+- Panel holds templates / system prompt from store; lesson context can be attached from Practice IDE
+- Replies rendered with `markdown-it`
+
+## Agent notes
+
+- Rest of the app must work with LLM unset — never require a key for core lesson/practice flows.
+- Keys stay client-side only; do not add a proxy without an explicit product decision.
+- Tests: `tests/editorAndLlm.test.js`.
+- Planned UX (default to search-engine, key warnings, etc.) in `IMPROVEMENTS_PLAN.md` is **not** shipped unless code matches.

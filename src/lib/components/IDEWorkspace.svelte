@@ -3,6 +3,8 @@
   import { createEventDispatcher, onDestroy } from 'svelte'
   import CodeEditor from '$lib/components/CodeEditor.svelte'
   import { loadWorkspaceSnapshot, saveWorkspaceSnapshot } from '$lib/editor/indexedDbWorkspace'
+  import { codiconSvg, fileCodicon } from '$lib/editor/codicons'
+  import { collectFoldersFromFiles, isValidWorkspacePath } from '$lib/editor/workspaceCore'
 
   /** @type {any[]} */
   export let files = []
@@ -23,6 +25,8 @@
   /** @type {any[]} */
   export let explorerNodes = []
   export let workspaceId = ''
+  /** @type {{ path: string, value: string }[]} */
+  export let legacyFiles = []
   export let sidebarHelpersTitle = 'NODE HELPERS'
   export let sidePanelEyebrow = 'PREVIEW'
   export let sidePanelTitle = 'Preview'
@@ -50,6 +54,7 @@
   let persistTimer = null
   let hydratedWorkspaceId = ''
   let hydratingWorkspace = false
+  let legacyMigrationApplied = false
   /** @type {Set<string>} */
   let expandedFolders = new Set(['root', 'src', 'config'])
   /** @type {any[]} */
@@ -57,6 +62,14 @@
   /** @type {string[]} */
   let workspaceFolders = []
   let previousResultsContent = resultsContent
+  /** @type {{ type: 'file' | 'folder', id: string, path: string } | null} */
+  let renamingEntry = null
+  let renameValue = ''
+  /** @type {{ x: number, y: number, entry: any, kind: 'file' | 'folder' } | null} */
+  let contextMenu = null
+  /** @type {Record<string, string>} */
+  let persistedFileValues = {}
+  let mobileExplorerOpen = false
 
   $: usesPersistentWorkspace = Boolean(workspaceId)
   $: seededFiles = files.map((file, index) => normalizeIncomingFile(file, index))
@@ -67,7 +80,10 @@
   $: currentMarkers = currentFile ? markersByFile[currentFile.id] ?? [] : []
   $: currentPreviewItems = currentFile ? previewItemsByFile[currentFile.id] ?? [] : []
   $: scopedSnippetActions = snippetActions.filter((action) => !action.fileId || currentFiles.some((file) => file.id === action.fileId))
-  $: explorerEntries = usesPersistentWorkspace ? buildExplorerEntries(currentFiles, workspaceFolders) : []
+  $: dirtyFileIds = new Set(currentFiles.filter((file) => isFileDirty(file)).map((file) => file.id))
+  $: explorerEntries = usesPersistentWorkspace
+    ? buildExplorerEntries(currentFiles, workspaceFolders, expandedFolders)
+    : []
   $: panelTabs = [
     ...(previewContent ? [{ id: 'preview', label: 'Preview' }] : []),
     ...(resultsContent ? [{ id: 'results', label: 'Results' }] : []),
@@ -93,6 +109,53 @@
     workspaceFiles = []
     workspaceFolders = []
     hydratedWorkspaceId = ''
+    legacyMigrationApplied = false
+  }
+
+  $: if (workspaceId && hydratedWorkspaceId && workspaceId !== hydratedWorkspaceId) {
+    legacyMigrationApplied = false
+  }
+
+  /** @param {any} file */
+  function isFileDirty(file) {
+    if (!file || file.persistContent === false) return false
+    return (persistedFileValues[file.id] ?? '') !== (file.value ?? '')
+  }
+
+  /** @param {any[]} fileList */
+  function snapshotPersistedValues(fileList) {
+    /** @type {Record<string, string>} */
+    const next = {}
+    for (const file of fileList) {
+      if (file.persistContent === false) continue
+      next[file.id] = file.value ?? ''
+    }
+    persistedFileValues = next
+  }
+
+  /**
+   * @param {string} path
+   * @param {string} value
+   */
+  export function updateFileByPath(path, value) {
+    const normalized = normalizePath(path)
+    if (!usesPersistentWorkspace) return
+    const target = workspaceFiles.find((file) => normalizePath(file.path) === normalized)
+    workspaceFiles = workspaceFiles.map((file, index) => (
+      normalizePath(file.path) === normalized
+        ? normalizeIncomingFile({ ...file, value }, index)
+        : file
+    ))
+    if (target?.id) {
+      codeEditor?.applyExternalFileContent?.(target.id, value)
+    }
+    schedulePersist()
+    emitFilesChange(workspaceFiles)
+  }
+
+  /** @returns {any[]} */
+  export function getWorkspaceFiles() {
+    return currentFiles
   }
 
   /** @param {string} value */
@@ -111,6 +174,21 @@
   function getParentPath(path) {
     const parts = normalizePath(path).split('/').filter(Boolean)
     return parts.slice(0, -1).join('/')
+  }
+
+  /** @param {string} path */
+  function expandParentFolders(path) {
+    const parts = normalizePath(path).split('/').filter(Boolean)
+    let currentPath = ''
+    for (const part of parts.slice(0, -1)) {
+      currentPath = currentPath ? `${currentPath}/${part}` : part
+      expandedFolders.add(currentPath)
+    }
+    commitExpandedFolders()
+  }
+
+  function commitExpandedFolders() {
+    expandedFolders = new Set(expandedFolders)
   }
 
   /** @param {string} name */
@@ -172,7 +250,7 @@
     })
     const userFiles = persistedFiles
       .map((file, index) => normalizeIncomingFile(file, index))
-      .filter((file) => !nextIds.has(file.id))
+      .filter((file) => !nextIds.has(file.id) && isValidWorkspacePath(file.path))
     return [...mergedSeedFiles, ...userFiles]
   }
 
@@ -188,12 +266,47 @@
       hydratingWorkspace = false
       return
     }
-    workspaceFiles = mergeFiles(nextSeedFiles, snapshot.files ?? [])
-    workspaceFolders = normalizeFolders(snapshot.folders ?? [])
+
+    let persistedFiles = (snapshot.files ?? []).filter((file) => isValidWorkspacePath(file.path ?? file.id ?? ''))
+    const hasPersistedContent = persistedFiles.some((file) => {
+      const seed = nextSeedFiles.find((entry) => entry.id === file.id || entry.path === file.path)
+      if (!seed) return true
+      if (seed.persistContent === false) return false
+      return Boolean(file.value)
+    })
+
+    if (!hasPersistedContent && legacyFiles.length && !legacyMigrationApplied) {
+      persistedFiles = nextSeedFiles.map((seed) => {
+        const legacy = legacyFiles.find((entry) => normalizePath(entry.path) === normalizePath(seed.path))
+        if (!legacy || seed.persistContent === false) return seed
+        return { ...seed, value: legacy.value ?? seed.value ?? '' }
+      })
+      legacyMigrationApplied = true
+    }
+
+    workspaceFiles = mergeFiles(nextSeedFiles, persistedFiles)
+    workspaceFolders = normalizeFolders([
+      ...(snapshot.folders ?? []),
+      ...collectFoldersFromFiles(workspaceFiles)
+    ])
+    for (const file of workspaceFiles) {
+      expandParentFolders(file.path)
+    }
+    expandedFolders.add('root')
+    commitExpandedFolders()
     hydratedWorkspaceId = nextWorkspaceId
     internalActiveFileId = resolveActiveFileId(snapshot.activeFileId || activeFileId, workspaceFiles)
     hydratingWorkspace = false
+    snapshotPersistedValues(workspaceFiles)
     emitFilesChange(workspaceFiles)
+    dispatch('workspacehydrated', {
+      workspaceId: nextWorkspaceId,
+      files: workspaceFiles,
+      activeFileId: internalActiveFileId
+    })
+    if (legacyMigrationApplied && !hasPersistedContent) {
+      schedulePersist()
+    }
   }
 
   function syncSeededFiles() {
@@ -225,12 +338,13 @@
       return
     }
     window.clearTimeout(persistTimer)
-    persistTimer = window.setTimeout(() => {
-      saveWorkspaceSnapshot(workspaceId, {
+    persistTimer = window.setTimeout(async () => {
+      await saveWorkspaceSnapshot(workspaceId, {
         files: workspaceFiles,
         folders: workspaceFolders,
         activeFileId: internalActiveFileId
       })
+      snapshotPersistedValues(workspaceFiles)
     }, 120)
   }
 
@@ -257,7 +371,7 @@
     } else {
       expandedFolders.add(folderId)
     }
-    expandedFolders = expandedFolders
+    commitExpandedFolders()
   }
 
   /** @param {'explorer' | 'helpers'} view */
@@ -367,23 +481,26 @@
 
   /** @param {string} path */
   function ensureFolderExpanded(path) {
-    const parts = normalizePath(path).split('/').filter(Boolean)
-    let currentPath = ''
-    for (const part of parts) {
-      currentPath = currentPath ? `${currentPath}/${part}` : part
-      expandedFolders.add(currentPath)
+    expandParentFolders(path)
+    const folderPath = normalizePath(path)
+    if (folderPath) {
+      expandedFolders.add(folderPath)
+      commitExpandedFolders()
     }
-    expandedFolders = expandedFolders
+  }
+
+  function collapseAllFolders() {
+    expandedFolders = new Set(['root'])
   }
 
   function createFile() {
-    const requestedPath = window.prompt('New file path', 'src/untitled.txt')
-    if (!requestedPath) return
-    const nextPath = normalizePath(requestedPath)
-    const nextId = `user:${nextPath}`
-    if (!nextPath || currentFiles.some((file) => file.path === nextPath || file.id === nextId)) {
-      return
+    let index = 1
+    let nextPath = 'src/untitled.txt'
+    while (currentFiles.some((file) => file.path === nextPath)) {
+      nextPath = `src/untitled-${index}.txt`
+      index += 1
     }
+    const nextId = `user:${nextPath}`
     const filename = getBaseName(nextPath)
     const language = inferLanguage(filename)
     workspaceFiles = [...currentFiles, normalizeIncomingFile({
@@ -392,12 +509,13 @@
       filename,
       label: filename,
       language,
-      icon: defaultFileIcon(filename, language),
       value: '',
       isUserCreated: true
     }, currentFiles.length)]
     ensureFolderExpanded(getParentPath(nextPath))
     internalActiveFileId = nextId
+    renamingEntry = { type: 'file', id: nextId, path: nextPath }
+    renameValue = filename
     activeSidebarView = 'explorer'
     explorerCollapsed = false
     schedulePersist()
@@ -405,66 +523,105 @@
   }
 
   function createFolder() {
-    const requestedPath = window.prompt('New folder path', 'src/new-folder')
-    if (!requestedPath) return
-    const nextPath = normalizePath(requestedPath)
-    if (!nextPath || workspaceFolders.includes(nextPath)) {
-      return
+    let index = 1
+    let nextPath = 'src/new-folder'
+    while (workspaceFolders.includes(nextPath)) {
+      nextPath = `src/new-folder-${index}`
+      index += 1
     }
     workspaceFolders = normalizeFolders([...workspaceFolders, nextPath])
     ensureFolderExpanded(nextPath)
+    renamingEntry = { type: 'folder', id: nextPath, path: nextPath }
+    renameValue = getBaseName(nextPath)
     schedulePersist()
   }
 
   /** @param {{ path: string, id?: string }} entry */
-  function renameFile(entry) {
-    const requestedPath = window.prompt('Rename file', entry.path)
-    if (!requestedPath) return
-    const nextPath = normalizePath(requestedPath)
-    if (!nextPath || nextPath === entry.path || currentFiles.some((file) => file.path === nextPath)) {
-      return
-    }
-    workspaceFiles = currentFiles.map((file, index) => (
-      file.id === entry.id
-        ? normalizeIncomingFile({
-            ...file,
-            path: nextPath,
-            filename: getBaseName(nextPath),
-            label: getBaseName(nextPath)
-          }, index)
-        : file
-    ))
-    ensureFolderExpanded(getParentPath(nextPath))
-    schedulePersist()
-    emitFilesChange(workspaceFiles)
+  function startRenameFile(entry) {
+    renamingEntry = { type: 'file', id: entry.id ?? entry.path, path: entry.path }
+    renameValue = getBaseName(entry.path)
+    contextMenu = null
   }
 
   /** @param {{ path: string }} entry */
-  function renameFolder(entry) {
-    const requestedPath = window.prompt('Rename folder', entry.path)
-    if (!requestedPath) return
-    const nextPath = normalizePath(requestedPath)
-    if (!nextPath || nextPath === entry.path || workspaceFolders.includes(nextPath)) {
+  function startRenameFolder(entry) {
+    renamingEntry = { type: 'folder', id: entry.path, path: entry.path }
+    renameValue = getBaseName(entry.path)
+    contextMenu = null
+  }
+
+  function confirmRename() {
+    if (!renamingEntry) return
+    const nextPath = normalizePath(
+      renamingEntry.type === 'folder'
+        ? `${getParentPath(renamingEntry.path)}/${renameValue}`.replace(/\/+/g, '/')
+        : `${getParentPath(renamingEntry.path)}/${renameValue}`.replace(/\/+/g, '/')
+    )
+    if (!nextPath || !renameValue.trim() || !isValidWorkspacePath(nextPath)) {
+      renamingEntry = null
       return
     }
-    workspaceFolders = normalizeFolders(workspaceFolders.map((folder) => (
-      folder === entry.path || folder.startsWith(`${entry.path}/`)
-        ? `${nextPath}${folder.slice(entry.path.length)}`
-        : folder
-    )))
-    workspaceFiles = currentFiles.map((file, index) => (
-      file.path === entry.path || file.path.startsWith(`${entry.path}/`)
-        ? normalizeIncomingFile({
-            ...file,
-            path: `${nextPath}${file.path.slice(entry.path.length)}`,
-            filename: getBaseName(`${nextPath}${file.path.slice(entry.path.length)}`),
-            label: getBaseName(`${nextPath}${file.path.slice(entry.path.length)}`)
-          }, index)
-        : file
-    ))
-    ensureFolderExpanded(nextPath)
+    if (renamingEntry.type === 'folder') {
+      if (nextPath !== renamingEntry.path) {
+        workspaceFolders = normalizeFolders(workspaceFolders.map((folder) => (
+          folder === renamingEntry.path || folder.startsWith(`${renamingEntry.path}/`)
+            ? `${nextPath}${folder.slice(renamingEntry.path.length)}`
+            : folder
+        )))
+        workspaceFiles = currentFiles.map((file, index) => (
+          file.path === renamingEntry.path || file.path.startsWith(`${renamingEntry.path}/`)
+            ? normalizeIncomingFile({
+                ...file,
+                path: `${nextPath}${file.path.slice(renamingEntry.path.length)}`,
+                filename: getBaseName(`${nextPath}${file.path.slice(renamingEntry.path.length)}`),
+                label: getBaseName(`${nextPath}${file.path.slice(renamingEntry.path.length)}`)
+              }, index)
+            : file
+        ))
+      }
+      ensureFolderExpanded(nextPath)
+    } else if (nextPath !== renamingEntry.path && !currentFiles.some((file) => file.path === nextPath)) {
+      workspaceFiles = currentFiles.map((file, index) => (
+        file.id === renamingEntry.id
+          ? normalizeIncomingFile({
+              ...file,
+              path: nextPath,
+              filename: getBaseName(nextPath),
+              label: getBaseName(nextPath)
+            }, index)
+          : file
+      ))
+      ensureFolderExpanded(getParentPath(nextPath))
+      emitFilesChange(workspaceFiles)
+    }
+    renamingEntry = null
     schedulePersist()
-    emitFilesChange(workspaceFiles)
+  }
+
+  function cancelRename() {
+    renamingEntry = null
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleRenameKeydown(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      confirmRename()
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelRename()
+    }
+  }
+
+  /** @param {MouseEvent} event @param {any} entry @param {'file' | 'folder'} kind */
+  function openContextMenu(event, entry, kind) {
+    event.preventDefault()
+    contextMenu = { x: event.clientX, y: event.clientY, entry, kind }
+  }
+
+  function closeContextMenu() {
+    contextMenu = null
   }
 
   /** @param {{ id: string }} entry */
@@ -489,8 +646,8 @@
     codeEditor?.insertSnippetAction?.(action)
   }
 
-  /** @param {any[]} fileList @param {string[]} explicitFolders */
-  function buildExplorerEntries(fileList, explicitFolders) {
+  /** @param {any[]} fileList @param {string[]} explicitFolders @param {Set<string>} openFolders */
+  function buildExplorerEntries(fileList, explicitFolders, openFolders) {
     const folders = new Set(normalizeFolders(explicitFolders))
     for (const file of fileList) {
       const parts = normalizePath(file.path).split('/').filter(Boolean)
@@ -532,7 +689,7 @@
           depth,
           label: getBaseName(folderPath)
         })
-        if (expandedFolders.has(folderPath)) {
+        if (openFolders.has(folderPath)) {
           appendChildren(folderPath, depth + 1)
         }
       }
@@ -543,9 +700,10 @@
           id: file.id,
           path: file.path,
           depth,
-          label: file.label,
+          label: file.label ?? file.filename ?? getBaseName(file.path),
+          language: file.language,
           icon: file.icon,
-          badge: file.badge
+          badge: (dirtyFileIds ?? new Set()).has(file.id) ? 'M' : file.badge
         })
       }
     }
@@ -610,8 +768,15 @@
           {#if expandedFolders.has('root')}
             {#if usesPersistentWorkspace}
               <div class="ide-explorer-toolbar">
-                <button class="ide-explorer-action" type="button" onclick={createFile}>New File</button>
-                <button class="ide-explorer-action" type="button" onclick={createFolder}>New Folder</button>
+                <button class="ide-explorer-icon-btn" type="button" title="New File" onclick={createFile}>
+                  {@html codiconSvg('new-file')}
+                </button>
+                <button class="ide-explorer-icon-btn" type="button" title="New Folder" onclick={createFolder}>
+                  {@html codiconSvg('new-folder')}
+                </button>
+                <button class="ide-explorer-icon-btn" type="button" title="Collapse All" onclick={collapseAllFolders}>
+                  {@html codiconSvg('collapse')}
+                </button>
               </div>
             {/if}
 
@@ -619,38 +784,75 @@
               {#if usesPersistentWorkspace}
                 {#each explorerEntries as entry}
                   {#if entry.type === 'folder'}
-                    <div class="ide-tree-row" style={`--tree-indent: ${entry.depth};`}>
+                    <div
+                      class="ide-tree-row"
+                      style={`--tree-indent: ${entry.depth};`}
+                      oncontextmenu={(event) => openContextMenu(event, entry, 'folder')}
+                    >
                       <button
                         class="ide-tree-item ide-tree-folder"
                         type="button"
                         onclick={() => toggleFolder(entry.id)}
                       >
-                        <span class="ide-chevron">{expandedFolders.has(entry.id) ? '▼' : '▶'}</span>
-                        <span class="ide-file-icon folder">📁</span>
-                        <span>{entry.label}</span>
+                        <span class="ide-chevron" class:expanded={expandedFolders.has(entry.id)}>
+                          {@html codiconSvg('chevron-right')}
+                        </span>
+                        <span class="ide-file-icon codicon">{@html codiconSvg(expandedFolders.has(entry.id) ? 'folder-opened' : 'folder')}</span>
+                        {#if renamingEntry?.type === 'folder' && renamingEntry.path === entry.path}
+                          <input
+                            class="ide-rename-input"
+                            bind:value={renameValue}
+                            onkeydown={handleRenameKeydown}
+                            onblur={confirmRename}
+                          />
+                        {:else}
+                          <span>{entry.label}</span>
+                        {/if}
                       </button>
                       <div class="ide-tree-actions">
-                        <button class="ide-tree-action" type="button" title="Rename folder" onclick={() => renameFolder(entry)}>✎</button>
-                        <button class="ide-tree-action" type="button" title="Delete folder" onclick={() => deleteFolder(entry)}>×</button>
+                        <button class="ide-tree-action" type="button" title="Rename folder" onclick={() => startRenameFolder(entry)}>
+                          {@html codiconSvg('edit')}
+                        </button>
+                        <button class="ide-tree-action" type="button" title="Delete folder" onclick={() => deleteFolder(entry)}>
+                          {@html codiconSvg('trash')}
+                        </button>
                       </div>
                     </div>
                   {:else}
-                    <div class="ide-tree-row" style={`--tree-indent: ${entry.depth};`}>
+                    <div
+                      class="ide-tree-row"
+                      style={`--tree-indent: ${entry.depth};`}
+                      oncontextmenu={(event) => openContextMenu(event, entry, 'file')}
+                    >
                       <button
                         class="ide-tree-item ide-tree-file"
                         class:active={entry.id === internalActiveFileId}
                         type="button"
                         onclick={() => selectFile(entry.id)}
                       >
-                        <span class="ide-file-icon">{entry.icon ?? '📄'}</span>
-                        <span>{entry.label}</span>
+                        <span class="ide-chevron-spacer"></span>
+                        <span class="ide-file-icon codicon">{@html codiconSvg(fileCodicon(entry.label, entry.language))}</span>
+                        {#if renamingEntry?.type === 'file' && renamingEntry.id === entry.id}
+                          <input
+                            class="ide-rename-input"
+                            bind:value={renameValue}
+                            onkeydown={handleRenameKeydown}
+                            onblur={confirmRename}
+                          />
+                        {:else}
+                          <span>{entry.label}</span>
+                        {/if}
                         {#if entry.badge}
                           <span class="ide-file-badge">{entry.badge}</span>
                         {/if}
                       </button>
                       <div class="ide-tree-actions">
-                        <button class="ide-tree-action" type="button" title="Rename file" onclick={() => renameFile(entry)}>✎</button>
-                        <button class="ide-tree-action" type="button" title="Delete file" onclick={() => deleteFile(entry)}>×</button>
+                        <button class="ide-tree-action" type="button" title="Rename file" onclick={() => startRenameFile(entry)}>
+                          {@html codiconSvg('edit')}
+                        </button>
+                        <button class="ide-tree-action" type="button" title="Delete file" onclick={() => deleteFile(entry)}>
+                          {@html codiconSvg('trash')}
+                        </button>
                       </div>
                     </div>
                   {/if}
@@ -874,15 +1076,31 @@
   </div>
 </div>
 
+{#if contextMenu}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="ide-context-backdrop" onclick={closeContextMenu}></div>
+  <div class="ide-context-menu" style={`left:${contextMenu.x}px;top:${contextMenu.y}px;`}>
+    <button type="button" onclick={createFile}>New File</button>
+    <button type="button" onclick={createFolder}>New Folder</button>
+    {#if contextMenu.kind === 'file'}
+      <button type="button" onclick={() => startRenameFile(contextMenu.entry)}>Rename</button>
+      <button type="button" onclick={() => { deleteFile(contextMenu.entry); closeContextMenu() }}>Delete</button>
+    {:else}
+      <button type="button" onclick={() => startRenameFolder(contextMenu.entry)}>Rename</button>
+      <button type="button" onclick={() => { deleteFolder(contextMenu.entry); closeContextMenu() }}>Delete</button>
+    {/if}
+  </div>
+{/if}
+
 <style>
   .ide-workspace {
     display: grid;
     grid-template-columns: auto var(--explorer-width, 17rem) 6px minmax(0, 1fr);
     height: clamp(34rem, 70vh, 48rem);
     min-height: 34rem;
-    background: #11131a;
-    border: 1px solid #2f3340;
-    border-radius: 0.5rem;
+    background: var(--vscode-editor-bg, #1e1e1e);
+    border: 1px solid var(--vscode-border, #2b2b2b);
+    border-radius: 0;
     overflow: hidden;
     resize: vertical;
     font-family: 'Segoe WPC', 'Segoe UI', system-ui, sans-serif;
@@ -898,8 +1116,8 @@
     align-items: center;
     gap: 0.45rem;
     width: 48px;
-    background: #161922;
-    border-right: 1px solid #252a35;
+    background: var(--vscode-activityBar-bg, #333333);
+    border-right: 1px solid var(--vscode-border, #2b2b2b);
     padding-top: 0.6rem;
   }
 
@@ -931,11 +1149,12 @@
   }
 
   .ide-explorer {
-    background: #161922;
-    border-right: 1px solid #252a35;
+    background: var(--vscode-sideBar-bg, #252526);
+    border-right: 1px solid var(--vscode-border, #2b2b2b);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    color: var(--vscode-foreground, #cccccc);
   }
 
   .ide-explorer-section {
@@ -980,7 +1199,79 @@
 
   .ide-explorer-toolbar {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.15rem;
+    padding: 0 0.35rem;
+  }
+
+  .ide-explorer-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--vscode-descriptionForeground, #858585);
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .ide-explorer-icon-btn:hover {
+    color: var(--vscode-foreground, #cccccc);
+  }
+
+  .ide-chevron.expanded {
+    transform: rotate(90deg);
+  }
+
+  .ide-chevron-spacer {
+    width: 1rem;
+    flex: 0 0 1rem;
+  }
+
+  .ide-file-icon.codicon :global(svg) {
+    display: block;
+  }
+
+  .ide-rename-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+    background: #1e1e1e;
+    color: var(--vscode-foreground, #cccccc);
+    font-size: 0.78rem;
+    padding: 0.1rem 0.25rem;
+  }
+
+  .ide-context-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+  }
+
+  .ide-context-menu {
+    position: fixed;
+    z-index: 41;
+    min-width: 10rem;
+    background: #252526;
+    border: 1px solid var(--vscode-border, #2b2b2b);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    display: grid;
+    padding: 0.25rem 0;
+  }
+
+  .ide-context-menu button {
+    border: none;
+    background: transparent;
+    color: var(--vscode-foreground, #cccccc);
+    text-align: left;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .ide-context-menu button:hover {
+    background: var(--vscode-list-hover, #2a2d2e);
   }
 
   .ide-explorer-action,
@@ -1257,7 +1548,12 @@
   }
 
   .ide-preview-content {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 4rem), #0f1118;
+    background: var(--vscode-editor-bg, #1e1e1e);
+    padding: 0;
+  }
+
+  .ide-preview-content :global(.topology-builder) {
+    min-height: 100%;
   }
 
   .ide-bottom-panel {

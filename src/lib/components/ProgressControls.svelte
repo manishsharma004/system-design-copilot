@@ -1,15 +1,15 @@
 <svelte:options runes={false} />
 <script>
-  import { exportLocalData, downloadBackup, importLocalData } from '$lib/backup';
+  import { exportFullLocalData, downloadBackup, importFullLocalData } from '$lib/backup';
   import { progress } from '$lib/stores/progress';
 
   let importMessage = '';
   let importError = '';
 
-  function handleExport() {
+  async function handleExport() {
     importMessage = '';
     importError = '';
-    downloadBackup(exportLocalData());
+    downloadBackup(await exportFullLocalData());
     importMessage = 'Backup downloaded.';
   }
 
@@ -22,10 +22,10 @@
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(String(reader.result ?? ''));
-        const result = importLocalData(parsed);
+        const result = await importFullLocalData(parsed);
         if (!result.ok) {
           importError = result.error;
           return;

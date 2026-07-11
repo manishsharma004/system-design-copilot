@@ -1,0 +1,74 @@
+---
+description: Keep docs/cursor/ in sync after substantive agent changes
+alwaysApply: true
+---
+
+# Sync Cursor docs after changes
+
+When you make **substantive** changes to the application (new features, routes, stores, runtimes, data flows, or architectural refactors), update `docs/cursor/` before finishing the task.
+
+Docs must cover **project intent and feature knowledge**, not only architecture — enough for the next agent to know *what the product is*, *what ships today*, and *where to change it*.
+
+## When to update
+
+Update docs when changes affect how the app is structured, what it offers users, or how major pieces interact — not for typo fixes, copy tweaks, or isolated CSS polish.
+
+| Change type | Update |
+|-------------|--------|
+| New flow, module family, or product capability | `intent.mdc` (+ topic file if needed) |
+| New route, module, or major page flow | `routes.mdc` + `architecture.mdc` |
+| New store, runtime, or persistence layer | `persistence.mdc` / `runtimes.mdc` + `architecture.mdc` |
+| New component category or shared pattern | `components.mdc` |
+| Practice / IDE / question-bank behavior | `practice.mdc` |
+| Simulation / LLM behavior | `simulation.mdc` / `llm.mdc` |
+| Course JSON, banks, lesson schema | `data.mdc` |
+| Dependency or build/deploy change | `architecture.mdc` |
+
+## File conventions
+
+- Location: `docs/cursor/`
+- Format: `.mdc` markdown (no YAML frontmatter in doc files)
+- One concern per file; keep each file under ~80 lines
+- Prefer updating an existing file over duplicating content
+- Create a new file when the current set does not cover the change
+
+### Core files (keep current)
+
+| File | Contents |
+|------|----------|
+| `intent.mdc` | Product purpose, audience, feature map, what *not* to invent |
+| `architecture.mdc` | Stack, static export, base path, module map, constraints |
+| `routes.mdc` | SvelteKit routes and what each page does |
+| `components.mdc` | Major Svelte components and when to use each |
+| `data.mdc` | Course JSON, flows/modules, question banks, lesson schema |
+| `persistence.mdc` | localStorage keys, IndexedDB workspaces, backup |
+| `runtimes.mdc` | Pyodide, YoWASP clang, CheerpJ, Monaco — load/execution |
+| `practice.mdc` | Practice IDE, DSA, question bank, ML practice modes |
+| `simulation.mdc` | Topology DSL, engine, session model |
+| `llm.mdc` | Optional in-browser assistant providers and settings |
+
+## What to write
+
+- **Current state only** — describe what exists now, not history or `IMPROVEMENTS_PLAN.md` plans
+- **Intent + features** — agents should not rediscover product scope from the home page
+- **Pointers over prose** — key paths (`src/lib/...`), not full file listings
+- **Agent-oriented** — enough context to avoid re-exploring the repo
+
+## Example
+
+After adding a new practice mode store:
+
+```markdown
+## Practice stores (`src/lib/stores/practice.js`)
+
+- `practiceState` — active question, language, test results
+- Persisted to IndexedDB via `indexedDbWorkspace.js`
+- Consumed by `DsaPracticeIDE.svelte` and `QuestionBankIDE.svelte`
+```
+
+## Do not
+
+- Duplicate `AGENTS.md` or `README.md` (link to them for setup/commands)
+- Leave `docs/cursor/` stale after architectural or feature work
+- Document roadmap items as shipped
+- Create docs for changes you did not make in the current task

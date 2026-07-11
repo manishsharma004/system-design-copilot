@@ -1,0 +1,53 @@
+# Product intent and features
+
+> Agent-maintained product snapshot. Update when capabilities or audience change.
+
+## What this is
+
+Browser-only **interview-prep** web app: structured lessons, interactive labs, and in-browser practice for system design and coding rounds. No backend — progress and drafts stay on the device.
+
+Setup/commands: `README.md`, `AGENTS.md`.
+
+## Audience
+
+| Flow | Who |
+|------|-----|
+| High-level design (HLD) | Backend / platform / senior engineers |
+| Low-level design (LLD) | SDE machine-coding / OO design |
+| DSA + interview questions | Coding-round candidates |
+| AI engineer | Engineers moving into ML / LLM systems |
+
+## Core value props (shipped)
+
+- **Five prep flows** with guided modules and lessons (`src/lib/data/courseData.js`)
+- **Structured answers**: frame → estimate → sketch → defend (Practice IDE steps)
+- **Topic labs**: decision guides, Mermaid, worked examples (`interactiveLessons.js`)
+- **Simulation lab** (HLD): topology DSL + workload engine
+- **Runnable coding**: DSA / question bank via WASM; ML scripts via Pyodide worker
+- **Reveal-on-demand** sample answers and enhanced case-study solutions
+- **Local progress** + export/import backup; optional user-keyed LLM coach
+
+## Feature map
+
+| Area | Entry |
+|------|--------|
+| Curriculum / home | `src/routes/+page.svelte`, `courseData.js` → `siteOverview` |
+| Flow / module / lesson | `src/routes/flow/…`, `module/…`, `module/…/lesson/…` |
+| Topic lab | `LessonExplorer.svelte`, `AiLessonStudyGuide.svelte` |
+| Simulation | `SimulationIDE.svelte`, `src/lib/simulation/` |
+| Markdown practice | `PracticeIDE.svelte` |
+| DSA / banks | `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte` |
+| ML practice | `MLPracticeIDE.svelte`, `static/ml-py-worker.js` |
+| Solutions / likely answers | `LessonSolutionPanel.svelte`, `interviewAnswers.js` |
+| LLM panel | `LlmAssistantPanel.svelte` (inside Practice IDE) |
+| Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
+
+Scale today: **5 flows · 29 modules · 110 lessons**.
+
+## Attribution
+
+Selected diagrams/framing from [System Design Primer](https://github.com/donnemartin/system-design-primer) (CC BY 4.0).
+
+## Do not invent as shipped
+
+Anything only in `IMPROVEMENTS_PLAN.md` (PWA, theme toggle, mock full-screen mode, etc.) is **not** current product behavior. See sibling files for how each area works now.

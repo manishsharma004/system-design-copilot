@@ -1,6 +1,6 @@
 const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 /** Keys persisted in the browser for this app. */
 export const BACKUP_STORAGE_KEYS = {
@@ -43,6 +43,19 @@ export function exportLocalData() {
 }
 
 /**
+ * @returns {Promise<BackupPayload>}
+ */
+export async function exportFullLocalData() {
+  const payload = exportLocalData();
+  if (!isBrowser) {
+    return payload;
+  }
+  const { listWorkspaceSnapshots } = await import('./editor/indexedDbWorkspace.js');
+  payload.data.workspaces = await listWorkspaceSnapshots();
+  return payload;
+}
+
+/**
  * @param {unknown} payload
  * @returns {{ ok: true } | { ok: false, error: string }}
  */
@@ -67,6 +80,36 @@ export function importLocalData(payload) {
     } catch {
       return { ok: false, error: `Could not restore ${name}. Storage may be full.` };
     }
+  }
+
+  return { ok: true };
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {Promise<{ ok: true } | { ok: false, error: string }>}
+ */
+export async function importFullLocalData(payload) {
+  const localResult = importLocalData(payload);
+  if (!localResult.ok || !isBrowser) {
+    return localResult;
+  }
+
+  const record = /** @type {BackupPayload} */ (payload);
+  const workspaces = record.data?.workspaces;
+  if (!workspaces || typeof workspaces !== 'object' || Array.isArray(workspaces)) {
+    return { ok: true };
+  }
+
+  try {
+    const { saveWorkspaceSnapshot } = await import('./editor/indexedDbWorkspace.js');
+    for (const [workspaceId, snapshot] of Object.entries(workspaces)) {
+      if (snapshot && typeof snapshot === 'object') {
+        await saveWorkspaceSnapshot(workspaceId, /** @type {any} */ (snapshot));
+      }
+    }
+  } catch {
+    return { ok: false, error: 'Could not restore IDE workspaces.' };
   }
 
   return { ok: true };

@@ -1,0 +1,41 @@
+# Routes
+
+All routes prerender with `trailingSlash = 'always'` (`src/routes/+layout.js`). URLs sit under base `/system-design-copilot`.
+
+## App shell
+
+| File | Role |
+|------|------|
+| `+layout.svelte` | Header nav, flow-scoped sidebar + search (`/` shortcut), progress topbar, skip link |
+| `+layout.js` | `prerender`, trailing slash |
+
+Sidebar UI state: localStorage `system-design-copilot-sidebar-v3` (inline in layout, not a store). Nav helpers: `src/lib/navigation.js`, `src/lib/sidebar.js`.
+
+## Pages
+
+| Route | Files | Purpose |
+|-------|-------|---------|
+| `/` | `+page.svelte` | Home: hero, five flow cards, resume card, featured HLD modules, study tracks, curriculum map + `ProgressControls` |
+| `/flow/[flow]/` | `flow/[flow]/+page.js`, `+page.svelte` | Flow roadmap: progress, focus areas, module runway. Entries from `courseFlows` |
+| `/module/[module]/` | `module/[module]/+page.js`, `+page.svelte` | Module overview + lesson runway |
+| `/module/[module]/lesson/[lesson]/` | `…/+page.js`, `+page.svelte` | **Main workspace**: read content, topic lab, simulation (HLD), practice IDE by flow, solutions |
+
+## Flow slugs
+
+`high-level-design` · `low-level-design` · `data-structures-and-algorithms` · `ai-engineer` · `interview-questions`
+
+## Lesson URL / id
+
+- URL: `{base}/module/{moduleSlug}/lesson/{lessonSlug}/`
+- Lesson id: `{moduleSlug}/{lessonSlug}` (normalized in `courseData.js`)
+
+## Lesson page composition
+
+Order on `module/…/lesson/…/+page.svelte`:
+
+1. Read body + rail (diagram, checklist, pitfalls, prompts)
+2. AI study guide + `MLPracticeIDE` (ai-engineer)
+3. `LessonExplorer` if `lesson.interactive`
+4. `SimulationIDE` if HLD + simulation config
+5. `QuestionBankIDE` | `DsaPracticeIDE` | `PracticeIDE` by flow
+6. `LessonSolutionPanel` when lesson is in `solutionLessonIds`
