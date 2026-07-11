@@ -12,6 +12,12 @@ import {
   readResponsePath,
   renderTemplate
 } from '../src/lib/llm/providers.js'
+import {
+  buildAnswerCheckPrompt,
+  getCheckPromptFlowIds,
+  getModeInstruction,
+  plainTextFromHtml
+} from '../src/lib/llm/checkPrompts.js'
 
 test('flow graph metadata exposes summaries and inline previews', () => {
   const metadata = buildFlowGraphMetadata(`
@@ -103,4 +109,82 @@ test('search engine URL builder includes google, duckduckgo, and perplexity', ()
   assert.equal(urls.perplexity.startsWith('https://www.perplexity.ai/?'), true)
   assert.equal(urls.google.includes('udm=50'), true)
   assert.equal(urls.google.includes('q='), true)
+})
+
+test('answer check prompts include Question and User answer for every flow', () => {
+  const flowIds = getCheckPromptFlowIds()
+  assert.deepEqual(flowIds.sort(), [
+    'ai-engineer',
+    'data-structures-and-algorithms',
+    'high-level-design',
+    'interview-questions',
+    'low-level-design',
+    'simulation'
+  ].sort())
+
+  for (const flowId of flowIds) {
+    const prompt = buildAnswerCheckPrompt({
+      flowId,
+      mode: 'check',
+      question: `Sample question for ${flowId}`,
+      answer: `Sample answer for ${flowId}`,
+      contextSections: [`Lesson: ${flowId}`],
+      extraRequest: 'Be brief'
+    })
+
+    assert.match(prompt, /Question:\nSample question/)
+    assert.match(prompt, /User answer:\nSample answer/)
+    assert.match(prompt, /Context: Lesson:/)
+    assert.match(prompt, /Specific request: Be brief/)
+  }
+
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'high-level-design', question: 'Q', answer: 'A' }),
+    /capacity|APIs|bottlenecks|trade-offs/i
+  )
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'low-level-design', question: 'Q', answer: 'A' }),
+    /classes|interfaces|responsibilities|invariants/i
+  )
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'data-structures-and-algorithms', question: 'Q', answer: 'A' }),
+    /complexity|edge cases|correctness/i
+  )
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'ai-engineer', question: 'Q', answer: 'A' }),
+    /evaluation metrics|failure modes|production/i
+  )
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'interview-questions', question: 'Q', answer: 'A' }),
+    /interview communication|technical depth/i
+  )
+  assert.match(
+    buildAnswerCheckPrompt({ flowId: 'simulation', question: 'Q', answer: 'A' }),
+    /topology|findings|concrete fix/i
+  )
+})
+
+test('outline mode and review alias share prompt shape with labeled question and answer', () => {
+  const outline = buildAnswerCheckPrompt({
+    mode: 'outline',
+    question: 'Design a cache',
+    answer: 'Use Redis'
+  })
+  assert.match(outline, /Question:\nDesign a cache/)
+  assert.match(outline, /User answer:\nUse Redis/)
+  assert.match(outline, /tighter system-design answer outline/i)
+
+  const review = buildAnswerCheckPrompt({
+    mode: 'review',
+    flowId: 'high-level-design',
+    question: 'Design a cache',
+    answer: 'Use Redis'
+  })
+  assert.match(review, /trade-offs/i)
+  assert.equal(getModeInstruction('check', 'high-level-design'), getModeInstruction('review', 'high-level-design'))
+})
+
+test('plainTextFromHtml strips tags for prompt text', () => {
+  assert.equal(plainTextFromHtml('<p>Hello <strong>world</strong></p>'), 'Hello world')
+  assert.equal(plainTextFromHtml(''), '')
 })

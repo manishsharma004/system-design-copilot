@@ -834,7 +834,9 @@
     border-radius: 0;
     border: none;
     background: var(--vscode-editor-bg, #1e1e1e);
-    height: 100%;
+    height: auto;
+    min-width: 0;
+    max-width: 100%;
     font-family: 'Segoe WPC', 'Segoe UI', system-ui, sans-serif;
   }
 
@@ -1069,11 +1071,13 @@
   }
 
   .monaco-host {
-    flex: 1;
+    flex: 1 1 auto;
     overflow: hidden;
     border-radius: 0;
     border: none;
     min-height: 16rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .code-editor-status-bar {

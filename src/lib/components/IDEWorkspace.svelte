@@ -986,6 +986,11 @@
   <div class="ide-main" bind:this={mainEl}>
     <div class="ide-editor-area" class:has-side-panel={hasSidePanel} bind:this={editorAreaEl}>
       <div class="ide-editor-pane">
+        {#if $$slots['editor-chrome']}
+          <div class="ide-editor-chrome">
+            <slot name="editor-chrome" />
+          </div>
+        {/if}
         <CodeEditor
           bind:this={codeEditor}
           files={currentFiles}
@@ -1457,15 +1462,26 @@
     flex-direction: column;
   }
 
+  .ide-editor-chrome {
+    flex: 0 0 auto;
+    z-index: 2;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .ide-editor-pane :global(.code-editor-shell) {
     border-radius: 0;
     border: none;
     height: 100%;
+    min-height: 0;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .ide-editor-pane :global(.monaco-host) {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
+    max-height: none;
   }
 
   .ide-side-panel {

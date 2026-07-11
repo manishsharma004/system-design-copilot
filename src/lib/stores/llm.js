@@ -6,7 +6,7 @@ import { getLlmProvider } from '$lib/llm/providers'
 const STORAGE_KEY = 'system-design-copilot-llm-v1'
 
 function getInitialState() {
-  const provider = getLlmProvider('openai')
+  const provider = getLlmProvider('search-engine')
   return {
     providerId: provider.id,
     endpoint: provider.defaultEndpoint,

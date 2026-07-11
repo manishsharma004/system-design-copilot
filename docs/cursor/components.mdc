@@ -24,11 +24,11 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 |-----------|----------|
 | `IDEWorkspace.svelte` | VS Code–like explorer + Monaco + bottom panels; IndexedDB FS |
 | `CodeEditor.svelte` | Monaco wrapper (multi-file, snippets, palette) |
-| `PracticeIDE.svelte` | Markdown 3-step mock answers + LLM panel (HLD/LLD/AI) |
-| `DsaPracticeIDE.svelte` | Curated DSA highlights, languages, WASM tests, timer |
-| `QuestionBankIDE.svelte` | Lazy JSON banks + same WASM stack |
+| `PracticeIDE.svelte` | Markdown 3-step mock answers + Check (AI) (HLD/LLD/AI) |
+| `DsaPracticeIDE.svelte` | Curated DSA highlights, languages, WASM tests, timer, Check (AI) |
+| `QuestionBankIDE.svelte` | Lazy JSON banks + WASM stack + reading answers + Check (AI) |
 | `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js` |
-| `SimulationIDE.svelte` | Topology editor + run engine (HLD) |
+| `SimulationIDE.svelte` | Topology editor + run engine + Check (AI) (HLD) |
 | `TopologyBuilder.svelte` | Visual topology; syncs with `.flow` DSL |
 
 ## App chrome / assistant
@@ -36,7 +36,7 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 | Component | Use when |
 |-----------|----------|
 | `ProgressControls.svelte` | Export/import backup, reset progress |
-| `LlmAssistantPanel.svelte` | Provider settings + completions (embedded in Practice IDE) |
+| `LlmAssistantPanel.svelte` | Editor chrome: Check (AI) + Configure model (Practice/DSA/QB/simulation) |
 
 ## Orphans (exist, not routed)
 

@@ -25,7 +25,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 - **Simulation lab** (HLD): topology DSL + workload engine
 - **Runnable coding**: DSA / question bank via WASM; ML scripts via Pyodide worker
 - **Reveal-on-demand** sample answers and enhanced case-study solutions
-- **Local progress** + export/import backup; optional user-keyed LLM coach
+- **Local progress** + export/import backup; optional user-keyed LLM coach with **Check (AI)** on practice, DSA, question bank, and simulation
 
 ## Feature map
 
@@ -39,7 +39,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | DSA / banks | `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte` |
 | ML practice | `MLPracticeIDE.svelte`, `static/ml-py-worker.js` |
 | Solutions / likely answers | `LessonSolutionPanel.svelte`, `interviewAnswers.js` |
-| LLM panel | `LlmAssistantPanel.svelte` (inside Practice IDE) |
+| LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` (Practice, DSA, question bank, simulation) |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
 Scale today: **5 flows · 29 modules · 110 lessons**.

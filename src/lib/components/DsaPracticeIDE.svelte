@@ -4,6 +4,8 @@
   import { onDestroy, onMount } from 'svelte'
 
   import CodeEditor from '$lib/components/CodeEditor.svelte'
+  import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte'
+  import { plainTextFromHtml } from '$lib/llm/checkPrompts'
   import {
     buildCppPracticeSource,
     buildJavaPracticeFiles,
@@ -59,6 +61,19 @@
   $: activeAttemptElapsedLabel = formatDuration(activeAttemptElapsedMs)
   $: attemptStatusLabel = activeAttemptTimer.status === 'running' ? 'Running' : activeAttemptTimer.status === 'paused' ? 'Paused' : 'Idle'
   $: lastAttemptLabel = activeAttemptTimer.lastCompletedMs ? formatDuration(activeAttemptTimer.lastCompletedMs) : 'No completed attempt yet'
+
+  $: checkQuestionText = selectedQuestion
+    ? [selectedQuestion.title, plainTextFromHtml(selectedQuestion.contentHtml)].filter(Boolean).join('\n\n')
+    : ''
+  $: checkContextSections = selectedQuestion
+    ? [
+        `Lesson: ${lesson.title}`,
+        activeLanguage ? `Language: ${activeLanguage.label}` : '',
+        latestRun
+          ? `Last test run: ${latestRun.passed ? 'Pass' : 'Needs work'}${latestRun.error ? ` — ${latestRun.error}` : ''}`
+          : 'Last test run: not run yet'
+      ].filter(Boolean)
+    : []
 
   $: if (activeLanguage?.id && activeLanguage.id !== activeRuntimeLanguageId) {
     activeRuntimeLanguageId = activeLanguage.id
@@ -430,6 +445,14 @@
           </div>
 
           <div class="editor-frame">
+            <LlmAssistantPanel
+              title="DSA answer copilot"
+              flowId="data-structures-and-algorithms"
+              showOutline={false}
+              objective={checkQuestionText}
+              draft={editorValue}
+              contextSections={checkContextSections}
+            />
             {#key activeDraftKey}
               <CodeEditor
                 files={editorFiles}
@@ -663,7 +686,33 @@
   }
 
   .editor-frame {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid rgba(118, 139, 186, 0.18);
+    border-radius: 0.85rem;
+    background: #151821;
+  }
+
+  .editor-frame :global(.llm-editor-chrome) {
+    flex: 0 0 auto;
+    min-width: 0;
+    border-bottom: 1px solid #252a35;
+  }
+
+  .editor-frame :global(.code-editor-shell) {
+    border: none;
+    border-radius: 0;
+    height: auto;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .editor-frame :global(.monaco-host) {
+    flex: 0 0 auto;
+    max-height: min(50vh, 28rem);
   }
 
   .language-pill,

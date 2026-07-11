@@ -1,28 +1,38 @@
 # LLM assistant
 
-Optional in-browser coach. No app backend — the browser calls the user’s provider with their key.
+Optional in-browser coach. No app backend — the browser calls the user’s provider with their key (or builds search links).
 
 ## Where it appears
 
-- UI: `LlmAssistantPanel.svelte` embedded in `PracticeIDE.svelte` (markdown practice)
+- UI: `LlmAssistantPanel.svelte` — compact editor chrome (**Check (AI)** + **Configure model**)
+  - `PracticeIDE` / `SimulationIDE`: `IDEWorkspace` slot `editor-chrome` above Monaco
+  - `DsaPracticeIDE` / `QuestionBankIDE`: inside `editor-frame` above `CodeEditor` (reading answers: under the answer box)
 - Settings store: `src/lib/stores/llm.js` → localStorage `system-design-copilot-llm-v1`
 - Providers + HTTP builders: `src/lib/llm/providers.js`
+- Check / outline prompt builders: `src/lib/llm/checkPrompts.js` (`buildAnswerCheckPrompt`)
 
 ## Built-in providers
 
 `search-engine`, `openai`, `azure-openai`, `gemini`, `anthropic`, `ollama`, `lm-studio`, `comfyui`, `custom`
 
-Default provider preset: **OpenAI** (`getLlmProvider('openai')`). Search-engine mode builds DuckDuckGo/Google/Perplexity links (no API key).
+Default provider preset (new installs / reset): **search-engine**. Cloud API keys show an in-panel warning; keys stay in browser localStorage only. Search-engine mode builds DuckDuckGo/Google/Perplexity links (no API key).
+
+## Check (AI)
+
+- Primary action on the panel; disabled when the answer draft is empty.
+- Prompt always labels **Question:** and **User answer:** plus optional Context lines.
+- Flow-specific rubrics for `high-level-design`, `low-level-design`, `data-structures-and-algorithms`, `ai-engineer`, `interview-questions`, and `simulation`.
+- Same invocation path as before: `requestLlmCompletion()` or `buildSearchEngineUrls()`.
 
 ## API surface
 
 - `buildRequest()`, `requestLlmCompletion()`, `buildSearchEngineUrls()`
-- Panel holds templates / system prompt from store; lesson context can be attached from Practice IDE
+- `buildAnswerCheckPrompt()`, `getCheckInstruction()`, `getModeInstruction()`
+- Panel holds templates / system prompt from store; hosts pass `flowId`, `objective` (question), `draft` (answer), `contextSections`
 - Replies rendered with `markdown-it`
 
 ## Agent notes
 
-- Rest of the app must work with LLM unset — never require a key for core lesson/practice flows.
+- Rest of the app must work with LLM unset — never require a key for core lesson/practice flows (search-engine is the zero-key path).
 - Keys stay client-side only; do not add a proxy without an explicit product decision.
 - Tests: `tests/editorAndLlm.test.js`.
-- Planned UX (default to search-engine, key warnings, etc.) in `IMPROVEMENTS_PLAN.md` is **not** shipped unless code matches.

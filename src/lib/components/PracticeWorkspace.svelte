@@ -194,6 +194,7 @@
 
   <LlmAssistantPanel
     title="Practice answer copilot"
+    flowId={lesson.flowSlug ?? ''}
     objective={currentStep.prompt}
     draft={draft}
     contextSections={[

@@ -76,8 +76,8 @@ Status key: **Done** | **In progress** | **Planned**
 
 | # | Item | Priority | Status |
 |---|------|----------|--------|
-| 6.1 | Default LLM provider to search-engine mode | P1 | Planned |
-| 6.2 | Prominent warning before storing cloud API keys in browser | P1 | Planned |
+| 6.1 | Default LLM provider to search-engine mode | P1 | **Done** |
+| 6.2 | Prominent warning before storing cloud API keys in browser | P1 | **Done** |
 | 6.3 | Optional proxy endpoint docs for production API use | P2 | Planned |
 
 ---

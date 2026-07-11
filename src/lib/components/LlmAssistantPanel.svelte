@@ -2,21 +2,33 @@
 <script>
   // @ts-nocheck
   import MarkdownIt from 'markdown-it'
+  import { buildAnswerCheckPrompt } from '$lib/llm/checkPrompts'
   import { buildSearchEngineUrls, getLlmProvider, getLlmProviders, requestLlmCompletion } from '$lib/llm/providers'
   import { llmSettings } from '$lib/stores/llm'
 
   export let title = 'AI copilot'
+  /** Question / objective text shown to the model as "Question:" */
   export let objective = ''
+  /** User's answer / draft shown as "User answer:" */
   export let draft = ''
   export let contextSections = []
+  /** Curriculum flow slug or "simulation" for check rubrics */
+  export let flowId = ''
+  /** When false, hide Generate outline (coding / simulation check-only surfaces) */
+  export let showOutline = true
 
   const providers = getLlmProviders()
   let settingsOpen = false
+  let feedbackOpen = false
   let loading = false
   let responseText = ''
   let responseHtml = ''
   let errorText = ''
   let extraPrompt = ''
+  /** @type {HTMLElement | null} */
+  let responseRegion = null
+
+  $: hasFeedback = Boolean(errorText?.trim() || responseText?.trim())
 
   const markdown = new MarkdownIt({
     html: false,
@@ -51,7 +63,14 @@
   $: activeProvider = getLlmProvider($llmSettings.providerId)
   $: isSearchEngineProvider = activeProvider?.id === 'search-engine'
   $: providerSupportsTemplates = Boolean(activeProvider?.supportsCustomTemplate)
+  $: isCloudProvider = activeProvider?.family === 'cloud'
+  $: needsApiKeyHint = !isSearchEngineProvider
+    && activeProvider?.family === 'cloud'
+    && !$llmSettings.apiKey?.trim()
   $: responseHtml = renderResponseMarkdown(responseText)
+  $: providerShortLabel = isSearchEngineProvider
+    ? 'Search'
+    : (activeProvider?.label?.split(' ')[0] ?? 'Model')
 
   const searchEngineOptions = [
     { id: 'all', label: 'All engines' },
@@ -82,26 +101,36 @@
     }
   }
 
+  function focusResponseRegion() {
+    queueMicrotask(() => {
+      responseRegion?.focus?.()
+      responseRegion?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    })
+  }
+
+  function dismissFeedback() {
+    errorText = ''
+    responseText = ''
+    feedbackOpen = false
+  }
+
   /**
-   * @param {'outline' | 'review'} mode
+   * @param {'outline' | 'check' | 'review'} mode
    */
   async function runAssistant(mode) {
     errorText = ''
     responseText = ''
+    feedbackOpen = true
     loading = true
     try {
-      const basePrompt = [
-        objective ? `Objective: ${objective}` : '',
-        ...contextSections.map((section) => `Context: ${section}`),
-        draft ? `Current draft:\n${draft}` : '',
-        extraPrompt ? `Specific request: ${extraPrompt}` : ''
-      ].filter(Boolean).join('\n\n')
-
-      const modePrompt = mode === 'outline'
-        ? 'Produce a tighter system-design answer outline with concrete sections, missing considerations, and one suggested next edit.'
-        : 'Review the draft, highlight missing trade-offs, missing APIs/data model details, and suggest the next three improvements.'
-
-      const userPrompt = `${basePrompt}\n\n${modePrompt}`
+      const userPrompt = buildAnswerCheckPrompt({
+        flowId,
+        mode,
+        question: objective,
+        answer: draft,
+        contextSections,
+        extraRequest: extraPrompt
+      })
 
       if (isSearchEngineProvider) {
         const systemPrompt = $llmSettings.systemPrompt || 'You are a concise system design interview coach.'
@@ -134,6 +163,12 @@
         return
       }
 
+      if (needsApiKeyHint) {
+        errorText = 'Add an API key in model settings, or switch the provider to Search Engine (no key required).'
+        settingsOpen = true
+        return
+      }
+
       responseText = await requestLlmCompletion($llmSettings, [
         { role: 'system', content: $llmSettings.systemPrompt || 'You are a concise system design interview coach.' },
         { role: 'user', content: userPrompt }
@@ -142,141 +177,346 @@
       errorText = error instanceof Error ? error.message : 'Unable to contact the configured model.'
     } finally {
       loading = false
+      if (responseText || errorText) {
+        focusResponseRegion()
+      }
     }
   }
 </script>
 
-<section class="panel hero-card llm-panel">
-  <div class="practice-card-header">
-    <div>
-      <p class="eyebrow">Bring your own model</p>
-      <h3>{title}</h3>
-      <p class="practice-copy">{activeProvider?.note}</p>
-    </div>
-    <div class="llm-header-actions">
-      <span class="pill">{activeProvider?.label}</span>
-      <button class="action-link" type="button" onclick={() => (settingsOpen = !settingsOpen)}>
-        {settingsOpen ? 'Hide model settings' : 'Configure model'}
+<div class="llm-editor-chrome" aria-busy={loading ? 'true' : 'false'} aria-label={title}>
+  <div class="llm-editor-toolbar">
+    <span class="llm-toolbar-label" title={activeProvider?.label ?? title}>{providerShortLabel}</span>
+    <button
+      class="llm-toolbar-btn"
+      type="button"
+      onclick={() => (settingsOpen = !settingsOpen)}
+      aria-expanded={settingsOpen}
+      title="Configure model provider and API key"
+    >
+      {settingsOpen ? 'Hide model' : 'Configure model'}
+    </button>
+    {#if showOutline}
+      <button class="llm-toolbar-btn" type="button" onclick={() => runAssistant('outline')} disabled={loading}>
+        Outline
       </button>
-    </div>
+    {/if}
+    <button
+      class="llm-toolbar-btn llm-toolbar-btn-primary"
+      type="button"
+      onclick={() => runAssistant('check')}
+      disabled={loading || !draft.trim()}
+      aria-label="Check answer with AI"
+      title="Check your answer with the configured AI provider"
+    >
+      {loading ? 'Checking…' : 'Check (AI)'}
+    </button>
+    {#if hasFeedback}
+      <button
+        class="llm-toolbar-btn"
+        type="button"
+        onclick={() => (feedbackOpen = !feedbackOpen)}
+        aria-expanded={feedbackOpen}
+        aria-label={feedbackOpen ? 'Hide AI feedback' : 'Show AI feedback'}
+        title={feedbackOpen ? 'Hide AI feedback' : 'Show AI feedback'}
+      >
+        {feedbackOpen ? 'Hide feedback' : 'Show feedback'}
+      </button>
+      <button
+        class="llm-toolbar-btn"
+        type="button"
+        onclick={dismissFeedback}
+        aria-label="Clear AI feedback"
+        title="Clear AI feedback"
+      >
+        Clear
+      </button>
+    {/if}
   </div>
 
   {#if settingsOpen}
-    <div class="llm-settings-grid">
-      <label>
-        <span class="eyebrow">Provider</span>
-        <select value={$llmSettings.providerId} onchange={(event) => llmSettings.applyProvider(event.currentTarget.value)}>
-          {#each providers as provider}
-            <option value={provider.id}>{provider.label}</option>
-          {/each}
-        </select>
-      </label>
-
-      <label>
-        <span class="eyebrow">Model</span>
-        {#if isSearchEngineProvider}
-          <select value={$llmSettings.model} onchange={(event) => llmSettings.updateField('model', event.currentTarget.value)}>
-            {#each searchEngineOptions as engine}
-              <option value={engine.id}>{engine.label}</option>
+    <div class="llm-editor-settings">
+      <div class="llm-settings-grid">
+        <label>
+          <span class="eyebrow">Provider</span>
+          <select value={$llmSettings.providerId} onchange={(event) => llmSettings.applyProvider(event.currentTarget.value)}>
+            {#each providers as provider}
+              <option value={provider.id}>{provider.label}</option>
             {/each}
           </select>
-        {:else}
-          <input value={$llmSettings.model} oninput={(event) => updateField('model', event)} />
+        </label>
+
+        <label>
+          <span class="eyebrow">Model</span>
+          {#if isSearchEngineProvider}
+            <select value={$llmSettings.model} onchange={(event) => llmSettings.updateField('model', event.currentTarget.value)}>
+              {#each searchEngineOptions as engine}
+                <option value={engine.id}>{engine.label}</option>
+              {/each}
+            </select>
+          {:else}
+            <input value={$llmSettings.model} oninput={(event) => updateField('model', event)} />
+          {/if}
+        </label>
+
+        {#if !isSearchEngineProvider}
+          <label>
+            <span class="eyebrow">{activeProvider?.endpointLabel}</span>
+            <input value={$llmSettings.endpoint} oninput={(event) => updateField('endpoint', event)} />
+          </label>
+
+          <label>
+            <span class="eyebrow">{activeProvider?.apiKeyLabel}</span>
+            <input type="password" autocomplete="off" value={$llmSettings.apiKey} oninput={(event) => updateField('apiKey', event)} />
+          </label>
         {/if}
-      </label>
 
-      {#if !isSearchEngineProvider}
-        <label>
-          <span class="eyebrow">{activeProvider?.endpointLabel}</span>
-          <input value={$llmSettings.endpoint} oninput={(event) => updateField('endpoint', event)} />
-        </label>
+        {#if activeProvider?.requiresDeployment && !isSearchEngineProvider}
+          <label>
+            <span class="eyebrow">Deployment</span>
+            <input value={$llmSettings.deployment} oninput={(event) => updateField('deployment', event)} />
+          </label>
+        {/if}
 
-        <label>
-          <span class="eyebrow">{activeProvider?.apiKeyLabel}</span>
-          <input type="password" autocomplete="off" value={$llmSettings.apiKey} oninput={(event) => updateField('apiKey', event)} />
-        </label>
-      {/if}
+        {#if !isSearchEngineProvider}
+          <label>
+            <span class="eyebrow">Temperature</span>
+            <input type="number" min="0" max="2" step="0.1" value={$llmSettings.temperature} oninput={(event) => updateField('temperature', Number(event.currentTarget.value))} />
+          </label>
+        {/if}
 
-      {#if activeProvider?.requiresDeployment && !isSearchEngineProvider}
-        <label>
-          <span class="eyebrow">Deployment</span>
-          <input value={$llmSettings.deployment} oninput={(event) => updateField('deployment', event)} />
-        </label>
-      {/if}
-
-      {#if !isSearchEngineProvider}
-        <label>
-          <span class="eyebrow">Temperature</span>
-          <input type="number" min="0" max="2" step="0.1" value={$llmSettings.temperature} oninput={(event) => updateField('temperature', Number(event.currentTarget.value))} />
-        </label>
-      {/if}
-
-      <label class="llm-full">
-        <span class="eyebrow">System prompt</span>
-        <textarea rows="4" value={$llmSettings.systemPrompt} oninput={(event) => updateField('systemPrompt', event)}></textarea>
-      </label>
-
-      {#if providerSupportsTemplates && !isSearchEngineProvider}
         <label class="llm-full">
-          <span class="eyebrow">Headers JSON</span>
-          <textarea rows="4" value={$llmSettings.headersText} oninput={(event) => updateField('headersText', event)}></textarea>
+          <span class="eyebrow">System prompt</span>
+          <textarea rows="3" value={$llmSettings.systemPrompt} oninput={(event) => updateField('systemPrompt', event)}></textarea>
         </label>
+
         <label class="llm-full">
-          <span class="eyebrow">Request body template</span>
-          <textarea rows="6" value={$llmSettings.bodyTemplate} oninput={(event) => updateField('bodyTemplate', event)}></textarea>
+          <span class="eyebrow">Specific guidance request</span>
+          <textarea rows="2" bind:value={extraPrompt} placeholder="Ask for missing trade-offs, sharper APIs, or a better scaling plan."></textarea>
         </label>
-        <label class="llm-full">
-          <span class="eyebrow">Response text path</span>
-          <input value={$llmSettings.responsePath} oninput={(event) => updateField('responsePath', event)} placeholder="choices[0].message.content" />
-        </label>
-      {/if}
+
+        {#if providerSupportsTemplates && !isSearchEngineProvider}
+          <label class="llm-full">
+            <span class="eyebrow">Headers JSON</span>
+            <textarea rows="3" value={$llmSettings.headersText} oninput={(event) => updateField('headersText', event)}></textarea>
+          </label>
+          <label class="llm-full">
+            <span class="eyebrow">Request body template</span>
+            <textarea rows="4" value={$llmSettings.bodyTemplate} oninput={(event) => updateField('bodyTemplate', event)}></textarea>
+          </label>
+          <label class="llm-full">
+            <span class="eyebrow">Response text path</span>
+            <input value={$llmSettings.responsePath} oninput={(event) => updateField('responsePath', event)} placeholder="choices[0].message.content" />
+          </label>
+        {/if}
+      </div>
+      <p class="muted llm-settings-note">
+        {#if isSearchEngineProvider}
+          Search links are generated locally from the composed prompt (no API key).
+        {:else if isCloudProvider}
+          Warning: cloud API keys are stored only in this browser’s localStorage. Prefer Search Engine or a local provider if you do not want keys on this device.
+        {:else}
+          Keys and templates stay in this browser only.
+        {/if}
+      </p>
     </div>
-    <p class="muted">
-      {#if isSearchEngineProvider}
-        Search links are generated locally in your browser from the composed prompt.
-      {:else}
-        Keys and custom request templates are stored only in this browser. To add another adapter in TypeScript, extend <code>src/lib/llm/providers.js</code>.
-      {/if}
+  {:else if needsApiKeyHint}
+    <p class="muted llm-config-hint">
+      Cloud providers need an API key.
+      <button class="llm-inline-link" type="button" onclick={() => (settingsOpen = true)}>Configure model</button>
+      or switch to Search Engine.
     </p>
   {/if}
 
-  <label>
-    <span class="eyebrow">Specific guidance request</span>
-    <textarea rows="3" bind:value={extraPrompt} placeholder="Ask for missing trade-offs, sharper APIs, or a better scaling plan."></textarea>
-  </label>
-
-  <div class="action-row">
-    <button class="action-link primary" type="button" onclick={() => runAssistant('outline')} disabled={loading}>
-      {loading ? 'Generating…' : 'Generate outline'}
-    </button>
-    <button class="action-link" type="button" onclick={() => runAssistant('review')} disabled={loading || !draft.trim()}>
-      Review current draft
-    </button>
-  </div>
-
-  {#if errorText}
-    <div class="simulation-note danger">
-      <p class="eyebrow">Model request failed</p>
+  {#if errorText && feedbackOpen}
+    <div class="llm-editor-feedback danger" tabindex="-1" role="alert" bind:this={responseRegion}>
+      <div class="llm-feedback-header">
+        <p class="eyebrow">Model request failed</p>
+        <button class="llm-feedback-dismiss" type="button" onclick={dismissFeedback} aria-label="Dismiss feedback">×</button>
+      </div>
       <p>{errorText}</p>
     </div>
-  {/if}
-
-  {#if responseText}
-    <article class="content-card llm-response-card">
-      <p class="eyebrow">Model response</p>
+  {:else if responseText && feedbackOpen}
+    <article class="llm-editor-feedback" tabindex="-1" aria-live="polite" bind:this={responseRegion}>
+      <div class="llm-feedback-header">
+        <p class="eyebrow">Model response</p>
+        <button class="llm-feedback-dismiss" type="button" onclick={dismissFeedback} aria-label="Dismiss feedback">×</button>
+      </div>
       <div class="llm-markdown">{@html responseHtml}</div>
     </article>
   {/if}
-</section>
+</div>
 
 <style>
-  .llm-response-card {
-    overflow: hidden;
+  .llm-editor-chrome {
+    display: grid;
+    gap: 0;
+    background: #151821;
+    border-bottom: 1px solid #252a35;
+    color: #cfd3ec;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .llm-editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    min-height: 2.15rem;
+  }
+
+  .llm-toolbar-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8d95ab;
+    margin-right: 0.25rem;
+  }
+
+  .llm-toolbar-btn {
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+    color: #9aa3bc;
+    min-height: 1.85rem;
+    padding: 0 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .llm-toolbar-btn:hover:not(:disabled) {
+    color: #eef2ff;
+    background: #2a3040;
+  }
+
+  .llm-toolbar-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .llm-toolbar-btn-primary {
+    background: rgba(105, 108, 255, 0.18);
+    color: #d7dbff;
+  }
+
+  .llm-toolbar-btn-primary:hover:not(:disabled) {
+    background: rgba(105, 108, 255, 0.3);
+    color: #fff;
+  }
+
+  .llm-editor-settings {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem 0.75rem;
+    border-top: 1px solid #252a35;
+    background: #12151d;
+  }
+
+  .llm-settings-grid {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  .llm-settings-grid label {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .llm-settings-grid .llm-full {
+    grid-column: 1 / -1;
+  }
+
+  .llm-settings-grid input,
+  .llm-settings-grid select,
+  .llm-settings-grid textarea {
+    width: 100%;
+    border-radius: 0.4rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: #0f1219;
+    color: #e8ecf8;
+    padding: 0.4rem 0.55rem;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  .llm-settings-note,
+  .llm-config-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    padding: 0 0.75rem 0.65rem;
+  }
+
+  .llm-config-hint {
+    padding-top: 0.45rem;
+    border-top: 1px solid #252a35;
+  }
+
+  .llm-inline-link {
+    border: none;
+    background: none;
+    color: #9dbdff;
+    text-decoration: underline;
+    text-underline-offset: 0.12rem;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+  }
+
+  .llm-editor-feedback {
+    max-height: 16rem;
+    overflow: auto;
+    padding: 0.65rem 0.75rem 0.8rem;
+    border-top: 1px solid #252a35;
+    background: #101522;
+  }
+
+  .llm-editor-feedback.danger {
+    background: rgba(160, 50, 60, 0.12);
+  }
+
+  .llm-editor-feedback:focus {
+    outline: 2px solid rgba(105, 108, 255, 0.65);
+    outline-offset: -2px;
+  }
+
+  .llm-editor-feedback .eyebrow {
+    margin: 0;
+  }
+
+  .llm-feedback-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .llm-feedback-dismiss {
+    border: none;
+    background: transparent;
+    color: #9aa3bc;
+    font-size: 1.15rem;
+    line-height: 1;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .llm-feedback-dismiss:hover {
+    color: #eef2ff;
+    background: #2a3040;
   }
 
   .llm-markdown {
-    font-size: 0.96rem;
-    line-height: 1.72;
+    font-size: 0.9rem;
+    line-height: 1.65;
     color: #cfd7ea;
     overflow-wrap: anywhere;
   }
@@ -285,47 +525,26 @@
   .llm-markdown :global(h2),
   .llm-markdown :global(h3),
   .llm-markdown :global(h4) {
-    margin: 1.1rem 0 0.55rem;
-    line-height: 1.32;
+    margin: 0.85rem 0 0.4rem;
+    line-height: 1.3;
     color: #f8fbff;
   }
 
-  .llm-markdown :global(h1) {
-    font-size: 1.35rem;
-  }
-
-  .llm-markdown :global(h2) {
-    font-size: 1.18rem;
-  }
-
-  .llm-markdown :global(h3) {
-    font-size: 1.05rem;
-  }
+  .llm-markdown :global(h1) { font-size: 1.2rem; }
+  .llm-markdown :global(h2) { font-size: 1.08rem; }
+  .llm-markdown :global(h3) { font-size: 1rem; }
 
   .llm-markdown :global(p),
   .llm-markdown :global(ul),
   .llm-markdown :global(ol),
   .llm-markdown :global(blockquote),
-  .llm-markdown :global(table),
   .llm-markdown :global(pre) {
-    margin: 0.6rem 0;
+    margin: 0.45rem 0;
   }
 
   .llm-markdown :global(ul),
   .llm-markdown :global(ol) {
-    padding-left: 1.3rem;
-  }
-
-  .llm-markdown :global(li) {
-    margin: 0.2rem 0;
-  }
-
-  .llm-markdown :global(blockquote) {
-    padding: 0.45rem 0.75rem;
-    border-left: 3px solid rgba(123, 145, 255, 0.7);
-    border-radius: 0.35rem;
-    background: rgba(91, 104, 190, 0.12);
-    color: #d9e2ff;
+    padding-left: 1.2rem;
   }
 
   .llm-markdown :global(code) {
@@ -338,48 +557,21 @@
   }
 
   .llm-markdown :global(pre) {
-    padding: 0.85rem 0.95rem;
-    border-radius: 0.65rem;
-    background: #101522;
-    border: 1px solid rgba(140, 157, 214, 0.28);
+    padding: 0.7rem 0.8rem;
+    border-radius: 0.5rem;
+    background: #0b0e14;
+    border: 1px solid rgba(140, 157, 214, 0.22);
     overflow: auto;
   }
 
   .llm-markdown :global(pre code) {
     padding: 0;
-    border-radius: 0;
     background: transparent;
-  }
-
-  .llm-markdown :global(table) {
-    width: 100%;
-    border-collapse: collapse;
-    display: block;
-    overflow: auto;
-  }
-
-  .llm-markdown :global(th),
-  .llm-markdown :global(td) {
-    border: 1px solid rgba(146, 162, 204, 0.35);
-    padding: 0.48rem 0.6rem;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  .llm-markdown :global(th) {
-    background: rgba(80, 100, 173, 0.22);
   }
 
   .llm-markdown :global(a) {
     color: #9dbdff;
     text-decoration: underline;
     text-underline-offset: 0.13rem;
-  }
-
-  @media (max-width: 760px) {
-    .llm-markdown {
-      font-size: 0.92rem;
-      line-height: 1.64;
-    }
   }
 </style>

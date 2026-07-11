@@ -280,6 +280,20 @@
     on:fileselect={handleStepFileChange}
     on:tabchange={handleStepFileChange}
   >
+    <div slot="editor-chrome">
+      <LlmAssistantPanel
+        title="Practice answer copilot"
+        flowId={lesson.flowSlug ?? ''}
+        objective={currentStep?.prompt ?? ''}
+        {draft}
+        contextSections={[
+          `Lesson: ${lesson.title}`,
+          `Practice step: ${currentStep?.title ?? ''}`,
+          ...(currentStep?.guardrails ?? []),
+          ...(currentStep?.structure ?? [])
+        ]}
+      />
+    </div>
     <div slot="preview">
       {#if previewContent}
         <div class="practice-preview-panel">
@@ -289,18 +303,6 @@
     </div>
   </IDEWorkspace>
   </div>
-
-  <LlmAssistantPanel
-    title="Practice answer copilot"
-    objective={currentStep?.prompt ?? ''}
-    {draft}
-    contextSections={[
-      `Lesson: ${lesson.title}`,
-      `Practice step: ${currentStep?.title ?? ''}`,
-      ...(currentStep?.guardrails ?? []),
-      ...(currentStep?.structure ?? [])
-    ]}
-  />
 </section>
 
 <style>

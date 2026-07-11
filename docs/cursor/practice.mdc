@@ -8,7 +8,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review; AI uses ML-oriented structures)
 - Workspace id: `practice:{lesson.id}` (IndexedDB)
 - Drafts: `practiceAnswers` store (`persistence.mdc`)
-- Optional coach: embeds `LlmAssistantPanel` (`llm.mdc`)
+- Optional coach: `LlmAssistantPanel` in IDEWorkspace `editor-chrome` — **Check (AI)** + **Configure model** above Monaco (`llm.mdc`)
 
 ## DSA Practice IDE
 
@@ -16,6 +16,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Questions from `lesson.questionHighlights` (curated runnable set)
 - Languages + WASM: `runtimes.mdc`; harness via `dsa/practice.js`
 - Attempt timer: `practiceTimer.js` nested in practice store
+- **Check (AI)** on code (question statement + draft); does not replace Run test case
 
 ## Question bank IDE
 
@@ -24,6 +25,8 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Lazy-loads matching JSON under `src/lib/data/`; normalize with `dsa/questionBank.js`
 - Section browser, search, per-question completion in localStorage
 - Same Python/C++/Java WASM runners as DSA
+- Reading items: “Your answer” textarea → `practiceAnswers` key `question-bank-answer:{bankKey}:{itemId}`
+- **Check (AI)** on code or reading draft
 
 ## ML Practice IDE (AI)
 

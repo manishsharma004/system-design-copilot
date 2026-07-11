@@ -3,6 +3,7 @@
   import { onDestroy, onMount } from 'svelte'
   import { browser } from '$app/environment'
   import IDEWorkspace from '$lib/components/IDEWorkspace.svelte'
+  import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte'
   import TopologyBuilder from '$lib/components/TopologyBuilder.svelte'
   import { codiconSvg } from '$lib/editor/codicons'
   import {
@@ -93,6 +94,24 @@
     }))
   ]
   $: resultsText = buildResultsText(latestRun) ?? 'Click ▶ Run to execute the simulation and see metrics here.'
+  $: checkQuestionText = simulation
+    ? [
+        simulation.title,
+        simulation.summary,
+        activeApi ? `Active API: ${activeApi.label}` : '',
+        activeProfile ? `Workload profile: ${activeProfile.label}` : ''
+      ].filter(Boolean).join('\n')
+    : ''
+  $: checkDraft = [
+    diagramText ? `Topology:\n${diagramText}` : '',
+    latestRun ? `Last run results:\n${buildResultsText(latestRun)}` : ''
+  ].filter(Boolean).join('\n\n')
+  $: checkContextSections = simulation
+    ? [
+        `Lesson: ${lesson.title}`,
+        'Lab: Simulation'
+      ]
+    : []
 
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id
@@ -421,6 +440,16 @@
       on:workspacehydrated={handleWorkspaceHydrated}
       on:fileschange={syncEditorFiles}
     >
+      <div slot="editor-chrome">
+        <LlmAssistantPanel
+          title="Simulation answer copilot"
+          flowId="simulation"
+          showOutline={false}
+          objective={checkQuestionText}
+          draft={checkDraft}
+          contextSections={checkContextSections}
+        />
+      </div>
       <div slot="preview" class="topology-panel-slot">
         <TopologyBuilder
           diagramText={diagramText || simulation.starterDiagram}

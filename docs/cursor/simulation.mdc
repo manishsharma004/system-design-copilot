@@ -24,6 +24,7 @@ Persisted via IndexedDB workspace snapshots like other IDEs.
 1. `compileFlowGraph()` turns DSL (+ layout) into a runnable graph
 2. `runSimulation()` applies workload profiles and optional failure injection
 3. Diagnostics surface bottlenecks / misconfig for the learner
+4. Optional **Check (AI)** via `LlmAssistantPanel` (`flowId: simulation`) reviews topology + last-run findings (`llm.mdc`)
 
 Registry tag: `native-flow` in `browserRuntimes.js` (plain JS, not WASM).
 

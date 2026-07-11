@@ -4,6 +4,8 @@
   import { onDestroy, onMount } from 'svelte'
 
   import CodeEditor from '$lib/components/CodeEditor.svelte'
+  import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte'
+  import { plainTextFromHtml } from '$lib/llm/checkPrompts'
   import { buildQuestionBank } from '$lib/dsa/questionBank'
   import {
     buildCppPracticeSource,
@@ -14,6 +16,7 @@
     parseInputLines,
     practiceLanguageCatalog
   } from '$lib/dsa/practice'
+  import { practiceAnswers } from '$lib/stores/practice'
   import { ensureCppRuntime, runCppSource } from '$lib/dsa/wasmCppRuntime'
   import { ensureJavaRuntime, runJavaPractice } from '$lib/dsa/wasmJavaRuntime'
   import { ensurePythonRuntime, runPythonSource } from '$lib/dsa/wasmPythonRuntime'
@@ -66,6 +69,8 @@
   let draftCache = {}
   let runtimeReadyByLanguage = { python3: false, cpp: false, java: false }
   let activeRuntimeLanguageId = ''
+  let readingDraft = ''
+  let readingDraftKey = ''
 
   $: if (browser && bankKey && bankKey !== loadedKey && loadStatus !== 'loading') {
     loadBank(bankKey)
@@ -128,6 +133,37 @@
         value: editorValue
       }]
     : []
+
+  $: readingAnswerKey = selectedItem?.kind === 'reading' && bankKey
+    ? `question-bank-answer:${bankKey}:${selectedItem.id}`
+    : ''
+  $: if (readingAnswerKey !== readingDraftKey) {
+    readingDraftKey = readingAnswerKey
+    readingDraft = readingAnswerKey ? ($practiceAnswers[readingAnswerKey]?.answer ?? '') : ''
+  }
+  $: checkQuestionText = selectedItem
+    ? [selectedItem.title, plainTextFromHtml(selectedItem.contentHtml), selectedItem.note].filter(Boolean).join('\n\n')
+    : ''
+  $: checkDraft = selectedItem?.kind === 'coding'
+    ? editorValue
+    : readingDraft
+  $: checkContextSections = selectedItem
+    ? [
+        `Lesson: ${lesson.title}`,
+        `Question kind: ${selectedItem.kind}`,
+        selectedItem.kind === 'coding' && activeLanguage ? `Language: ${activeLanguage.label}` : '',
+        selectedItem.kind === 'coding'
+          ? (latestRun
+            ? `Last test run: ${latestRun.passed ? 'Pass' : 'Needs work'}${latestRun.error ? ` — ${latestRun.error}` : ''}`
+            : 'Last test run: not run yet')
+          : ''
+      ].filter(Boolean)
+    : []
+
+  function saveReadingAnswer() {
+    if (!readingAnswerKey) return
+    practiceAnswers.saveAnswer(readingAnswerKey, readingDraft)
+  }
 
   async function loadBank(key) {
     const loader = bankLoaders[key]
@@ -461,6 +497,28 @@
                 <div class="prose-like">{@html selectedItem.solutionHtml}</div>
               </details>
             {/if}
+
+            {#if selectedItem.kind === 'reading'}
+              <label class="reading-answer-field">
+                <span class="eyebrow">Your answer</span>
+                <textarea
+                  rows="6"
+                  bind:value={readingDraft}
+                  oninput={saveReadingAnswer}
+                  placeholder="Write a short interview-style answer, then use Check (AI)."
+                ></textarea>
+              </label>
+              <div class="reading-llm-chrome">
+                <LlmAssistantPanel
+                  title="Interview answer copilot"
+                  flowId="interview-questions"
+                  showOutline={false}
+                  objective={checkQuestionText}
+                  draft={checkDraft}
+                  contextSections={checkContextSections}
+                />
+              </div>
+            {/if}
           </article>
 
           {#if selectedItem.kind === 'coding' && selectedItem.supportsLocalWasmRun && activeLanguage}
@@ -482,6 +540,14 @@
               </div>
 
               <div class="editor-frame">
+                <LlmAssistantPanel
+                  title="Interview answer copilot"
+                  flowId="interview-questions"
+                  showOutline={false}
+                  objective={checkQuestionText}
+                  draft={checkDraft}
+                  contextSections={checkContextSections}
+                />
                 {#key activeDraftKey}
                   <CodeEditor
                     files={editorFiles}
@@ -615,6 +681,27 @@
 
   .bank-state.inline {
     margin: 0;
+  }
+
+  .reading-answer-field {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+  }
+
+  .reading-answer-field textarea {
+    width: 100%;
+    min-height: 8rem;
+    resize: vertical;
+  }
+
+  .reading-llm-chrome {
+    margin-top: 0.65rem;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid rgba(118, 139, 186, 0.18);
+    border-radius: 0.85rem;
   }
 
   .bank-grid {
@@ -804,7 +891,33 @@
   }
 
   .editor-frame {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid rgba(118, 139, 186, 0.18);
+    border-radius: 0.85rem;
+    background: #151821;
+  }
+
+  .editor-frame :global(.llm-editor-chrome) {
+    flex: 0 0 auto;
+    min-width: 0;
+    border-bottom: 1px solid #252a35;
+  }
+
+  .editor-frame :global(.code-editor-shell) {
+    border: none;
+    border-radius: 0;
+    height: auto;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .editor-frame :global(.monaco-host) {
+    flex: 0 0 auto;
+    max-height: min(50vh, 28rem);
   }
 
   .language-pill,

@@ -14,7 +14,7 @@ Canonical list: `BACKUP_STORAGE_KEYS` in `src/lib/backup.js`.
 | `system-design-copilot-llm-v1` | `stores/llm.js` | Provider, endpoint, model, apiKey, templates, systemPrompt |
 | `system-design-copilot-sidebar-v3` | `+layout.svelte` | Sidebar open/filter UI (not a store) |
 
-Question-bank completion flags also use localStorage keys like `question-bank:{key}:completed` (see `QuestionBankIDE.svelte`).
+Question-bank completion flags also use localStorage keys like `question-bank:{key}:completed` (see `QuestionBankIDE.svelte`). Reading answers for Check (AI) use practice-store keys `question-bank-answer:{bankKey}:{itemId}`.
 
 Timer state machine helpers: `stores/practiceTimer.js` (nested under practice answers).
 
