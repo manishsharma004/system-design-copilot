@@ -17,7 +17,7 @@ Setup: `README.md`, `AGENTS.md`. Dev URL: `http://localhost:4173/system-design-c
 
 ```
 src/
-  routes/           Home, flow, module, lesson (+ layout shell)
+  routes/           Home, flow, module, lesson (+ layout shell: slim header, underline tabs, context-aware sidebar)
   lib/
     components/     Lesson chrome, IDEs, labs, LLM panel
     data/           Course JSON, banks, interactive/simulation metadata

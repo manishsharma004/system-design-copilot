@@ -3,8 +3,8 @@
   import { base } from '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
-  import { allLessons, courseFlows, defaultFlow, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
-  import { headerNavHref, headerNavItems, isHeaderNavActive } from '$lib/navigation';
+  import { allLessons, courseFlows, getFlowBySlug, getModuleProgress, modules, siteOverview } from '$lib/data/courseData';
+  import { getTrackNavItems, headerNavHref, headerNavItems, isHeaderNavActive } from '$lib/navigation';
   import { getVisibleSidebarModules } from '$lib/sidebar';
   import { progress } from '$lib/stores/progress';
   import { derived } from 'svelte/store';
@@ -14,13 +14,12 @@
   let desktopNavOpen = true;
   let isDesktop = false;
   let query = '';
-  let showAllModules = false;
   /** @type {Record<string, boolean>} */
   let expandedModules = {};
   /** @type {HTMLInputElement | null} */
   let searchInput = null;
 
-  const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v3';
+  const SIDEBAR_STORAGE_KEY = 'system-design-copilot-sidebar-v4';
 
   function loadSidebarState() {
     try {
@@ -30,9 +29,6 @@
         if (parsed && typeof parsed === 'object') {
           if (typeof parsed.desktopNavOpen === 'boolean') {
             desktopNavOpen = parsed.desktopNavOpen;
-          }
-          if (typeof parsed.showAllModules === 'boolean') {
-            showAllModules = parsed.showAllModules;
           }
           if (parsed.expandedModules && typeof parsed.expandedModules === 'object') {
             expandedModules = parsed.expandedModules;
@@ -48,7 +44,6 @@
     try {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({
         desktopNavOpen,
-        showAllModules,
         expandedModules
       }));
     } catch {
@@ -96,6 +91,7 @@
     if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
     const target = /** @type {HTMLElement | null} */ (event.target);
     if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (!activeFlow) return;
     event.preventDefault();
     if (!sidebarVisible && !isDesktop) {
       navOpen = true;
@@ -133,34 +129,36 @@
   $: activeFlow = activeModule
     ? getFlowBySlug(activeModule.flowSlug)
     : courseFlows.find((flow) => normalizedPathname === flowHref(flow.slug)) ?? null;
-  $: sidebarFlow = activeFlow ?? defaultFlow;
   $: activeLesson = activeModule?.lessons.find((lesson) => normalizedPathname === lessonHref(activeModule.slug, lesson.slug)) ?? null;
-  $: activeModuleProgress = activeModule ? $moduleProgress[activeModule.slug] : null;
-  $: activeFlowLessonTotal = sidebarFlow ? sidebarFlow.modules.reduce((sum, module) => sum + module.lessons.length, 0) : 0;
-  $: activeFlowCompleted = sidebarFlow
-    ? sidebarFlow.modules.reduce((sum, module) => sum + ($moduleProgress[module.slug]?.completed ?? 0), 0)
+  $: isHome = !activeFlow;
+  $: activeFlowLessonTotal = activeFlow
+    ? activeFlow.modules.reduce((sum, module) => sum + module.lessons.length, 0)
     : 0;
-  $: contextTitle = activeLesson?.title ?? activeModule?.title ?? activeFlow?.title ?? sidebarFlow.title;
-  $: contextSubtitle = activeLesson
-    ? `${activeModule?.title ?? ''} · Lesson ${activeLesson.order} of ${activeModule?.lessons.length ?? 0}`
-    : activeModule
-      ? `${sidebarFlow.shortTitle ?? 'Course'} · ${activeModule.lessons.length} lessons · ${activeModuleProgress?.completed ?? 0}/${activeModuleProgress?.total ?? 0} complete`
-      : activeFlow
-        ? `${activeFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`
-        : `${sidebarFlow.modules.length} modules · ${activeFlowCompleted}/${activeFlowLessonTotal} lessons complete`;
-  $: filteredModules = getVisibleSidebarModules({
-    modules,
-    activeFlow: activeFlow ?? sidebarFlow,
-    query,
-    showAllModules
-  });
+  $: activeFlowCompleted = activeFlow
+    ? activeFlow.modules.reduce((sum, module) => sum + ($moduleProgress[module.slug]?.completed ?? 0), 0)
+    : 0;
+  $: progressByFlow = Object.fromEntries(
+    courseFlows.map((flow) => {
+      const total = flow.modules.reduce((sum, module) => sum + module.lessons.length, 0);
+      const completed = flow.modules.reduce((sum, module) => sum + ($moduleProgress[module.slug]?.completed ?? 0), 0);
+      return [flow.slug, { completed, total }];
+    })
+  );
+  $: trackNavItems = getTrackNavItems(courseFlows, base, progressByFlow);
+  $: filteredModules = activeFlow
+    ? getVisibleSidebarModules({
+        modules,
+        activeFlow,
+        query
+      })
+    : [];
   $: visibleModules = filteredModules.map((module) => ({
     ...module,
     isExpanded: query.trim()
       ? true
       : expandedModules[module.slug] ?? module.slug === activeModule?.slug
   }));
-  $: if (!Object.keys(expandedModules).length) {
+  $: if (activeFlow && !Object.keys(expandedModules).length) {
     expandedModules = Object.fromEntries(filteredModules.map((module) => [module.slug, module.slug === activeModule?.slug]));
   }
   $: if (activeModule && !query.trim() && !expandedModules[activeModule.slug]) {
@@ -172,8 +170,7 @@
   $: sidebarVisible = isDesktop ? desktopNavOpen : navOpen;
   $: progressLabel = activeFlow
     ? `${activeFlowCompleted}/${activeFlowLessonTotal} · ${activeFlow.shortTitle}`
-    : `${$progress.completedLessonIds.length}/${lessonTotal} lessons`;
-  $: scopeFlowLabel = activeFlow?.shortTitle ?? sidebarFlow.shortTitle;
+    : `${$progress.completedLessonIds.length}/${lessonTotal}`;
 </script>
 
 <svelte:head>
@@ -191,17 +188,13 @@
       <a class="app-header-brand" href={homeHref}>
         <strong>{siteOverview.title}</strong>
       </a>
-      <div class="app-header-context">
-        <strong>{contextTitle}</strong>
-        <span>{contextSubtitle}</span>
-      </div>
       <div class="app-header-actions">
         <span class="pill topbar-progress" title="Lesson completion progress">{progressLabel}</span>
         <button class="nav-toggle sidebar-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
           {#if isDesktop}
-            {desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            {desktopNavOpen ? 'Hide topics' : 'Show topics'}
           {:else}
-            {navOpen ? 'Close topics' : 'Browse topics'}
+            {navOpen ? 'Close topics' : 'Topics'}
           {/if}
         </button>
       </div>
@@ -218,8 +211,7 @@
           class="app-header-nav-link"
           href={headerNavHref(item, base)}
         >
-          <span class="nav-full">{item.label}</span>
-          <span class="nav-short">{item.shortLabel}</span>
+          {item.label}
         </a>
       {/each}
     </nav>
@@ -227,66 +219,80 @@
 
   <div class:desktop-sidebar-collapsed={isDesktop && !desktopNavOpen} class="layout">
     <aside class:open={!isDesktop && navOpen} class:desktop-open={isDesktop && desktopNavOpen} class="sidebar sidebar-compact">
-      <div class="sidebar-compact-header">
-        <label class="sidebar-search-label">
-          <span class="sidebar-search-label-text">Search lessons</span>
-          <input bind:this={searchInput} bind:value={query} type="search" placeholder="Search lessons… (press /)" class="sidebar-compact-search" />
-        </label>
-        <button class="sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
-      </div>
+      {#if isHome}
+        <div class="sidebar-compact-header sidebar-home-header">
+          <div class="sidebar-panel-header">
+            <span class="eyebrow">Tracks</span>
+            <strong>Prep flows</strong>
+            <span class="sidebar-panel-meta">{$progress.completedLessonIds.length}/{lessonTotal} lessons complete</span>
+          </div>
+          <button class="sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
+        </div>
 
-      <div class="sidebar-flow-context">
-        <span class="eyebrow">{sidebarFlow.shortTitle} track</span>
-        <strong>{sidebarFlow.title}</strong>
-        <span>{activeFlowCompleted}/{activeFlowLessonTotal} lessons complete in this track</span>
-      </div>
-
-      <div class="sidebar-scope-toggle">
-        <button class="sidebar-scope-button" class:active={!showAllModules} type="button" onclick={() => { showAllModules = false; saveSidebarState(); }}>
-          {scopeFlowLabel} only
-        </button>
-        <button class="sidebar-scope-button" class:active={showAllModules} type="button" onclick={() => { showAllModules = true; saveSidebarState(); }}>
-          All topics
-        </button>
-      </div>
-
-      <nav class="sidebar-compact-nav" aria-label="Course topics">
-        {#if visibleModules.length}
-          {#each visibleModules as module}
-            <div class="sidebar-compact-group">
-              <button
-                class="sidebar-compact-module"
-                class:active-module={module.slug === activeModule?.slug}
-                type="button"
-                aria-expanded={module.isExpanded}
-                onclick={() => toggleModule(module.slug)}
-              >
-                <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
-                <span class="sidebar-compact-module-title">{module.title}</span>
-                <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
-              </button>
-              {#if module.isExpanded}
-                <div class="sidebar-compact-lessons">
-                  {#each module.lessons as lesson}
-                    <a
-                      class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)}
-                      class="sidebar-compact-link sidebar-compact-lesson"
-                      href={lessonHref(module.slug, lesson.slug)}
-                    >
-                      <span>{lesson.order}. {lesson.title}</span>
-                      {#if $progress.completedLessonIds.includes(lesson.id)}
-                        <span class="sidebar-compact-done">✓</span>
-                      {/if}
-                    </a>
-                  {/each}
-                </div>
-              {/if}
-            </div>
+        <nav class="sidebar-track-nav" aria-label="Prep tracks">
+          {#each trackNavItems as track}
+            <a class="sidebar-track-link" href={track.href}>
+              <span class="sidebar-track-copy">
+                <strong>{track.shortTitle}</strong>
+                <span>{track.title}</span>
+              </span>
+              <span class="sidebar-compact-count">{track.completed}/{track.total}</span>
+            </a>
           {/each}
-        {:else}
-          <p class="sidebar-compact-empty">No lessons matched your search.</p>
-        {/if}
-      </nav>
+        </nav>
+      {:else}
+        <div class="sidebar-compact-header">
+          <label class="sidebar-search-label">
+            <span class="sidebar-search-label-text">Search lessons</span>
+            <input bind:this={searchInput} bind:value={query} type="search" placeholder="Search lessons… (press /)" class="sidebar-compact-search" />
+          </label>
+          <button class="sidebar-close" type="button" aria-label="Close sidebar" onclick={toggleNavigation}>✕</button>
+        </div>
+
+        <div class="sidebar-flow-context">
+          <span class="eyebrow">{activeFlow.shortTitle} track</span>
+          <strong>{activeFlow.title}</strong>
+          <span>{activeFlowCompleted}/{activeFlowLessonTotal} lessons complete</span>
+        </div>
+
+        <nav class="sidebar-compact-nav" aria-label="Course topics">
+          {#if visibleModules.length}
+            {#each visibleModules as module}
+              <div class="sidebar-compact-group">
+                <button
+                  class="sidebar-compact-module"
+                  class:active-module={module.slug === activeModule?.slug}
+                  type="button"
+                  aria-expanded={module.isExpanded}
+                  onclick={() => toggleModule(module.slug)}
+                >
+                  <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
+                  <span class="sidebar-compact-module-title">{module.title}</span>
+                  <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
+                </button>
+                {#if module.isExpanded}
+                  <div class="sidebar-compact-lessons">
+                    {#each module.lessons as lesson}
+                      <a
+                        class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)}
+                        class="sidebar-compact-link sidebar-compact-lesson"
+                        href={lessonHref(module.slug, lesson.slug)}
+                      >
+                        <span>{lesson.order}. {lesson.title}</span>
+                        {#if $progress.completedLessonIds.includes(lesson.id)}
+                          <span class="sidebar-compact-done">✓</span>
+                        {/if}
+                      </a>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          {:else}
+            <p class="sidebar-compact-empty">No lessons matched your search.</p>
+          {/if}
+        </nav>
+      {/if}
     </aside>
 
     <main id="main-content" class="page">

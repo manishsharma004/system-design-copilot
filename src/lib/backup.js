@@ -8,7 +8,7 @@ export const BACKUP_STORAGE_KEYS = {
   practice: 'system-design-copilot-practice-v1',
   simulation: 'system-design-copilot-simulation-v1',
   llm: 'system-design-copilot-llm-v1',
-  sidebar: 'system-design-copilot-sidebar-v3'
+  sidebar: 'system-design-copilot-sidebar-v4'
 };
 
 /**

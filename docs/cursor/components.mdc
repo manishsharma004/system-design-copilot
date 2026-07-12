@@ -35,8 +35,11 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 
 | Component | Use when |
 |-----------|----------|
+| `+layout.svelte` (routes) | App shell: slim header, underline primary tabs, Home tracks vs in-flow module sidebar |
 | `ProgressControls.svelte` | Export/import backup, reset progress |
 | `LlmAssistantPanel.svelte` | Editor chrome: Check (AI) + Configure model (Practice/DSA/QB/simulation) |
+
+Nav helpers: `src/lib/navigation.js` (`headerNavItems`, `getTrackNavItems`), `src/lib/sidebar.js`.
 
 ## Orphans (exist, not routed)
 

@@ -1,5 +1,12 @@
 /** @typedef {{ label: string, shortLabel: string, flowSlug: string | null, kind: 'home' | 'flow' }} HeaderNavItem */
 
+/** @typedef {{
+ *   slug: string,
+ *   title: string,
+ *   shortTitle?: string,
+ *   modules: Array<{ lessons: unknown[] }>
+ * }} TrackFlow */
+
 /** @type {HeaderNavItem[]} */
 export const headerNavItems = [
   {
@@ -9,14 +16,14 @@ export const headerNavItems = [
     kind: 'home'
   },
   {
-    label: 'System Design (High Level)',
-    shortLabel: 'SD (HL)',
+    label: 'System Design',
+    shortLabel: 'System Design',
     flowSlug: 'high-level-design',
     kind: 'flow'
   },
   {
-    label: 'System Design (Low Level)',
-    shortLabel: 'SD (LL)',
+    label: 'Low Level',
+    shortLabel: 'Low Level',
     flowSlug: 'low-level-design',
     kind: 'flow'
   },
@@ -27,14 +34,14 @@ export const headerNavItems = [
     kind: 'flow'
   },
   {
-    label: 'AI Engineer',
+    label: 'AI',
     shortLabel: 'AI',
     flowSlug: 'ai-engineer',
     kind: 'flow'
   },
   {
-    label: 'DSA (Practice)',
-    shortLabel: 'DSA Practice',
+    label: 'Practice',
+    shortLabel: 'Practice',
     flowSlug: 'interview-questions',
     kind: 'flow'
   }
@@ -57,8 +64,7 @@ export function headerNavHref(item, base) {
  * @param {{
  *   pathname: string,
  *   homeHref: string,
- *   activeFlowSlug?: string | null,
- *   sidebarFlowSlug?: string | null
+ *   activeFlowSlug?: string | null
  * }} context
  */
 export function isHeaderNavActive(item, { pathname, homeHref, activeFlowSlug }) {
@@ -70,4 +76,29 @@ export function isHeaderNavActive(item, { pathname, homeHref, activeFlowSlug }) 
   }
 
   return item.flowSlug === activeFlowSlug;
+}
+
+/**
+ * Build Home-sidebar track list from course flows + completion counts.
+ *
+ * @param {TrackFlow[]} courseFlows
+ * @param {string} base
+ * @param {Record<string, { completed: number, total: number }>} progressByFlow
+ */
+export function getTrackNavItems(courseFlows, base, progressByFlow = {}) {
+  return courseFlows.map((flow) => {
+    const lessonTotal = flow.modules.reduce((sum, module) => sum + module.lessons.length, 0);
+    const progress = progressByFlow[flow.slug];
+    const completed = progress?.completed ?? 0;
+    const total = progress?.total ?? lessonTotal;
+
+    return {
+      slug: flow.slug,
+      title: flow.title,
+      shortTitle: flow.shortTitle ?? flow.title,
+      href: `${base}/flow/${flow.slug}`,
+      completed,
+      total
+    };
+  });
 }

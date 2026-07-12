@@ -6,10 +6,14 @@ All routes prerender with `trailingSlash = 'always'` (`src/routes/+layout.js`). 
 
 | File | Role |
 |------|------|
-| `+layout.svelte` | Header nav, flow-scoped sidebar + search (`/` shortcut), progress topbar, skip link |
+| `+layout.svelte` | Slim header (brand · progress · Topics), Coursera-style underline tabs, context-aware sidebar, skip link |
 | `+layout.js` | `prerender`, trailing slash |
 
-Sidebar UI state: localStorage `system-design-copilot-sidebar-v3` (inline in layout, not a store). Nav helpers: `src/lib/navigation.js`, `src/lib/sidebar.js`.
+**Tabs:** Home · System Design · Low Level · DSA · AI · Practice (`src/lib/navigation.js`).
+
+**Sidebar:** On Home, LeetCode-style **tracks** list (5 flows + progress). In a flow/module/lesson, search + module accordion for the active flow only. `/` focuses search when in a flow.
+
+Sidebar UI state: localStorage `system-design-copilot-sidebar-v4` (inline in layout, not a store). Helpers: `navigation.js`, `sidebar.js`.
 
 ## Pages
 

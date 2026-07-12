@@ -52,7 +52,7 @@
 <style>
   .lesson-section-nav {
     position: sticky;
-    top: 4.25rem;
+    top: 5.75rem;
     z-index: 5;
     display: flex;
     flex-wrap: wrap;
