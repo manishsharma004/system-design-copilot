@@ -1,0 +1,573 @@
+- generic [ref=f1e2]:
+  - link "Skip to main content" [ref=f1e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - button "Close navigation"
+  - generic [ref=f1e4]:
+    - banner [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - link [ref=f1e7] [cursor=pointer]:
+          - /url: ../../../../
+          - strong [ref=f1e8]: System Design Copilot
+        - generic [ref=f1e9]:
+          - strong [ref=f1e10]: High-level design interview prep
+          - generic [ref=f1e11]: 9 modules · 0/48 lessons complete
+        - generic [ref=f1e12]:
+          - generic "Lesson completion progress" [ref=f1e13]: 0/110 lessons
+          - button "Browse topics" [ref=f1e14] [cursor=pointer]
+      - navigation "Primary" [ref=f1e15]:
+        - link "Home" [ref=f1e16] [cursor=pointer]:
+          - /url: ../../../../
+        - link "System Design (High Level)" [ref=f1e18] [cursor=pointer]:
+          - /url: ../../../../flow/high-level-design
+        - link "System Design (Low Level)" [ref=f1e20] [cursor=pointer]:
+          - /url: ../../../../flow/low-level-design
+        - link "DSA" [ref=f1e22] [cursor=pointer]:
+          - /url: ../../../../flow/data-structures-and-algorithms
+        - link "AI Engineer" [ref=f1e24] [cursor=pointer]:
+          - /url: ../../../../flow/ai-engineer
+        - link "DSA (Practice)" [ref=f1e26] [cursor=pointer]:
+          - /url: ../../../../flow/interview-questions
+    - generic [ref=f1e28]:
+      - complementary [ref=f1e29]:
+        - generic [ref=f1e30]:
+          - generic [ref=f1e31]:
+            - generic [ref=f1e32]: Search lessons
+            - searchbox "Search lessons" [ref=f1e33]
+          - button "Close sidebar" [ref=f1e34] [cursor=pointer]: ✕
+        - generic [ref=f1e35]:
+          - generic [ref=f1e36]: HLD track
+          - strong [ref=f1e37]: High-level design interview prep
+          - generic [ref=f1e38]: 0/48 lessons complete in this track
+        - generic [ref=f1e39]:
+          - button "HLD only" [ref=f1e40] [cursor=pointer]
+          - button "All topics" [ref=f1e41] [cursor=pointer]
+        - navigation "Course topics" [ref=f1e42]:
+          - button "▸ Foundations and estimation 0/5" [ref=f1e44] [cursor=pointer]:
+            - generic [ref=f1e45]: ▸
+            - generic [ref=f1e46]: Foundations and estimation
+            - generic [ref=f1e47]: 0/5
+          - button "▸ Networking, edge, and request routing 0/5" [ref=f1e49] [cursor=pointer]:
+            - generic [ref=f1e50]: ▸
+            - generic [ref=f1e51]: Networking, edge, and request routing
+            - generic [ref=f1e52]: 0/5
+          - button "▸ Application architecture and APIs 0/5" [ref=f1e54] [cursor=pointer]:
+            - generic [ref=f1e55]: ▸
+            - generic [ref=f1e56]: Application architecture and APIs
+            - generic [ref=f1e57]: 0/5
+          - button "▸ Data storage and indexing 0/5" [ref=f1e59] [cursor=pointer]:
+            - generic [ref=f1e60]: ▸
+            - generic [ref=f1e61]: Data storage and indexing
+            - generic [ref=f1e62]: 0/5
+          - button "▸ Caching, asynchrony, and resilience 0/5" [ref=f1e64] [cursor=pointer]:
+            - generic [ref=f1e65]: ▸
+            - generic [ref=f1e66]: Caching, asynchrony, and resilience
+            - generic [ref=f1e67]: 0/5
+          - button "▸ Security, multi-region, and operations 0/4" [ref=f1e69] [cursor=pointer]:
+            - generic [ref=f1e70]: ▸
+            - generic [ref=f1e71]: Security, multi-region, and operations
+            - generic [ref=f1e72]: 0/4
+          - button "▸ Distributed systems building blocks 0/5" [ref=f1e74] [cursor=pointer]:
+            - generic [ref=f1e75]: ▸
+            - generic [ref=f1e76]: Distributed systems building blocks
+            - generic [ref=f1e77]: 0/5
+          - button "▸ Common product design patterns 0/5" [ref=f1e79] [cursor=pointer]:
+            - generic [ref=f1e80]: ▸
+            - generic [ref=f1e81]: Common product design patterns
+            - generic [ref=f1e82]: 0/5
+          - button "▸ Case studies and interview drills 0/9" [ref=f1e84] [cursor=pointer]:
+            - generic [ref=f1e85]: ▸
+            - generic [ref=f1e86]: Case studies and interview drills
+            - generic [ref=f1e87]: 0/9
+      - main [ref=f1e88]:
+        - generic [ref=f1e89]:
+          - generic [ref=f1e90]:
+            - link "Curriculum" [ref=f1e91] [cursor=pointer]:
+              - /url: ../../../../
+            - generic [ref=f1e92]: →
+            - link "High-level design interview prep" [ref=f1e93] [cursor=pointer]:
+              - /url: ../../../../flow/high-level-design
+            - generic [ref=f1e94]: →
+            - link "Foundations and estimation" [ref=f1e95] [cursor=pointer]:
+              - /url: ../../../../module/foundations
+            - generic [ref=f1e96]: →
+            - generic [ref=f1e97]: Latency, throughput, and SLOs
+          - paragraph [ref=f1e98]: Lesson 4 of 5
+          - heading "Latency, throughput, and SLOs" [level=1] [ref=f1e99]
+          - paragraph [ref=f1e100]: Reason about how much work the system can do, how long each request takes, and which percentile targets users actually feel.
+          - generic [ref=f1e101]:
+            - generic [ref=f1e102]: 25-35 min
+            - generic [ref=f1e103]: HLD flow
+            - generic [ref=f1e104]: Foundations and estimation
+            - generic [ref=f1e105]: 4 guided stops
+            - button "Mark complete" [ref=f1e106] [cursor=pointer]
+          - article [ref=f1e107]:
+            - paragraph [ref=f1e108]: Why this lesson matters
+            - paragraph [ref=f1e109]: This is the language that connects product promises to capacity planning, queues, caches, and admission control.
+        - navigation "Jump to lesson section" [ref=f1e110]:
+          - link "Read" [ref=f1e111] [cursor=pointer]:
+            - /url: "#lesson-content"
+          - link "Simulate" [ref=f1e112] [cursor=pointer]:
+            - /url: "#simulation-lab"
+          - link "Practice" [ref=f1e113] [cursor=pointer]:
+            - /url: "#practice-lab"
+        - generic [ref=f1e114]:
+          - generic [ref=f1e115]:
+            - navigation "Lesson steps" [ref=f1e116]:
+              - link "Step 1 Interview framing This is the language that connects product promises to capacity planning, queues, caches, and admission control." [ref=f1e117] [cursor=pointer]:
+                - /url: "#lesson-framing"
+                - generic [ref=f1e118]: Step 1
+                - strong [ref=f1e119]: Interview framing
+                - generic [ref=f1e120]: This is the language that connects product promises to capacity planning, queues, caches, and admission control.
+              - link "Step 2 Latency is the user-visible delay Track p50 for typical experience and p95/p99 for worst-case experience" [ref=f1e121] [cursor=pointer]:
+                - /url: "#latency-is-the-user-visible-delay"
+                - generic [ref=f1e122]: Step 2
+                - strong [ref=f1e123]: Latency is the user-visible delay
+                - generic [ref=f1e124]: Track p50 for typical experience and p95/p99 for worst-case experience
+              - link "Step 3 Throughput is sustained work per unit time Queues can smooth bursts even when average throughput is healthy" [ref=f1e125] [cursor=pointer]:
+                - /url: "#throughput-is-sustained-work-per-unit-time"
+                - generic [ref=f1e126]: Step 3
+                - strong [ref=f1e127]: Throughput is sustained work per unit time
+                - generic [ref=f1e128]: Queues can smooth bursts even when average throughput is healthy
+              - link "Step 4 SLOs drive trade-offs Separate user-facing SLOs from internal targets" [ref=f1e129] [cursor=pointer]:
+                - /url: "#slos-drive-trade-offs"
+                - generic [ref=f1e130]: Step 4
+                - strong [ref=f1e131]: SLOs drive trade-offs
+                - generic [ref=f1e132]: Separate user-facing SLOs from internal targets
+            - article [ref=f1e133]:
+              - generic [ref=f1e134]:
+                - generic [ref=f1e135]: "1"
+                - generic [ref=f1e136]:
+                  - paragraph [ref=f1e137]: Start with this framing
+                  - heading "Interview framing" [level=2] [ref=f1e138]
+              - generic [ref=f1e139]:
+                - paragraph [ref=f1e141]: This is the language that connects product promises to capacity planning, queues, caches, and admission control.
+                - generic [ref=f1e143]:
+                  - paragraph [ref=f1e144]: What to say first
+                  - list [ref=f1e145]:
+                    - listitem [ref=f1e146]:
+                      - paragraph [ref=f1e147]: Use percentile latency, not only averages.
+                      - group [ref=f1e148]:
+                        - generic "Show likely answer" [ref=f1e149] [cursor=pointer]
+                    - listitem [ref=f1e150]:
+                      - paragraph [ref=f1e151]: Call out both average load and peak concurrency.
+                      - group [ref=f1e152]:
+                        - generic "Show likely answer" [ref=f1e153] [cursor=pointer]
+                    - listitem [ref=f1e154]:
+                      - paragraph [ref=f1e155]: Tie SLOs to architecture choices and fallback behavior.
+                      - group [ref=f1e156]:
+                        - generic "Show likely answer" [ref=f1e157] [cursor=pointer]
+            - article [ref=f1e158]:
+              - generic [ref=f1e159]:
+                - generic [ref=f1e160]: "2"
+                - generic [ref=f1e161]:
+                  - paragraph [ref=f1e162]: Study section
+                  - heading "Latency is the user-visible delay" [level=2] [ref=f1e163]
+              - generic [ref=f1e164]:
+                - paragraph [ref=f1e166]: Latency comes from network hops, serialization, locks, cache misses, storage I/O, and retries. Tail latency often dominates user pain.
+                - generic [ref=f1e167]:
+                  - paragraph [ref=f1e168]: Call these points out explicitly
+                  - list [ref=f1e169]:
+                    - listitem [ref=f1e170]:
+                      - paragraph [ref=f1e171]: Track p50 for typical experience and p95/p99 for worst-case experience
+                      - group [ref=f1e172]:
+                        - generic "Show likely answer" [ref=f1e173] [cursor=pointer]
+                    - listitem [ref=f1e174]:
+                      - paragraph [ref=f1e175]: One slow dependency can dominate the whole request fan-out
+                      - group [ref=f1e176]:
+                        - generic "Show likely answer" [ref=f1e177] [cursor=pointer]
+                    - listitem [ref=f1e178]:
+                      - paragraph [ref=f1e179]: Synchronous cross-region calls are expensive in latency budgets
+                      - group [ref=f1e180]:
+                        - generic "Show likely answer" [ref=f1e181] [cursor=pointer]
+            - article [ref=f1e182]:
+              - generic [ref=f1e183]:
+                - generic [ref=f1e184]: "3"
+                - generic [ref=f1e185]:
+                  - paragraph [ref=f1e186]: Study section
+                  - heading "Throughput is sustained work per unit time" [level=2] [ref=f1e187]
+              - generic [ref=f1e188]:
+                - paragraph [ref=f1e190]: Throughput depends on concurrency, parallelism, batching, and how much coordination each request requires.
+                - generic [ref=f1e191]:
+                  - paragraph [ref=f1e192]: Call these points out explicitly
+                  - list [ref=f1e193]:
+                    - listitem [ref=f1e194]:
+                      - paragraph [ref=f1e195]: Queues can smooth bursts even when average throughput is healthy
+                      - group [ref=f1e196]:
+                        - generic "Show likely answer" [ref=f1e197] [cursor=pointer]
+                    - listitem [ref=f1e198]:
+                      - paragraph [ref=f1e199]: Throughput ceilings often appear before CPU is fully saturated
+                      - group [ref=f1e200]:
+                        - generic "Show likely answer" [ref=f1e201] [cursor=pointer]
+                    - listitem [ref=f1e202]:
+                      - paragraph [ref=f1e203]: Back pressure protects latency by refusing or delaying excess work
+                      - group [ref=f1e204]:
+                        - generic "Show likely answer" [ref=f1e205] [cursor=pointer]
+            - article [ref=f1e206]:
+              - generic [ref=f1e207]:
+                - generic [ref=f1e208]: "4"
+                - generic [ref=f1e209]:
+                  - paragraph [ref=f1e210]: Study section
+                  - heading "SLOs drive trade-offs" [level=2] [ref=f1e211]
+              - generic [ref=f1e212]:
+                - paragraph [ref=f1e214]: A stated objective such as 99.9% of writes under 200 ms creates a design target for replicas, cache placement, and fallback behavior.
+                - generic [ref=f1e215]:
+                  - paragraph [ref=f1e216]: Call these points out explicitly
+                  - list [ref=f1e217]:
+                    - listitem [ref=f1e218]:
+                      - paragraph [ref=f1e219]: Separate user-facing SLOs from internal targets
+                      - group [ref=f1e220]:
+                        - generic "Show likely answer" [ref=f1e221] [cursor=pointer]
+                    - listitem [ref=f1e222]:
+                      - paragraph [ref=f1e223]: Include error budgets and degraded modes
+                      - group [ref=f1e224]:
+                        - generic "Show likely answer" [ref=f1e225] [cursor=pointer]
+                    - listitem [ref=f1e226]:
+                      - paragraph [ref=f1e227]: Make clear which endpoints need stronger guarantees than others
+                      - group [ref=f1e228]:
+                        - generic "Show likely answer" [ref=f1e229] [cursor=pointer]
+          - complementary [ref=f1e230]:
+            - article [ref=f1e231]:
+              - paragraph [ref=f1e232]: Checklist
+              - heading "Things to say clearly" [level=3] [ref=f1e233]
+              - list [ref=f1e234]:
+                - listitem [ref=f1e235]:
+                  - paragraph [ref=f1e236]: Use percentile latency, not only averages.
+                  - group [ref=f1e237]:
+                    - generic "Show likely answer" [ref=f1e238] [cursor=pointer]
+                - listitem [ref=f1e239]:
+                  - paragraph [ref=f1e240]: Call out both average load and peak concurrency.
+                  - group [ref=f1e241]:
+                    - generic "Show likely answer" [ref=f1e242] [cursor=pointer]
+                - listitem [ref=f1e243]:
+                  - paragraph [ref=f1e244]: Tie SLOs to architecture choices and fallback behavior.
+                  - group [ref=f1e245]:
+                    - generic "Show likely answer" [ref=f1e246] [cursor=pointer]
+                - listitem [ref=f1e247]:
+                  - paragraph [ref=f1e248]: Discuss how you would detect SLO regression in production.
+                  - group [ref=f1e249]:
+                    - generic "Show likely answer" [ref=f1e250] [cursor=pointer]
+            - article [ref=f1e251]:
+              - paragraph [ref=f1e252]: Common pitfalls
+              - heading "What to avoid" [level=3] [ref=f1e253]
+              - list [ref=f1e254]:
+                - listitem [ref=f1e255]: Assuming throughput improvements always help latency.
+                - listitem [ref=f1e256]: Ignoring tail latency in fan-out systems.
+                - listitem [ref=f1e257]: Treating SLOs as static even when product requirements differ by endpoint.
+            - article [ref=f1e258]:
+              - paragraph [ref=f1e259]: Interview prompts
+              - heading "Practice aloud" [level=3] [ref=f1e260]
+              - list [ref=f1e261]:
+                - listitem [ref=f1e262]:
+                  - paragraph [ref=f1e263]: Why can adding retries improve availability but hurt latency?
+                  - group [ref=f1e264]:
+                    - generic "Show likely answer" [ref=f1e265] [cursor=pointer]
+                - listitem [ref=f1e266]:
+                  - paragraph [ref=f1e267]: How do queues change throughput without necessarily improving latency?
+                  - group [ref=f1e268]:
+                    - generic "Show likely answer" [ref=f1e269] [cursor=pointer]
+                - listitem [ref=f1e270]:
+                  - paragraph [ref=f1e271]: Which percentile would you optimize for a checkout flow and why?
+                  - group [ref=f1e272]:
+                    - generic "Show likely answer" [ref=f1e273] [cursor=pointer]
+            - article [ref=f1e274]:
+              - paragraph [ref=f1e275]: Related topics
+              - heading "Keep the thread going" [level=3] [ref=f1e276]
+              - generic [ref=f1e277]:
+                - link "Availability, consistency, and CAP trade-offs Foundations and estimation" [ref=f1e278] [cursor=pointer]:
+                  - /url: ../../../../module/foundations/lesson/availability-consistency-cap
+                  - strong [ref=f1e279]: Availability, consistency, and CAP trade-offs
+                  - generic [ref=f1e280]: Foundations and estimation
+                - link "Queues, streams, and background work Caching, asynchrony, and resilience" [ref=f1e281] [cursor=pointer]:
+                  - /url: ../../../../module/performance-and-resilience/lesson/queues-and-streams
+                  - strong [ref=f1e282]: Queues, streams, and background work
+                  - generic [ref=f1e283]: Caching, asynchrony, and resilience
+        - generic [ref=f1e285]:
+          - generic [ref=f1e286]:
+            - generic [ref=f1e287]:
+              - paragraph [ref=f1e288]: Simulation lab
+              - 'heading "Simulation lab: Latency, throughput, and SLOs" [level=2] [ref=f1e289]'
+              - paragraph [ref=f1e290]: Turn estimation and baseline trade-offs into an actual workload so you can see which assumption breaks first. Apply it to latency, throughput, and slos so the trade-offs feel concrete.
+            - generic [ref=f1e291]:
+              - generic [ref=f1e292]:
+                - generic [ref=f1e293]:
+                  - generic [ref=f1e294]: API
+                  - combobox "API" [ref=f1e295]:
+                    - option "Read-heavy request" [selected]
+                    - option "Write / state change"
+                - generic [ref=f1e296]:
+                  - generic [ref=f1e297]: Profile
+                  - combobox "Profile" [ref=f1e298]:
+                    - option "Steady reads" [selected]
+                    - option "Sudden spike"
+              - generic [ref=f1e299]:
+                - button "▶ Run" [ref=f1e300] [cursor=pointer]
+                - button "Save" [ref=f1e301] [cursor=pointer]
+                - button "Reset" [ref=f1e302] [cursor=pointer]
+                - button "Full screen" [ref=f1e303] [cursor=pointer]
+          - generic [ref=f1e308]:
+            - generic [ref=f1e309]:
+              - button "Explorer" [ref=f1e310] [cursor=pointer]
+              - button "Node helpers" [ref=f1e313] [cursor=pointer]
+            - complementary [ref=f1e317]:
+              - generic [ref=f1e318]:
+                - 'button "▼ EXPLORER SIMULATION LAB: LATENCY," [ref=f1e319] [cursor=pointer]':
+                  - generic [ref=f1e320]: ▼
+                  - generic [ref=f1e321]: EXPLORER
+                  - strong [ref=f1e322]: "SIMULATION LAB: LATENCY,"
+                - generic [ref=f1e323]:
+                  - button "New File" [ref=f1e324] [cursor=pointer]
+                  - button "New Folder" [ref=f1e327] [cursor=pointer]
+                  - button "Collapse All" [ref=f1e330] [cursor=pointer]
+                - generic [ref=f1e333]:
+                  - generic [ref=f1e334]:
+                    - button "config" [ref=f1e335] [cursor=pointer]
+                    - generic:
+                      - button "Rename folder"
+                      - button "Delete folder"
+                  - generic [ref=f1e343]:
+                    - button "read-path.json" [ref=f1e344] [cursor=pointer]
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+                  - generic [ref=f1e349]:
+                    - button "steady-read.json" [ref=f1e350] [cursor=pointer]
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+                  - generic [ref=f1e355]:
+                    - button "src" [ref=f1e356] [cursor=pointer]
+                    - generic:
+                      - button "Rename folder"
+                      - button "Delete folder"
+                  - generic [ref=f1e364]:
+                    - button "overrides.ts M" [ref=f1e365] [cursor=pointer]:
+                      - generic [ref=f1e369]: overrides.ts
+                      - generic [ref=f1e370]: M
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+                  - generic [ref=f1e371]:
+                    - button "topology.flow M" [ref=f1e372] [cursor=pointer]:
+                      - generic [ref=f1e376]: topology.flow
+                      - generic [ref=f1e377]: M
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+                  - generic [ref=f1e378]:
+                    - button "topology.layout.json M" [ref=f1e379] [cursor=pointer]:
+                      - generic [ref=f1e383]: topology.layout.json
+                      - generic [ref=f1e384]: M
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+                  - generic [ref=f1e385]:
+                    - button "README.md" [ref=f1e386] [cursor=pointer]
+                    - generic:
+                      - button "Rename file"
+                      - button "Delete file"
+            - button "Resize explorer" [ref=f1e391]
+            - generic [ref=f1e392]:
+              - generic [ref=f1e393]:
+                - generic [ref=f1e395]:
+                  - generic [ref=f1e396]:
+                    - tablist "Open files":
+                      - button "topology.flow ×" [ref=f1e397] [cursor=pointer]:
+                        - generic [ref=f1e401]: topology.flow
+                        - text: ×
+                      - button "overrides.ts ×" [ref=f1e402] [cursor=pointer]:
+                        - generic [ref=f1e406]: overrides.ts
+                        - text: ×
+                      - button "topology.layout.json ×" [ref=f1e407] [cursor=pointer]:
+                        - generic [ref=f1e411]: topology.layout.json
+                        - text: ×
+                      - button "read-path.json ×" [ref=f1e412] [cursor=pointer]:
+                        - generic [ref=f1e416]: read-path.json
+                        - text: ×
+                      - button "steady-read.json ×" [ref=f1e417] [cursor=pointer]:
+                        - generic [ref=f1e421]: steady-read.json
+                        - text: ×
+                      - button "README.md ×" [ref=f1e422] [cursor=pointer]:
+                        - generic [ref=f1e426]: README.md
+                        - text: ×
+                    - generic [ref=f1e427]:
+                      - button "Save" [ref=f1e428] [cursor=pointer]
+                      - button "Wrap" [ref=f1e429] [cursor=pointer]
+                      - button "Copy" [ref=f1e430] [cursor=pointer]
+                      - button "Cmd" [ref=f1e431] [cursor=pointer]
+                  - generic "Breadcrumb" [ref=f1e432]:
+                    - generic [ref=f1e433]: src
+                    - generic [ref=f1e434]: ›
+                    - generic [ref=f1e435]: topology.flow
+                  - textbox [ref=f1e436]: node client type=edge label="Client entry" latencyMs=4 capacityRps=90000 node gateway type=service label="Gateway" latencyMs=8 capacityRps=48000 node app type=service label="Core app" latencyMs=14 capacityRps=26000 node cache type=cache label="Hot cache" latencyMs=3 capacityRps=110000 queueCapacity=50000 hitRate=0.88 node primary type=database label="Primary store" latencyMs=22 capacityRps=9000 queueCapacity=9000 node replica type=database label="Read replica" latencyMs=16 capacityRps=18000 queueCapacity=9000 node queue type=queue label="Async queue" latencyMs=12 capacityRps=36000 queueCapacity=140000 node workers type=worker label="Background workers" latencyMs=24 capacityRps=22000 link client -> gateway link gateway -> app link app -> cache link app -> primary link app -> replica link app -> queue async=true link queue -> workers async=true
+                  - generic [ref=f1e438]:
+                    - generic [ref=f1e439]: Ln 1, Col 1
+                    - generic [ref=f1e440]: 15 lines
+                    - generic [ref=f1e441]: 90 words
+                    - generic [ref=f1e442]: 0.8 KB
+                    - generic [ref=f1e443]: flow-graph
+                - button "Resize preview panel" [ref=f1e444]
+                - generic [ref=f1e445]:
+                  - generic [ref=f1e446]:
+                    - paragraph [ref=f1e447]: TOPOLOGY
+                    - strong [ref=f1e448]: Interactive diagram
+                    - generic [ref=f1e449]: Edit visually or in topology.flow.
+                  - generic [ref=f1e452]:
+                    - generic [ref=f1e453]:
+                      - generic [ref=f1e454]:
+                        - button "Select" [ref=f1e455] [cursor=pointer]
+                        - button "Connect" [ref=f1e458] [cursor=pointer]
+                        - button "Pan" [ref=f1e461] [cursor=pointer]
+                        - button "Delete selection" [ref=f1e464] [cursor=pointer]
+                      - generic [ref=f1e467]:
+                        - button "edge" [ref=f1e468] [cursor=pointer]
+                        - button "service" [ref=f1e469] [cursor=pointer]
+                        - button "cache" [ref=f1e470] [cursor=pointer]
+                        - button "database" [ref=f1e471] [cursor=pointer]
+                        - button "queue" [ref=f1e472] [cursor=pointer]
+                        - button "worker" [ref=f1e473] [cursor=pointer]
+                    - img [ref=f1e475]:
+                      - generic [ref=f1e481]:
+                        - generic [ref=f1e483]: Client entry
+                        - generic [ref=f1e484]: edge
+                      - generic [ref=f1e485]:
+                        - generic [ref=f1e487]: Gateway
+                        - generic [ref=f1e488]: service
+                      - generic [ref=f1e489]:
+                        - generic [ref=f1e491]: Core app
+                        - generic [ref=f1e492]: service
+                      - generic [ref=f1e493]:
+                        - generic [ref=f1e495]: Hot cache
+                        - generic [ref=f1e496]: cache
+                      - generic [ref=f1e497]:
+                        - generic [ref=f1e499]: Primary store
+                        - generic [ref=f1e500]: database
+                      - generic [ref=f1e501]:
+                        - generic [ref=f1e503]: Read replica
+                        - generic [ref=f1e504]: database
+                      - generic [ref=f1e505]:
+                        - generic [ref=f1e507]: Async queue
+                        - generic [ref=f1e508]: queue
+                      - generic [ref=f1e509]:
+                        - generic [ref=f1e511]: Background workers
+                        - generic [ref=f1e512]: worker
+              - generic [ref=f1e513]:
+                - button "Resize bottom panel" [ref=f1e514]
+                - generic [ref=f1e515]:
+                  - button "Results" [ref=f1e516] [cursor=pointer]
+                  - button "×" [ref=f1e517] [cursor=pointer]
+        - generic [ref=f1e519]:
+          - generic [ref=f1e520]:
+            - generic [ref=f1e521]:
+              - paragraph [ref=f1e522]: Interactive practice lab
+              - heading "Write, save, and move through the mock interview" [level=2] [ref=f1e523]
+              - paragraph [ref=f1e524]: Answers stay in your browser so you can come back later.
+            - generic [ref=f1e525]:
+              - generic [ref=f1e526]: 0/3 saved
+              - generic [ref=f1e527]: "Step 1/3: Explain the concept"
+          - generic [ref=f1e528]:
+            - generic [ref=f1e529]:
+              - button "1" [ref=f1e530] [cursor=pointer]
+              - button "2" [ref=f1e531] [cursor=pointer]
+              - button "3" [ref=f1e532] [cursor=pointer]
+            - generic [ref=f1e533]:
+              - button "Save" [disabled] [ref=f1e534] [cursor=pointer]
+              - button "←" [disabled] [ref=f1e535] [cursor=pointer]
+              - button "→" [disabled] [ref=f1e536] [cursor=pointer]
+              - button "Clear all" [ref=f1e537] [cursor=pointer]
+          - generic [ref=f1e538]:
+            - generic [ref=f1e539]:
+              - button "Explorer" [ref=f1e540] [cursor=pointer]
+              - button "Node helpers" [ref=f1e543] [cursor=pointer]
+            - complementary [ref=f1e547]:
+              - generic [ref=f1e548]:
+                - button "▼ PRACTICE STEPS LATENCY, THROUGHPUT, AND" [ref=f1e549] [cursor=pointer]:
+                  - generic [ref=f1e550]: ▼
+                  - generic [ref=f1e551]: PRACTICE STEPS
+                  - strong [ref=f1e552]: LATENCY, THROUGHPUT, AND
+                - generic [ref=f1e553]:
+                  - button "New File" [ref=f1e554] [cursor=pointer]
+                  - button "New Folder" [ref=f1e557] [cursor=pointer]
+                  - button "Collapse All" [ref=f1e560] [cursor=pointer]
+                - generic [ref=f1e564]:
+                  - button "steps" [ref=f1e565] [cursor=pointer]
+                  - generic:
+                    - button "Rename folder"
+                    - button "Delete folder"
+            - button "Resize explorer" [ref=f1e573]
+            - generic [ref=f1e575]:
+              - generic [ref=f1e577]:
+                - generic [ref=f1e578]:
+                  - tablist "Open files":
+                    - button "step-1-answer.md ×" [ref=f1e579] [cursor=pointer]:
+                      - generic [ref=f1e583]: step-1-answer.md
+                      - text: ×
+                    - button "step-2-answer.md ×" [ref=f1e584] [cursor=pointer]:
+                      - generic [ref=f1e588]: step-2-answer.md
+                      - text: ×
+                    - button "step-3-answer.md ×" [ref=f1e589] [cursor=pointer]:
+                      - generic [ref=f1e593]: step-3-answer.md
+                      - text: ×
+                  - generic [ref=f1e594]:
+                    - button "Save" [ref=f1e595] [cursor=pointer]
+                    - button "Wrap" [ref=f1e596] [cursor=pointer]
+                    - button "Copy" [disabled] [ref=f1e597] [cursor=pointer]
+                    - button "Cmd" [ref=f1e598] [cursor=pointer]
+                - generic "Breadcrumb" [ref=f1e599]:
+                  - generic [ref=f1e600]: steps
+                  - generic [ref=f1e601]: ›
+                  - generic [ref=f1e602]: step-1-answer.md
+                - textbox [ref=f1e603]
+                - generic [ref=f1e605]:
+                  - generic [ref=f1e606]: Ln 1, Col 1
+                  - generic [ref=f1e607]: 1 lines
+                  - generic [ref=f1e608]: 0 words
+                  - generic [ref=f1e609]: 0.0 KB
+                  - generic [ref=f1e610]: markdown
+              - button "Resize preview panel" [ref=f1e611]
+              - generic [ref=f1e612]:
+                - generic [ref=f1e613]:
+                  - paragraph [ref=f1e614]: PRACTICE GUIDE
+                  - strong [ref=f1e615]: Explain the concept
+                  - generic [ref=f1e616]: Explain the topic in interviewer-friendly language before diving into implementation details.
+                - generic [ref=f1e620]:
+                  - heading "Explain the concept" [level=3] [ref=f1e621]
+                  - paragraph [ref=f1e622]: Teach "Latency, throughput, and SLOs" back to an interviewer. Summarize what it is, when you would use it, and why it matters in a real system.
+                  - heading "Goal" [level=4] [ref=f1e623]
+                  - paragraph [ref=f1e624]: Explain the topic in interviewer-friendly language before diving into implementation details.
+                  - heading "Guardrails" [level=4] [ref=f1e625]
+                  - list [ref=f1e626]:
+                    - listitem [ref=f1e627]: Why can adding retries improve availability but hurt latency?
+                    - listitem [ref=f1e628]: Latency is the user-visible delay
+                    - listitem [ref=f1e629]: Throughput is sustained work per unit time
+                    - listitem [ref=f1e630]: Use percentile latency, not only averages.
+                  - heading "Suggested Structure" [level=4] [ref=f1e631]
+                  - list [ref=f1e632]:
+                    - listitem [ref=f1e633]: Definition
+                    - listitem [ref=f1e634]: When to use it
+                    - listitem [ref=f1e635]: Benefits
+                    - listitem [ref=f1e636]: Trade-offs
+          - generic [ref=f1e637]:
+            - generic [ref=f1e638]:
+              - generic [ref=f1e639]:
+                - paragraph [ref=f1e640]: Bring your own model
+                - heading "Practice answer copilot" [level=3] [ref=f1e641]
+                - paragraph [ref=f1e642]: Direct browser call to the Chat Completions API.
+              - generic [ref=f1e643]:
+                - generic [ref=f1e644]: OpenAI
+                - button "Configure model" [ref=f1e645] [cursor=pointer]
+            - generic [ref=f1e646]:
+              - generic [ref=f1e647]: Specific guidance request
+              - textbox "Specific guidance request" [ref=f1e648]:
+                - /placeholder: Ask for missing trade-offs, sharper APIs, or a better scaling plan.
+            - generic [ref=f1e649]:
+              - button "Generate outline" [ref=f1e650] [cursor=pointer]
+              - button "Review current draft" [disabled] [ref=f1e651]
+        - generic [ref=f1e652]:
+          - generic [ref=f1e654]:
+            - paragraph [ref=f1e655]: Next steps
+            - heading "Keep moving through the module" [level=2] [ref=f1e656]
+          - generic [ref=f1e657]:
+            - link "← Performance vs. scalability" [ref=f1e658] [cursor=pointer]:
+              - /url: ../../../../module/foundations/lesson/performance-vs-scalability
+            - link "Availability, consistency, and CAP trade-offs →" [ref=f1e659] [cursor=pointer]:
+              - /url: ../../../../module/foundations/lesson/availability-consistency-cap

@@ -8,7 +8,7 @@ import {
 } from './practiceTimer.js';
 
 const STORAGE_KEY = 'system-design-copilot-practice-v1';
-/** @typedef {{ status: 'idle' | 'running' | 'paused', elapsedMs: number, startedAt: string | null, lastCompletedMs: number, attemptCount: number, updatedAt: string | null }} AttemptTimer */
+/** @typedef {import('./practiceTimer.js').ResolvedAttemptTimer} AttemptTimer */
 /** @typedef {{ answer?: string, savedAt?: string, timer?: AttemptTimer }} PracticeEntry */
 /** @typedef {Record<string, PracticeEntry>} PracticeState */
 

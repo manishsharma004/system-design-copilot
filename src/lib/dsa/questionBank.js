@@ -1,9 +1,17 @@
+import MarkdownIt from 'markdown-it'
 import {
   extractPracticeCases,
   parseLanguageTemplates,
   parseQuestionMeta,
   supportsLocalWasmPractice
 } from './practice.js'
+
+const solutionMarkdown = new MarkdownIt({
+  html: true,
+  linkify: true,
+  breaks: false,
+  typographer: false
+})
 
 /**
  * @param {string} value
@@ -13,6 +21,59 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
+}
+
+/**
+ * LeetCode article solutions ship as Markdown (with a few HTML tags). Convert
+ * them to HTML for the question-bank "Show solution" panel.
+ *
+ * @param {string} markdown
+ */
+export function renderSolutionHtml(markdown) {
+  const source = String(markdown ?? '')
+    .replace(/^\s*\[TOC\]\s*/i, '')
+    .replace(/!\?![\s\S]*?!\?!/g, '')
+    .replace(/\$\$([^$\n]+)\$\$/g, (_match, expr) => `<code>${simplifySolutionMath(expr)}</code>`)
+    .trim()
+
+  if (!source) return ''
+
+  try {
+    return solutionMarkdown.render(source)
+  } catch {
+    return `<pre>${escapeHtml(source)}</pre>`
+  }
+}
+
+/**
+ * @param {string} value
+ */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+}
+
+/**
+ * Lightweight cleanup for common LeetCode $$...$$ math snippets.
+ *
+ * @param {string} expr
+ */
+function simplifySolutionMath(expr) {
+  return escapeHtml(
+    String(expr)
+      .replace(/\\cdot/g, '·')
+      .replace(/\\times/g, '×')
+      .replace(/\\leq/g, '≤')
+      .replace(/\\geq/g, '≥')
+      .replace(/\\neq/g, '≠')
+      .replace(/\\infty/g, '∞')
+      .replace(/\\rightarrow/g, '→')
+      .replace(/\\text\{([^}]+)\}/g, '$1')
+      .replace(/\\mathrm\{([^}]+)\}/g, '$1')
+      .replace(/[{}]/g, '')
+  )
 }
 
 /**
@@ -59,7 +120,7 @@ export function toBankItem(item) {
       note: item.info || '',
       paidOnly: Boolean(item.paidOnly),
       contentHtml: questionData.content || '',
-      solutionHtml: questionData.solution?.content || '',
+      solutionHtml: renderSolutionHtml(questionData.solution?.content || ''),
       hints: Array.isArray(questionData.hints) ? questionData.hints : [],
       sampleTestCase: questionData.sampleTestCase || '',
       practiceMeta,

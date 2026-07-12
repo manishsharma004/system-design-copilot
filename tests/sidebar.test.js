@@ -5,6 +5,7 @@ import { getVisibleSidebarModules } from '../src/lib/sidebar.js';
 
 test('sidebar modules are scoped to the selected flow', () => {
   const aiFlow = courseFlows.find((flow) => flow.slug === 'ai-engineer');
+  assert.ok(aiFlow);
   const visibleModules = getVisibleSidebarModules({ modules, activeFlow: aiFlow });
 
   assert.deepEqual(

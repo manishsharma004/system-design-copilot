@@ -175,8 +175,8 @@
     draggingNodeId = nodeId
     const point = clientToCanvas(event.clientX, event.clientY)
     const nodeLayout = layout[nodeId] ?? { x: 0, y: 0 }
-    dragOffsetX = point.x - nodeLayout.x
-    dragOffsetY = point.y - nodeLayout.y
+    dragOffsetX = point.x - (nodeLayout.x ?? 0)
+    dragOffsetY = point.y - (nodeLayout.y ?? 0)
   }
 
   /** @param {string} from @param {string} to */
@@ -364,10 +364,10 @@
         {@const from = layout[link.from]}
         {@const to = layout[link.to]}
         {#if from && to}
-          {@const x1 = from.x + NODE_WIDTH}
-          {@const y1 = from.y + NODE_HEIGHT / 2}
-          {@const x2 = to.x}
-          {@const y2 = to.y + NODE_HEIGHT / 2}
+          {@const x1 = (from.x ?? 0) + NODE_WIDTH}
+          {@const y1 = (from.y ?? 0) + NODE_HEIGHT / 2}
+          {@const x2 = to.x ?? 0}
+          {@const y2 = (to.y ?? 0) + NODE_HEIGHT / 2}
           <line
             class="topology-link"
             class:selected={selectedLinkKey === `${link.from}->${link.to}`}

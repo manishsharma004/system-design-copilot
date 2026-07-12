@@ -551,38 +551,39 @@
   }
 
   function confirmRename() {
-    if (!renamingEntry) return
+    const entry = renamingEntry
+    if (!entry) return
     const nextPath = normalizePath(
-      renamingEntry.type === 'folder'
-        ? `${getParentPath(renamingEntry.path)}/${renameValue}`.replace(/\/+/g, '/')
-        : `${getParentPath(renamingEntry.path)}/${renameValue}`.replace(/\/+/g, '/')
+      entry.type === 'folder'
+        ? `${getParentPath(entry.path)}/${renameValue}`.replace(/\/+/g, '/')
+        : `${getParentPath(entry.path)}/${renameValue}`.replace(/\/+/g, '/')
     )
     if (!nextPath || !renameValue.trim() || !isValidWorkspacePath(nextPath)) {
       renamingEntry = null
       return
     }
-    if (renamingEntry.type === 'folder') {
-      if (nextPath !== renamingEntry.path) {
+    if (entry.type === 'folder') {
+      if (nextPath !== entry.path) {
         workspaceFolders = normalizeFolders(workspaceFolders.map((folder) => (
-          folder === renamingEntry.path || folder.startsWith(`${renamingEntry.path}/`)
-            ? `${nextPath}${folder.slice(renamingEntry.path.length)}`
+          folder === entry.path || folder.startsWith(`${entry.path}/`)
+            ? `${nextPath}${folder.slice(entry.path.length)}`
             : folder
         )))
         workspaceFiles = currentFiles.map((file, index) => (
-          file.path === renamingEntry.path || file.path.startsWith(`${renamingEntry.path}/`)
+          file.path === entry.path || file.path.startsWith(`${entry.path}/`)
             ? normalizeIncomingFile({
                 ...file,
-                path: `${nextPath}${file.path.slice(renamingEntry.path.length)}`,
-                filename: getBaseName(`${nextPath}${file.path.slice(renamingEntry.path.length)}`),
-                label: getBaseName(`${nextPath}${file.path.slice(renamingEntry.path.length)}`)
+                path: `${nextPath}${file.path.slice(entry.path.length)}`,
+                filename: getBaseName(`${nextPath}${file.path.slice(entry.path.length)}`),
+                label: getBaseName(`${nextPath}${file.path.slice(entry.path.length)}`)
               }, index)
             : file
         ))
       }
       ensureFolderExpanded(nextPath)
-    } else if (nextPath !== renamingEntry.path && !currentFiles.some((file) => file.path === nextPath)) {
+    } else if (nextPath !== entry.path && !currentFiles.some((file) => file.path === nextPath)) {
       workspaceFiles = currentFiles.map((file, index) => (
-        file.id === renamingEntry.id
+        file.id === entry.id
           ? normalizeIncomingFile({
               ...file,
               path: nextPath,
@@ -1082,17 +1083,18 @@
 </div>
 
 {#if contextMenu}
+  {@const menu = contextMenu}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div class="ide-context-backdrop" onclick={closeContextMenu}></div>
-  <div class="ide-context-menu" style={`left:${contextMenu.x}px;top:${contextMenu.y}px;`}>
+  <div class="ide-context-menu" style={`left:${menu.x}px;top:${menu.y}px;`}>
     <button type="button" onclick={createFile}>New File</button>
     <button type="button" onclick={createFolder}>New Folder</button>
-    {#if contextMenu.kind === 'file'}
-      <button type="button" onclick={() => startRenameFile(contextMenu.entry)}>Rename</button>
-      <button type="button" onclick={() => { deleteFile(contextMenu.entry); closeContextMenu() }}>Delete</button>
+    {#if menu.kind === 'file'}
+      <button type="button" onclick={() => startRenameFile(menu.entry)}>Rename</button>
+      <button type="button" onclick={() => { deleteFile(menu.entry); closeContextMenu() }}>Delete</button>
     {:else}
-      <button type="button" onclick={() => startRenameFolder(contextMenu.entry)}>Rename</button>
-      <button type="button" onclick={() => { deleteFolder(contextMenu.entry); closeContextMenu() }}>Delete</button>
+      <button type="button" onclick={() => startRenameFolder(menu.entry)}>Rename</button>
+      <button type="button" onclick={() => { deleteFolder(menu.entry); closeContextMenu() }}>Delete</button>
     {/if}
   </div>
 {/if}

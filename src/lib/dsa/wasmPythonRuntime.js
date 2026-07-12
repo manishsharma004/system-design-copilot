@@ -10,10 +10,10 @@ function appendPyodideScript() {
 
   if (window.loadPyodide) return Promise.resolve()
 
-  return new Promise((resolve, reject) => {
+  return /** @type {Promise<void>} */ (new Promise((resolve, reject) => {
     const existingScript = document.querySelector('script[data-pyodide-loader="true"]')
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(), { once: true })
+      existingScript.addEventListener('load', () => resolve(undefined), { once: true })
       existingScript.addEventListener('error', () => reject(new Error('Failed to load the Pyodide runtime bundle.')), { once: true })
       return
     }
@@ -22,17 +22,21 @@ function appendPyodideScript() {
     script.src = `${PYODIDE_INDEX_URL}pyodide.js`
     script.async = true
     script.dataset.pyodideLoader = 'true'
-    script.onload = () => resolve()
+    script.onload = () => resolve(undefined)
     script.onerror = () => reject(new Error('Failed to load the Pyodide runtime bundle.'))
     document.head.append(script)
-  })
+  }))
 }
 
 export async function ensurePythonRuntime() {
   if (!runtimePromise) {
     runtimePromise = (async () => {
       await appendPyodideScript()
-      return window.loadPyodide({ indexURL: PYODIDE_INDEX_URL })
+      const loadPyodide = window.loadPyodide
+      if (!loadPyodide) {
+        throw new Error('Pyodide loader did not initialize.')
+      }
+      return loadPyodide({ indexURL: PYODIDE_INDEX_URL })
     })()
   }
 

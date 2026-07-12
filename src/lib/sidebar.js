@@ -1,9 +1,20 @@
+/** @typedef {{ slug: string, title: string, summary: string, id: string, order: number }} SidebarLesson */
+
+/** @typedef {{
+ *   slug: string,
+ *   title: string,
+ *   summary: string,
+ *   flowSlug?: string,
+ *   lessons: SidebarLesson[]
+ * }} SidebarModule */
+
 /**
  * @param {{
- *   modules: Array<{ slug: string, title: string, summary: string, lessons: Array<{ title: string, summary: string }> }>,
- *   activeFlow?: { modules?: Array<{ slug: string, title: string, summary: string, lessons: Array<{ title: string, summary: string }> }> } | null,
+ *   modules: SidebarModule[],
+ *   activeFlow?: { modules?: SidebarModule[] } | null,
  *   query?: string
  * }} options
+ * @returns {SidebarModule[]}
  */
 export function getVisibleSidebarModules({ modules, activeFlow = null, query = '' }) {
   const normalizedQuery = query.trim().toLowerCase();

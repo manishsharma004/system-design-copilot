@@ -1,5 +1,5 @@
 const IDLE_TIMER = Object.freeze({
-  status: 'idle',
+  status: /** @type {'idle'} */ ('idle'),
   elapsedMs: 0,
   startedAt: null,
   lastCompletedMs: 0,
@@ -22,6 +22,18 @@ function toNowIso(now) {
   return new Date(safeNow).toISOString()
 }
 
+/** @typedef {'idle' | 'running' | 'paused'} AttemptTimerStatus */
+
+/** @typedef {{
+ *   status: AttemptTimerStatus,
+ *   elapsedMs: number,
+ *   startedAt: string | null,
+ *   lastCompletedMs: number,
+ *   attemptCount: number,
+ *   updatedAt: string | null
+ * }} ResolvedAttemptTimer */
+
+/** @returns {ResolvedAttemptTimer} */
 export function resolveAttemptTimer(timer) {
   if (!timer || typeof timer !== 'object' || Array.isArray(timer)) {
     return { ...IDLE_TIMER }
@@ -33,6 +45,7 @@ export function resolveAttemptTimer(timer) {
   const startedAt = toIsoTimestamp(timer.startedAt)
   const updatedAt = toIsoTimestamp(timer.updatedAt)
 
+  /** @type {AttemptTimerStatus} */
   let status = timer.status === 'running' || timer.status === 'paused' ? timer.status : 'idle'
   if (status === 'running' && !startedAt) {
     status = elapsedMs > 0 ? 'paused' : 'idle'
@@ -59,6 +72,7 @@ export function getAttemptTimerElapsed(timer, now = Date.now()) {
   return resolved.elapsedMs + Math.max(0, safeNow - startedAtMs)
 }
 
+/** @returns {ResolvedAttemptTimer} */
 export function startAttemptTimer(timer, now = Date.now()) {
   const resolved = resolveAttemptTimer(timer)
   const isoNow = toNowIso(now)
@@ -79,6 +93,7 @@ export function startAttemptTimer(timer, now = Date.now()) {
   }
 }
 
+/** @returns {ResolvedAttemptTimer} */
 export function pauseAttemptTimer(timer, now = Date.now()) {
   const resolved = resolveAttemptTimer(timer)
   if (resolved.status !== 'running') {
@@ -94,6 +109,7 @@ export function pauseAttemptTimer(timer, now = Date.now()) {
   }
 }
 
+/** @returns {ResolvedAttemptTimer} */
 export function stopAttemptTimer(timer, now = Date.now()) {
   const resolved = resolveAttemptTimer(timer)
   const totalElapsedMs = getAttemptTimerElapsed(resolved, now)

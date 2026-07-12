@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { buildCppPracticeSource, buildJavaPracticeFiles, buildPythonPracticeSource } from '../src/lib/dsa/practice.js'
+import { renderSolutionHtml, toBankItem } from '../src/lib/dsa/questionBank.js'
 import {
   getAttemptTimerElapsed,
   pauseAttemptTimer,
@@ -125,4 +126,57 @@ test('resolveAttemptTimer normalizes invalid persisted timer state', () => {
     attemptCount: 0,
     updatedAt: null
   })
+})
+
+test('renderSolutionHtml turns LeetCode markdown solutions into HTML', () => {
+  const html = renderSolutionHtml(`[TOC]
+
+## Solution
+
+**Rules to clean email:**
+
+- Ignore periods \`'.'\` in _local name_.
+
+Let $$N$$ be the number of emails.
+
+Time Complexity: $$O(N \\cdot M)$$
+
+!?!../Documents/929/demo.json:960,540!?!
+
+<iframe src="https://leetcode.com/playground/demo/shared"></iframe>
+`)
+
+  assert.match(html, /<h2>Solution<\/h2>/)
+  assert.match(html, /<strong>Rules to clean email:<\/strong>/)
+  assert.match(html, /<em>local name<\/em>/)
+  assert.match(html, /<code>N<\/code>/)
+  assert.match(html, /<code>O\(N · M\)<\/code>/)
+  assert.match(html, /<iframe src="https:\/\/leetcode\.com\/playground\/demo\/shared"><\/iframe>/)
+  assert.doesNotMatch(html, /\[TOC\]/)
+  assert.doesNotMatch(html, /!\?!/)
+})
+
+test('toBankItem converts solution markdown into solutionHtml', () => {
+  const item = toBankItem({
+    id: '1',
+    info: 'OA',
+    paidOnly: false,
+    questionData: {
+      questionTitle: 'Unique Email Addresses',
+      questionFrontendId: '929',
+      titleSlug: 'unique-email-addresses',
+      content: '<p>Problem</p>',
+      sampleTestCase: '["a@b.com"]',
+      metaData: '{"name":"numUniqueEmails","params":[{"name":"emails","type":"string[]"}],"return":{"type":"integer"}}',
+      codeDefinition: '[{"value":"python3","text":"Python3","defaultCode":"class Solution:\\n    def numUniqueEmails(self, emails):\\n        pass"}]',
+      hints: ['<p>Use a set.</p>'],
+      solution: {
+        content: '## Approach\n\nUse a **hash set**.'
+      }
+    }
+  })
+
+  assert.equal(item?.kind, 'coding')
+  assert.match(item?.solutionHtml ?? '', /<h2>Approach<\/h2>/)
+  assert.match(item?.solutionHtml ?? '', /<strong>hash set<\/strong>/)
 })

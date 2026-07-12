@@ -250,9 +250,11 @@
         </div>
 
         <div class="sidebar-flow-context">
-          <span class="eyebrow">{activeFlow.shortTitle} track</span>
-          <strong>{activeFlow.title}</strong>
-          <span>{activeFlowCompleted}/{activeFlowLessonTotal} lessons complete</span>
+          {#if activeFlow}
+            <span class="eyebrow">{activeFlow.shortTitle} track</span>
+            <strong>{activeFlow.title}</strong>
+            <span>{activeFlowCompleted}/{activeFlowLessonTotal} lessons complete</span>
+          {/if}
         </div>
 
         <nav class="sidebar-compact-nav" aria-label="Course topics">

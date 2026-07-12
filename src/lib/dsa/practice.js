@@ -75,6 +75,14 @@ export function parseLanguageTemplates(rawDefinitions) {
   }
 }
 
+/**
+ * @param {string | null | undefined} rawType
+ * @returns {{ kind: string, base: string, depth: number, raw: string }}
+ */
+export function normalizeReturnType(rawType) {
+  return normalizePracticeType(rawType ?? 'void') ?? { kind: 'void', base: 'void', depth: 0, raw: 'void' }
+}
+
 export function normalizePracticeType(rawType) {
   if (!rawType) return null
   const type = rawType.toLowerCase().replace(/\s+/g, '')
@@ -109,7 +117,7 @@ export function isSupportedPracticeMeta(meta) {
   const parameterTypes = meta.params.map((param) => normalizePracticeType(param.type))
   if (parameterTypes.some((paramType) => !isSupportedType(paramType))) return false
 
-  const returnType = normalizePracticeType(meta.return?.type ?? 'void')
+  const returnType = normalizeReturnType(meta.return?.type)
   if (returnType.kind === 'void') {
     const outputIndex = meta.output?.paramindex
     return Number.isInteger(outputIndex) && outputIndex >= 0 && outputIndex < parameterTypes.length
@@ -195,7 +203,7 @@ export function buildPythonPracticeSource({ practiceMeta, userCode, inputValues 
     .join('\n')
 
   const callArguments = practiceMeta.params.map((param) => param.name).join(', ')
-  const outputExpression = normalizePracticeType(practiceMeta.return?.type ?? 'void').kind === 'void'
+  const outputExpression = normalizeReturnType(practiceMeta.return?.type).kind === 'void'
     ? practiceMeta.params[practiceMeta.output.paramindex]?.name ?? 'None'
     : 'result'
 
@@ -220,7 +228,7 @@ export function buildCppPracticeSource({ practiceMeta, userCode, inputValues }) 
     })
     .join('\n')
 
-  const returnType = normalizePracticeType(practiceMeta.return?.type ?? 'void')
+  const returnType = normalizeReturnType(practiceMeta.return?.type)
   const callArguments = practiceMeta.params.map((param) => param.name).join(', ')
   const invocationLine = returnType.kind === 'void'
     ? `solver.${practiceMeta.name}(${callArguments});`
@@ -314,7 +322,7 @@ export function buildJavaPracticeFiles({ practiceMeta, userCode, inputValues }) 
     })
     .join('\n')
 
-  const returnType = normalizePracticeType(practiceMeta.return?.type ?? 'void')
+  const returnType = normalizeReturnType(practiceMeta.return?.type)
   const callArguments = practiceMeta.params.map((param) => param.name).join(', ')
   const invocationLine = returnType.kind === 'void'
     ? `solver.${practiceMeta.name}(${callArguments});`

@@ -17,7 +17,9 @@
   function handleImport(event) {
     importMessage = '';
     importError = '';
-    const input = /** @type {HTMLInputElement | null} */ (event.currentTarget);
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLInputElement)) return;
+    const input = target;
     const file = input.files?.[0];
     if (!file) return;
 

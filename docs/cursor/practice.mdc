@@ -23,6 +23,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Component: `QuestionBankIDE.svelte`
 - Lesson field: `questionBank: { key, label, kind }` from `questionBankCourseData.js`
 - Lazy-loads matching JSON under `src/lib/data/`; normalize with `dsa/questionBank.js`
+- Coding solutions are Markdown in JSON; `renderSolutionHtml()` (markdown-it, `html: true`) fills `solutionHtml` for the “Show solution” panel
 - Section browser, search, per-question completion in localStorage
 - Same Python/C++/Java WASM runners as DSA
 - Reading items: “Your answer” textarea → `practiceAnswers` key `question-bank-answer:{bankKey}:{itemId}`
