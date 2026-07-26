@@ -36,7 +36,7 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 | Component | Use when |
 |-----------|----------|
 | `+layout.svelte` (routes) | App shell: slim header, underline primary tabs, Home tracks vs in-flow module sidebar |
-| `ThemePicker.svelte` | Header color-theme swatches (`stores/theme.js`, `themes.css`) |
+| `ThemePicker.svelte` | Header theme dropdown with dark/light groups (`stores/theme.js`, `themes.css`) |
 | `ProgressControls.svelte` | Export/import backup, reset progress |
 | `LlmAssistantPanel.svelte` | Editor chrome: Check (AI) + Configure model (Practice/DSA/QB/simulation) |
 

@@ -1,6 +1,8 @@
 <svelte:options runes={false} />
 <script>
   import { onMount } from 'svelte';
+  import { getThemeOption } from '$lib/themes.js';
+  import { theme } from '$lib/stores/theme.js';
 
   /** @type {{ title?: string, caption?: string, code?: string } | null} */
   export let diagram = null;
@@ -10,9 +12,11 @@
   let renderedSvg = '';
   let errorMessage = '';
   let renderedCode = '';
+  let renderedTheme = '';
   const baseId = `mermaid-${Math.random().toString(36).slice(2)}`;
 
-  async function renderDiagram() {
+  /** @param {string} themeName */
+  async function renderDiagram(themeName) {
     if (!diagram?.code) return;
     renderedSvg = '';
     errorMessage = '';
@@ -21,27 +25,30 @@
       mermaid.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
-        theme: 'dark',
+        theme: /** @type {'dark' | 'default'} */ (themeName),
         fontFamily: 'Segoe WPC, Segoe UI, system-ui, sans-serif'
       });
       const { svg } = await mermaid.render(`${baseId}-${Date.now()}`, diagram.code);
       renderedSvg = svg;
+      renderedTheme = themeName;
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Unable to render the diagram right now.';
     }
   }
 
+  $: mermaidTheme = getThemeOption($theme).mode === 'light' ? 'default' : 'dark';
+
   onMount(() => {
     mounted = true;
     if (diagram?.code) {
       renderedCode = diagram.code;
-      renderDiagram();
+      renderDiagram(mermaidTheme);
     }
   });
 
-  $: if (mounted && diagram?.code && diagram.code !== renderedCode) {
+  $: if (mounted && diagram?.code && (diagram.code !== renderedCode || mermaidTheme !== renderedTheme)) {
     renderedCode = diagram.code;
-    renderDiagram();
+    renderDiagram(mermaidTheme);
   }
 </script>
 
@@ -85,9 +92,9 @@
   .mermaid-card.extension .mermaid-output,
   .mermaid-card.extension .mermaid-fallback {
     padding: 0.9rem;
-    border: 1px solid #252a35;
+    border: 1px solid var(--border);
     border-radius: 0.45rem;
-    background: #11131a;
+    background: var(--code-bg);
   }
 
   .mermaid-card.extension .mermaid-output :global(svg) {
