@@ -645,6 +645,8 @@
             class:connect-source={connectSourceId === node.id}
             class:hot={utilClass(node) === 'hot'}
             class:warm={utilClass(node) === 'warm'}
+            role="button"
+            tabindex="0"
             transform={`translate(${pos.x}, ${pos.y})`}
             onpointerdown={(event) => handleNodePointerDown(node.id, event)}
             onpointerenter={(event) => handleNodeHover(node.id, event)}
@@ -1336,10 +1338,6 @@
     padding: 0.4rem 0.5rem;
     font-size: 0.65rem;
     color: var(--vscode-descriptionForeground, #858585);
-  }
-
-  .topology-diagram.mermaid {
-    padding: 0.35rem;
   }
 
   .topology-facts {
