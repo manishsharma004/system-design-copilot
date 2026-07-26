@@ -25,7 +25,7 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 | `IDEWorkspace.svelte` | VS Code–like explorer + Monaco + bottom panels; IndexedDB FS |
 | `CodeEditor.svelte` | Monaco wrapper (multi-file, snippets, palette) |
 | `PracticeIDE.svelte` | Markdown 3-step mock answers + Check (AI) (HLD/LLD/AI) |
-| `DsaPracticeIDE.svelte` | Curated DSA highlights, languages, WASM tests, timer, Check (AI) |
+| `DsaPracticeIDE.svelte` | DSA lesson exercises + curated interview drills, WASM tests, timer, Check (AI) |
 | `QuestionBankIDE.svelte` | Lazy JSON banks + WASM stack + reading answers + Check (AI) |
 | `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js` |
 | `SimulationIDE.svelte` | Topology editor + run engine + Check (AI) (HLD) |

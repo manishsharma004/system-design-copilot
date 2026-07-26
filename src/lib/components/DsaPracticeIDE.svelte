@@ -24,6 +24,8 @@
   export let lesson
 
   let selectedQuestionId = ''
+  let selectedExerciseId = ''
+  let workspaceMode = 'interview-drills'
   let languageId = 'python3'
   let activeCaseId = ''
   let activeDraftKey = ''
@@ -42,38 +44,75 @@
     java: false
   }
   let activeRuntimeLanguageId = ''
+  let modeInitializedForLesson = ''
 
+  $: codingExercises = (lesson?.exercises ?? []).filter(
+    (/** @type {{ type?: string, starterCode?: string }} */ exercise) =>
+      exercise?.type === 'coding' && typeof exercise?.starterCode === 'string' && exercise.starterCode.trim().length > 0
+  )
+  $: hasLessonExercises = codingExercises.length > 0
   $: practiceQuestions = (lesson?.questionHighlights ?? []).filter((question) => question.supportsLocalWasmRun)
+  $: if (lesson?.id && lesson.id !== modeInitializedForLesson) {
+    modeInitializedForLesson = lesson.id
+    workspaceMode = hasLessonExercises ? 'lesson-exercises' : 'interview-drills'
+  }
+  $: if (workspaceMode === 'lesson-exercises' && !hasLessonExercises && practiceQuestions.length) {
+    workspaceMode = 'interview-drills'
+  }
+  $: if (workspaceMode === 'interview-drills' && !practiceQuestions.length && hasLessonExercises) {
+    workspaceMode = 'lesson-exercises'
+  }
+  $: isExerciseMode = workspaceMode === 'lesson-exercises' && hasLessonExercises
+  $: if (codingExercises.length && !codingExercises.some((exercise) => exercise.id === selectedExerciseId)) {
+    selectedExerciseId = codingExercises[0].id
+  }
+  $: selectedExercise = codingExercises.find((exercise) => exercise.id === selectedExerciseId) ?? null
   $: if (practiceQuestions.length && !practiceQuestions.some((question) => `${question.frontendId}` === `${selectedQuestionId}`)) {
     selectedQuestionId = practiceQuestions[0].frontendId
   }
   $: selectedQuestion = practiceQuestions.find((question) => `${question.frontendId}` === `${selectedQuestionId}`) ?? null
 
-  $: availableLanguages = practiceLanguageCatalog.filter((language) => selectedQuestion?.languageTemplates?.[language.id])
+  $: availableLanguages = isExerciseMode
+    ? practiceLanguageCatalog.filter((language) => language.id === 'python3')
+    : practiceLanguageCatalog.filter((language) => selectedQuestion?.languageTemplates?.[language.id])
   $: if (availableLanguages.length && !availableLanguages.some((language) => language.id === languageId)) {
     languageId = availableLanguages[0].id
   }
+  $: if (isExerciseMode) {
+    languageId = 'python3'
+  }
   $: activeLanguage = availableLanguages.find((language) => language.id === languageId) ?? availableLanguages[0] ?? null
   $: practiceCases = selectedQuestion?.practiceCases?.length ? selectedQuestion.practiceCases : []
-  $: attemptEntryKey = selectedQuestion ? `dsa-attempt:${lesson.id}:${selectedQuestion.frontendId}` : ''
+  $: attemptEntryKey = isExerciseMode
+    ? selectedExercise
+      ? `dsa-exercise-attempt:${lesson.id}:${selectedExercise.id}`
+      : ''
+    : selectedQuestion
+      ? `dsa-attempt:${lesson.id}:${selectedQuestion.frontendId}`
+      : ''
   $: activeAttemptTimer = resolveAttemptTimer(attemptEntryKey ? $practiceAnswers[attemptEntryKey]?.timer : null)
   $: activeAttemptElapsedMs = getAttemptTimerElapsed(activeAttemptTimer, timerNow)
   $: activeAttemptElapsedLabel = formatDuration(activeAttemptElapsedMs)
   $: attemptStatusLabel = activeAttemptTimer.status === 'running' ? 'Running' : activeAttemptTimer.status === 'paused' ? 'Paused' : 'Idle'
   $: lastAttemptLabel = activeAttemptTimer.lastCompletedMs ? formatDuration(activeAttemptTimer.lastCompletedMs) : 'No completed attempt yet'
 
-  $: checkQuestionText = selectedQuestion
-    ? [selectedQuestion.title, plainTextFromHtml(selectedQuestion.contentHtml)].filter(Boolean).join('\n\n')
-    : ''
-  $: checkContextSections = selectedQuestion
-    ? [
-        `Lesson: ${lesson.title}`,
-        activeLanguage ? `Language: ${activeLanguage.label}` : '',
-        latestRun
-          ? `Last test run: ${latestRun.passed ? 'Pass' : 'Needs work'}${latestRun.error ? ` — ${latestRun.error}` : ''}`
-          : 'Last test run: not run yet'
-      ].filter(Boolean)
-    : []
+  $: checkQuestionText = isExerciseMode
+    ? selectedExercise
+      ? [selectedExercise.title, selectedExercise.description, selectedExercise.expectedOutput ? `Expected: ${selectedExercise.expectedOutput}` : '']
+          .filter(Boolean)
+          .join('\n\n')
+      : ''
+    : selectedQuestion
+      ? [selectedQuestion.title, plainTextFromHtml(selectedQuestion.contentHtml)].filter(Boolean).join('\n\n')
+      : ''
+  $: checkContextSections = [
+    `Lesson: ${lesson.title}`,
+    isExerciseMode ? 'Mode: lesson exercises' : 'Mode: interview drills',
+    activeLanguage ? `Language: ${activeLanguage.label}` : '',
+    latestRun
+      ? `Last test run: ${latestRun.passed ? 'Pass' : 'Needs work'}${latestRun.error ? ` — ${latestRun.error}` : ''}`
+      : 'Last test run: not run yet'
+  ].filter(Boolean)
 
   $: if (activeLanguage?.id && activeLanguage.id !== activeRuntimeLanguageId) {
     activeRuntimeLanguageId = activeLanguage.id
@@ -82,7 +121,16 @@
     runtimeMessage = isReady ? getReadyMessage(activeLanguage.id) : activeLanguage.helperText
   }
 
-  $: if (selectedQuestion && activeLanguage) {
+  $: if (isExerciseMode && selectedExercise) {
+    const nextDraftKey = getExerciseDraftKey(selectedExercise.id)
+    if (nextDraftKey !== activeDraftKey) {
+      activeDraftKey = nextDraftKey
+      editorValue = loadExerciseDraft(selectedExercise)
+      expectedOutput = selectedExercise.expectedOutput ?? ''
+      caseInput = ''
+      latestRun = null
+    }
+  } else if (!isExerciseMode && selectedQuestion && activeLanguage) {
     const nextDraftKey = getDraftKey(selectedQuestion, activeLanguage.id)
     if (nextDraftKey !== activeDraftKey) {
       activeDraftKey = nextDraftKey
@@ -91,7 +139,7 @@
     }
   }
 
-  $: if (practiceCases.length && !practiceCases.some((entry) => entry.id === activeCaseId)) {
+  $: if (!isExerciseMode && practiceCases.length && !practiceCases.some((entry) => entry.id === activeCaseId)) {
     applyPracticeCase(practiceCases[0])
   }
 
@@ -156,6 +204,10 @@
     return `dsa-practice:${lesson.id}:${question.frontendId}:${nextLanguageId}`
   }
 
+  function getExerciseDraftKey(exerciseId) {
+    return `dsa-exercise:${lesson.id}:${exerciseId}`
+  }
+
   function formatDuration(totalMs) {
     const totalSeconds = Math.max(0, Math.floor(totalMs / 1000))
     const hours = Math.floor(totalSeconds / 3600)
@@ -173,15 +225,44 @@
     const draftKey = getDraftKey(question, nextLanguageId)
     if (draftCache[draftKey] !== undefined) return draftCache[draftKey]
 
+    const persisted = $practiceAnswers[draftKey]?.answer
+    if (typeof persisted === 'string' && persisted.length > 0) {
+      draftCache[draftKey] = persisted
+      return persisted
+    }
+
     const defaultCode = question.languageTemplates?.[nextLanguageId]?.defaultCode ?? ''
     draftCache[draftKey] = defaultCode
     return defaultCode
   }
 
+  function loadExerciseDraft(exercise) {
+    const draftKey = getExerciseDraftKey(exercise.id)
+    if (draftCache[draftKey] !== undefined) return draftCache[draftKey]
+
+    const persisted = $practiceAnswers[draftKey]?.answer
+    if (typeof persisted === 'string' && persisted.length > 0) {
+      draftCache[draftKey] = persisted
+      return persisted
+    }
+
+    draftCache[draftKey] = exercise.starterCode
+    return exercise.starterCode
+  }
+
   function saveDraft(nextValue) {
+    if (isExerciseMode) {
+      if (!selectedExercise) return
+      const draftKey = getExerciseDraftKey(selectedExercise.id)
+      draftCache[draftKey] = nextValue
+      practiceAnswers.saveAnswer(draftKey, nextValue)
+      return
+    }
+
     if (!selectedQuestion || !activeLanguage) return
     const draftKey = getDraftKey(selectedQuestion, activeLanguage.id)
     draftCache[draftKey] = nextValue
+    practiceAnswers.saveAnswer(draftKey, nextValue)
   }
 
   function applyPracticeCase(practiceCase) {
@@ -191,7 +272,36 @@
     latestRun = null
   }
 
+  function loadExercise(exerciseId) {
+    const exercise = codingExercises.find((item) => item.id === exerciseId)
+    if (!exercise?.starterCode) return
+    selectedExerciseId = exerciseId
+    editorValue = loadExerciseDraft(exercise)
+    expectedOutput = exercise.expectedOutput ?? ''
+    latestRun = null
+    runtimeMessage = `Loaded lesson exercise: ${exercise.title}. Fill in the TODOs, then run.`
+  }
+
+  function loadExerciseSolution() {
+    if (!selectedExercise?.solution) return
+    editorValue = selectedExercise.solution
+    saveDraft(editorValue)
+    runtimeMessage = 'Loaded the reference solution for the selected lesson exercise.'
+  }
+
+  function resetExerciseStarter() {
+    if (!selectedExercise?.starterCode) return
+    editorValue = selectedExercise.starterCode
+    saveDraft(editorValue)
+    runtimeMessage = 'Reset to starter code for the selected lesson exercise.'
+  }
+
   async function runCurrentCase() {
+    if (isExerciseMode) {
+      await runLessonExercise()
+      return
+    }
+
     if (!selectedQuestion || !activeLanguage) return
 
     const inputValues = parseInputLines(caseInput)
@@ -305,6 +415,36 @@
       : (execution.error || execution.stderr || `Execution failed inside the ${activeLanguage.label} browser runtime.`)
   }
 
+  async function runLessonExercise() {
+    if (!selectedExercise) return
+
+    runtimeStatus = 'loading'
+    runtimeMessage = 'Running the lesson exercise in the browser via Pyodide.'
+
+    const execution = await runPythonSource(editorValue)
+    if (execution.ok) {
+      runtimeReadyByLanguage = { ...runtimeReadyByLanguage, python3: true }
+    }
+
+    const actualText = (execution.stdout || '').trim()
+    const expectedText = (expectedOutput || selectedExercise.expectedOutput || '').trim()
+    const passed = execution.ok && (!expectedText || actualText.toLowerCase().includes(expectedText.toLowerCase().split(',')[0].trim().toLowerCase()) || actualText === expectedText)
+
+    latestRun = {
+      ok: execution.ok,
+      passed,
+      actual: actualText || 'No stdout captured.',
+      expected: expectedText || 'No expected output set.',
+      stderr: execution.stderr,
+      error: execution.ok ? '' : (execution.error || execution.stderr || 'Execution failed.')
+    }
+
+    runtimeStatus = execution.ok ? 'ready' : 'error'
+    runtimeMessage = execution.ok
+      ? 'Lesson exercise finished. Compare the printed output with the expected result, then move to interview drills when ready.'
+      : (execution.error || execution.stderr || 'Execution failed inside the Python browser runtime.')
+  }
+
   function handleEditorChange(event) {
     editorValue = event.detail.value
     saveDraft(editorValue)
@@ -334,15 +474,203 @@
     <div>
       <p class="eyebrow">Coding practice</p>
       <h2>DSA interview workspace</h2>
-      <p class="practice-copy">This lab only surfaces runnable DSA prompts from the lesson set and keeps the editor in a single-file interview format.</p>
+      <p class="practice-copy">
+        {#if hasLessonExercises}
+          Start with the lesson exercises to lock the pattern, then switch to interview drills for runnable prompts from this lesson set.
+        {:else}
+          This lab surfaces runnable DSA prompts from the lesson set and keeps the editor in a single-file interview format.
+        {/if}
+      </p>
     </div>
     <div class="runtime-pill-stack">
       <span class:ready={runtimeStatus === 'ready'} class="pill runtime-pill">{runtimeStatus === 'ready' ? 'WASM runtime ready' : runtimeStatus === 'loading' ? 'Loading WASM runtime' : runtimeStatus === 'error' ? 'Runtime error' : 'WASM runtime idle'}</span>
+      {#if hasLessonExercises}
+        <span class="pill">{codingExercises.length} lesson exercise{codingExercises.length === 1 ? '' : 's'}</span>
+      {/if}
       <span class="pill">{practiceQuestions.length} runnable question{practiceQuestions.length === 1 ? '' : 's'}</span>
     </div>
   </div>
 
-  {#if !practiceQuestions.length}
+  {#if hasLessonExercises && practiceQuestions.length}
+    <div class="mode-switcher" role="tablist" aria-label="DSA practice mode">
+      <button
+        class:active={isExerciseMode}
+        class="mode-pill"
+        type="button"
+        role="tab"
+        aria-selected={isExerciseMode}
+        onclick={() => {
+          workspaceMode = 'lesson-exercises'
+          latestRun = null
+        }}
+      >
+        Lesson exercises
+      </button>
+      <button
+        class:active={!isExerciseMode}
+        class="mode-pill"
+        type="button"
+        role="tab"
+        aria-selected={!isExerciseMode}
+        onclick={() => {
+          workspaceMode = 'interview-drills'
+          latestRun = null
+        }}
+      >
+        Interview drills
+      </button>
+    </div>
+  {/if}
+
+  {#if isExerciseMode}
+    <div class="ml-exercise-picker dsa-exercise-picker">
+      <label class="ml-exercise-label" for="dsa-exercise-select">
+        <span class="eyebrow">Lesson exercises</span>
+        <select
+          id="dsa-exercise-select"
+          class="ml-exercise-select"
+          value={selectedExerciseId}
+          onchange={(event) => loadExercise(/** @type {HTMLSelectElement} */ (event.currentTarget).value)}
+        >
+          {#each codingExercises as exercise}
+            <option value={exercise.id}>{exercise.title} · {exercise.difficulty}</option>
+          {/each}
+        </select>
+      </label>
+      {#if selectedExercise}
+        <p class="ml-exercise-copy">{selectedExercise.description}</p>
+        {#if selectedExercise.expectedOutput}
+          <p class="muted-hint">Expected: {selectedExercise.expectedOutput}</p>
+        {/if}
+        {#if selectedExercise.hints?.length}
+          <div class="support-card">
+            <p class="eyebrow">Hints</p>
+            <ul>
+              {#each selectedExercise.hints as hint}
+                <li>{hint}</li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      {/if}
+    </div>
+
+    <div class="dsa-practice-grid">
+      <article class="problem-pane">
+        <div class="problem-pane-header">
+          <div>
+            <p class="eyebrow">Exercise brief</p>
+            <h3>{selectedExercise?.title || 'Lesson exercise'}</h3>
+          </div>
+          {#if selectedExercise?.difficulty}
+            <div class="tag-row">
+              <span class="pill">{selectedExercise.difficulty}</span>
+              <span class="pill">Python lab</span>
+            </div>
+          {/if}
+        </div>
+        <p class="practice-copy">{selectedExercise?.description}</p>
+        <div class="support-card">
+          <p class="eyebrow">Runtime model</p>
+          <p>{runtimeMessage}</p>
+        </div>
+      </article>
+
+      <article class="workspace-pane">
+        <div class="attempt-timer-card">
+          <div class="attempt-timer-header">
+            <div>
+              <p class="eyebrow">Attempt timer</p>
+              <h3>{activeAttemptElapsedLabel}</h3>
+            </div>
+            <div class="attempt-timer-pill-row">
+              <span class="pill">{attemptStatusLabel}</span>
+              <span class="pill">{activeAttemptTimer.attemptCount} completed</span>
+              <span class="pill">Last {lastAttemptLabel}</span>
+            </div>
+          </div>
+          <p class="attempt-timer-copy">Time one focused pass on the lesson exercise before peeking at the reference solution.</p>
+          <div class="attempt-timer-actions">
+            <button class="action-link primary" type="button" onclick={startAttempt}>
+              {activeAttemptTimer.status === 'paused' ? 'Resume attempt' : activeAttemptTimer.attemptCount ? 'Start new attempt' : 'Start attempt'}
+            </button>
+            <button class="action-link" type="button" onclick={pauseAttempt} disabled={activeAttemptTimer.status !== 'running'}>Pause</button>
+            <button class="action-link" type="button" onclick={stopAttempt} disabled={activeAttemptTimer.status === 'idle' && activeAttemptElapsedMs === 0}>Stop</button>
+          </div>
+        </div>
+
+        <div class="workspace-toolbar">
+          <div class="language-switcher">
+            <button class="language-pill active" type="button">Python</button>
+          </div>
+          <div class="attempt-timer-actions">
+            <button class="action-link" type="button" onclick={resetExerciseStarter} disabled={!selectedExercise?.starterCode}>Reset starter</button>
+            <button class="action-link" type="button" onclick={loadExerciseSolution} disabled={!selectedExercise?.solution}>Load solution</button>
+            <button class="action-link primary" type="button" onclick={runCurrentCase} title="Run exercise (Ctrl+Enter)">Run exercise</button>
+          </div>
+        </div>
+
+        <div class="editor-frame">
+          <LlmAssistantPanel
+            title="DSA exercise copilot"
+            flowId="data-structures-and-algorithms"
+            showOutline={false}
+            objective={checkQuestionText}
+            draft={editorValue}
+            contextSections={checkContextSections}
+          />
+          {#key activeDraftKey}
+            <CodeEditor
+              files={editorFiles}
+              activeFileId="solution"
+              minHeight="24rem"
+              runShortcutEnabled={true}
+              showHelperToolbar={false}
+              on:change={handleEditorChange}
+              on:runshortcut={runCurrentCase}
+            />
+          {/key}
+        </div>
+
+        <div class="test-lab-grid">
+          <div class="test-card">
+            <div class="test-card-header">
+              <p class="eyebrow">Expected result</p>
+            </div>
+            <pre>{expectedOutput || selectedExercise?.expectedOutput || 'No expected output provided for this exercise.'}</pre>
+          </div>
+          <div class="test-card result-card">
+            <div class="test-card-header">
+              <p class="eyebrow">Run result</p>
+              {#if latestRun}
+                <span class:passing={latestRun.passed} class="pill">{latestRun.passed ? 'Pass' : 'Needs work'}</span>
+              {/if}
+            </div>
+            {#if latestRun}
+              <div class="result-metric-grid">
+                <div>
+                  <span>Actual</span>
+                  <pre>{latestRun.actual || 'No stdout captured.'}</pre>
+                </div>
+                <div>
+                  <span>Expected</span>
+                  <pre>{latestRun.expected || 'No expected output set.'}</pre>
+                </div>
+              </div>
+              {#if latestRun.error}
+                <div class="result-error">
+                  <strong>Runtime feedback</strong>
+                  <pre>{latestRun.error}</pre>
+                </div>
+              {/if}
+            {:else}
+              <p class="empty-copy">Run the lesson exercise to compare printed output with the expected result.</p>
+            {/if}
+          </div>
+        </div>
+      </article>
+    </div>
+  {:else if !practiceQuestions.length}
     <div class="dsa-empty-state">
       <h3>No runnable DSA prompts in this lesson yet</h3>
       <p>The lesson content is present, but none of its linked questions currently expose a single-method signature that this local WASM runner can execute safely.</p>
@@ -577,7 +905,8 @@
 
   .question-chip,
   .language-pill,
-  .case-pill {
+  .case-pill,
+  .mode-pill {
     background: var(--ide-button-bg, var(--bg-soft));
     border: 1px solid var(--ide-border, var(--border));
     border-radius: 1rem;
@@ -602,10 +931,45 @@
 
   .question-chip.active,
   .language-pill.active,
-  .case-pill.active {
+  .case-pill.active,
+  .mode-pill.active {
     border-color: var(--accent);
     box-shadow: 0 0 0 1px var(--accent-muted);
     transform: translateY(-1px);
+  }
+
+  .mode-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .mode-pill {
+    padding: 0.55rem 0.95rem;
+  }
+
+  .dsa-exercise-picker {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .ml-exercise-label {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .ml-exercise-select {
+    background: var(--ide-button-bg, var(--bg-soft));
+    border: 1px solid var(--ide-border, var(--border));
+    border-radius: 0.85rem;
+    color: var(--text);
+    padding: 0.7rem 0.85rem;
+  }
+
+  .ml-exercise-copy,
+  .muted-hint {
+    color: var(--muted);
+    margin: 0;
   }
 
   .dsa-practice-grid {

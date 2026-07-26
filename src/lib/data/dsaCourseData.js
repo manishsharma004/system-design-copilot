@@ -102,10 +102,42 @@ function formatQuestionBullet(question) {
   return tags ? `${question.title} · ${tags}` : question.title;
 }
 
-function buildPracticeLesson({ slug, title, summary, whyItMatters, patternFocus, executionFocus, interviewPrompts, questions }) {
+function buildPracticeLesson({
+  slug,
+  title,
+  summary,
+  whyItMatters,
+  patternFocus,
+  executionFocus,
+  interviewPrompts,
+  questions,
+  related = /** @type {string[]} */ ([]),
+  studyBridge = '',
+  patternSignals = /** @type {string[]} */ ([]),
+  warmUpChecks = /** @type {string[]} */ ([])
+}) {
   const runnableQuestions = questions.filter((question) => question.supportsLocalWasmRun);
   const spotlight = (runnableQuestions.length ? runnableQuestions : questions).slice(0, 6);
   const questionNames = spotlight.slice(0, 3).map((question) => question.title).join(', ');
+  const signals =
+    patternSignals.length > 0
+      ? patternSignals
+      : [
+          'Name the core data structure choice before you code.',
+          'State the target time and space complexity up front.',
+          'Use one invariant or pointer relationship to guide the implementation.'
+        ];
+  const checks =
+    warmUpChecks.length > 0
+      ? warmUpChecks
+      : [
+          'Walk one example manually before finalizing the code.',
+          'Call out the edge case that is most likely to break the first draft.',
+          'Finish by restating the complexity and one possible follow-up optimization.'
+        ];
+  const bridgeBody =
+    studyBridge ||
+    'If the pattern still feels mechanical, revisit the matching DSA concept or pattern lab first. Study labs teach the invariant with worked Python examples; this lesson is for timed transfer into interview prompts.';
   return {
     slug,
     title,
@@ -116,10 +148,15 @@ function buildPracticeLesson({ slug, title, summary, whyItMatters, patternFocus,
       {
         heading: 'Pattern lens',
         body: patternFocus,
+        bullets: signals
+      },
+      {
+        heading: 'Study bridge',
+        body: bridgeBody,
         bullets: [
-          'Name the core data structure choice before you code.',
-          'State the target time and space complexity up front.',
-          'Use one invariant or pointer relationship to guide the implementation.'
+          'Restate the invariant or recurrence in one sentence before opening the IDE.',
+          'Skim one worked example from the linked study lab if the first prompt feels unfamiliar.',
+          'Return here for timed drills once you can explain why the pattern is safe.'
         ]
       },
       {
@@ -130,11 +167,7 @@ function buildPracticeLesson({ slug, title, summary, whyItMatters, patternFocus,
       {
         heading: 'Execution focus',
         body: executionFocus,
-        bullets: [
-          'Walk one example manually before finalizing the code.',
-          'Call out the edge case that is most likely to break the first draft.',
-          'Finish by restating the complexity and one possible follow-up optimization.'
-        ]
+        bullets: checks
       }
     ],
     checklist: [
@@ -150,7 +183,7 @@ function buildPracticeLesson({ slug, title, summary, whyItMatters, patternFocus,
     ],
     interviewPrompts,
     diagram: null,
-    related: [],
+    related,
     practiceMode: 'coding',
     runtimeTarget: 'browser-wasm',
     questionHighlights: spotlight
@@ -246,12 +279,20 @@ export const rawDsaModules = [
         summary: 'Practice the fastest path from brute force to linear or near-linear array solutions.',
         whyItMatters: 'A large share of DSA screens begin here. Interviewers want to hear how you choose between indexing, frequency maps, sorting, and pointer movement.',
         patternFocus: 'Use this set to rehearse when to trade space for time with a hash map, when to sort first, and how to keep left/right pointer invariants stable through duplicates and boundary cases.',
+        studyBridge:
+          'Study first in Arrays, two pointers, and prefix sums plus Complexity and algorithmic thinking. Those labs teach the operation-first decision and the monotonic proof behind pointer movement; this drill transfers that judgment into timed prompts.',
+        patternSignals: [
+          'Ask whether the hot operation is membership, ordered pairing, range aggregation, or bulk update.',
+          'Prefer a hash map when indices or counts must survive unsorted order.',
+          'Prefer sorting plus two pointers when a monotonic move discards many candidates at once.'
+        ],
         executionFocus: 'Aim to state the brute-force baseline first, then replace it with the intended hash-map or pointer invariant without losing correctness around duplicates and empty inputs.',
         interviewPrompts: [
           'When does sorting unlock a two-pointer solution that beats a hash-map approach?',
           'Which invariant keeps your left and right pointers from skipping the correct answer?',
-          'How would you explain the trade-off between O(n) space and O(n log n) sorting in an interview?' 
+          'How would you explain the trade-off between O(n) space and O(n log n) sorting in an interview?'
         ],
+        related: ['arrays-two-pointers-and-prefix-sums', 'complexity-and-algorithmic-thinking'],
         questions: arraysAndHashingQuestions
       }),
       buildPracticeLesson({
@@ -260,12 +301,20 @@ export const rawDsaModules = [
         summary: 'Move from pointer manipulation into partitioning, ordering, and search-space pruning.',
         whyItMatters: 'These questions expose whether you can manage mutable state, midpoint logic, and off-by-one boundaries without getting lost in implementation details.',
         patternFocus: 'Practice slow-fast pointers, dummy nodes, partitioned search spaces, and the conditions that let you discard half the search region safely.',
+        studyBridge:
+          'Use Linked lists and pointer invariants together with Binary search on answer spaces before this drill. The study labs isolate pointer ownership and monotonic predicates so the practice set can focus on execution under pressure.',
+        patternSignals: [
+          'Draw next-pointer ownership before mutating a list.',
+          'Name whether binary search is over indices, values, or a feasibility answer space.',
+          'Prove why each midpoint decision discards half the remaining region.'
+        ],
         executionFocus: 'Keep pointer ownership explicit, draw one example list or sorted range, and say exactly why your midpoint or pointer updates cannot loop forever.',
         interviewPrompts: [
           'How do you decide whether a binary-search problem is searching an index, a value, or an answer space?',
           'What dummy-node setup makes a linked-list problem easier to reason about?',
           'Which boundary cases do you test first when the search region is size 0, 1, or 2?'
         ],
+        related: ['linked-lists-and-pointer-invariants', 'binary-search-on-answer-spaces'],
         questions: linkedListAndSearchQuestions
       }),
       buildPracticeLesson({
@@ -274,12 +323,20 @@ export const rawDsaModules = [
         summary: 'Rehearse recursive traversal, state propagation, priority-based selection, and small DP recurrences.',
         whyItMatters: 'Once an interviewer moves beyond arrays, they are often testing whether you can preserve state across recursion and build a concise recurrence without overcomplicating the code.',
         patternFocus: 'Use these prompts to practice DFS versus BFS selection, heap usage for top-k style problems, and the moment a recursive relation becomes a DP table or memoized search.',
+        studyBridge:
+          'Pair Trees and graphs mental models with Heaps, top-k, and priority queues, then skim Dynamic programming cookbook for the first recurrence. Come back here once you can state return values, heap invariants, and overlapping subproblems cleanly.',
+        patternSignals: [
+          'Decide what a recursive call returns versus what stays global.',
+          'Use a heap when you need repeated extract-min/max without full sorting.',
+          'Promote recursion to DP only after naming state, transition, and overlapping work.'
+        ],
         executionFocus: 'State what each recursive call returns, what global or accumulated state exists, and how you avoid recomputing overlapping subproblems.',
         interviewPrompts: [
           'What information should a tree DFS return to its caller versus keep globally?',
           'When is a heap cleaner than sorting the whole input?',
           'How do you know a recursive solution should become memoized dynamic programming?'
         ],
+        related: ['trees-graphs-mental-models', 'heaps-topk-and-priority-queues', 'dynamic-programming-cookbook'],
         questions: treesAndDpQuestions
       })
     ]
@@ -300,12 +357,20 @@ export const rawDsaModules = [
         summary: 'Use window expansion, shrinking rules, and accumulated state to solve substring and range problems efficiently.',
         whyItMatters: 'This family of problems is common because it tests whether you can maintain a live invariant while the input changes one step at a time.',
         patternFocus: 'Practice defining exactly what must remain true inside the current window, what forces a shrink, and when prefix state helps replace repeated range scans.',
+        studyBridge:
+          'Study Sliding window and substring invariants first, then refresh Arrays, two pointers, and prefix sums for prefix-state variants. The lab makes shrink rules explicit so this drill can focus on live narration.',
+        patternSignals: [
+          'Define the window invariant before moving either boundary.',
+          'Shrink only when the invariant is broken, and update counts in a fixed order.',
+          'Switch to prefix thinking when the question is aggregate ranges rather than a contiguous live window.'
+        ],
         executionFocus: 'Name the variable that proves the current window is valid, then update it in a fixed order every time the left or right boundary moves.',
         interviewPrompts: [
           'What makes a problem a sliding-window problem instead of a prefix-sum or brute-force scan?',
           'Which invariant tells you when to shrink versus expand the window?',
           'How do you explain window validity without waving your hands around the implementation?'
         ],
+        related: ['sliding-window-and-substring-invariants', 'arrays-two-pointers-and-prefix-sums'],
         questions: slidingWindowQuestions
       }),
       buildPracticeLesson({
@@ -314,12 +379,20 @@ export const rawDsaModules = [
         summary: 'Practice generating combinations, traversing choice trees, and pruning branches that cannot lead to a valid answer.',
         whyItMatters: 'Interviewers use these problems to evaluate structure: can you model decisions, stop conditions, and backtracking cleanup without losing track of the stack state?',
         patternFocus: 'Use these prompts to rehearse state snapshots, choice ordering, pruning conditions, and the differences between exhaustive search, DFS, and memoized recursion.',
+        studyBridge:
+          'Work through Recursion, backtracking, and pruning before this set. The study lab covers choose/explore/undo discipline and when memoization replaces enumeration; this lesson pressure-tests that structure on interview prompts.',
+        patternSignals: [
+          'Write the base case and the undo step before expanding the search tree.',
+          'Order choices so pruning can fire early.',
+          'Escalate to memoization only when overlapping states appear.'
+        ],
         executionFocus: 'Write the base case first, then say what state is chosen, recursed on, and undone when control returns.',
         interviewPrompts: [
           'How do you know when a recursive choice should be undone during backtracking?',
           'What pruning rule meaningfully shrinks the search tree for this problem family?',
-          'When should a recursion tree become memoized instead of enumerated?' 
+          'When should a recursion tree become memoized instead of enumerated?'
         ],
+        related: ['recursion-backtracking-and-pruning'],
         questions: recursionAndBacktrackingQuestions
       }),
       buildPracticeLesson({
@@ -328,12 +401,20 @@ export const rawDsaModules = [
         summary: 'Handle problems where correctness depends on state transitions, reachability, or proving why a local choice is globally safe.',
         whyItMatters: 'This is where many rounds separate solid implementers from candidates who can defend correctness under deeper follow-ups.',
         patternFocus: 'Rehearse how to model graph state, when to topologically or breadth-first traverse it, and how to justify a recurrence or greedy choice with more than intuition.',
+        studyBridge:
+          'Refresh Shortest paths and union-find plus Dynamic programming cookbook before the harder prompts. Those labs supply representation choices, algorithm selection, and state-design language you can reuse under follow-ups.',
+        patternSignals: [
+          'Model the graph or DP state before choosing BFS, Dijkstra, greedy, or tabulation.',
+          'Prove why a local greedy choice does not block a better global answer.',
+          'Count states times transition work before claiming a DP bound.'
+        ],
         executionFocus: 'State the subproblem, the transition, and the reason the transition covers all valid futures before diving into code.',
         interviewPrompts: [
           'How do you decide between BFS, DFS, Dijkstra-style expansion, or DP over states?',
           'What proof sketch makes a greedy choice believable in an interview?',
-          'Which dimensions of state are essential before you build a DP table or memo?' 
+          'Which dimensions of state are essential before you build a DP table or memo?'
         ],
+        related: ['shortest-paths-and-union-find', 'dynamic-programming-cookbook'],
         questions: hardOptimizationQuestions
       })
     ]

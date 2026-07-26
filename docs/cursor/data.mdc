@@ -6,8 +6,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 - `siteOverview` — marketing copy, `learningPaths`, study tracks, study loop, reading list
 - `rawModules` / `rawLowLevelModules` — core HLD + LLD lessons
-- Expansion modules concatenated: `hldModules`, `lldModules`, `dsaModules`, `aiModules`
-- DSA concept labs without highlights inherit runnable `questionHighlights` via `dsaExpansionPracticeSourceBySlug`
+- Expansion modules concatenated: `hldModules`, `lldModules`, `dsaModules` (study labs first, then practice drills), `aiModules`
+- DSA concept/pattern labs without highlights inherit runnable `questionHighlights` via `dsaExpansionPracticeSourceBySlug`
 - `flowDefinitions` → `courseFlows`, `modules`, `allLessons`, indexes
 - Helpers: `getFlowBySlug`, `getModuleBySlug`, `getLessonBySlug`, `getModuleProgress`, `getLessonPracticeSteps`, `getResumeLesson`
 
@@ -19,24 +19,27 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `hldLearningExpansion.js` | HLD labs: systems fundamentals, reliability/observability, plus exhaustive storage/security/distributed labs |
 | `hldExhaustiveLabModules.js` | Generated HLD labs (data storage, security ops, distributed systems) — rebuild via `scripts/build_hld_exhaustive_labs.py` |
 | `lldLearningExpansion.js` | LLD labs: design patterns + project labs with full OOP examples and exercises |
-| `dsaCourseData.js` | DSA interview practice modules |
-| `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding exercises |
+| `dsaCourseData.js` | DSA interview practice modules with study-bridge sections linking back to labs |
+| `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding/design exercises |
+| `dsaPatternsLearningExpansion.js` | DSA core pattern + search labs (arrays, linked lists, binary search, windows, heaps, backtracking) |
 | `aiEngineerCourseData.js` | AI modules; many lessons include runnable `exercises[]` |
 | `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs with full on-page teaching sections, code examples, and exercises |
-| `learningExpansionInteractive.js` | On-page interactive labs for all 33 expansion lessons (incl. HLD exhaustive labs); merged into `interactiveLessons.js` |
+| `learningExpansionInteractive.js` | On-page interactive labs for all 39 HLD, LLD, DSA, and AI learning-expansion lessons; merged into `interactiveLessons.js` |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
 
 ## Modules by flow
 
 - **HLD (14):** foundations … case-studies + `systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`
 - **LLD (6):** lld-foundations … lld-machine-coding + `lld-design-patterns-lab`, `lld-project-labs`
-- **DSA (6):** dsa-foundations … dsa-mock-loops + `dsa-concepts-lab`, `dsa-algorithms-lab`
+- **DSA (8):** `dsa-concepts-lab`, `dsa-algorithms-lab`, `dsa-patterns-lab`, `dsa-search-lab`, then dsa-foundations … dsa-mock-loops
 - **AI (10):** ml-foundations … data-engineering-for-ml + `ml-interactive-lab`, `deep-learning-from-scratch`
 - **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
 
 ## Lesson shape (typical)
 
-`slug`, `title`, `summary`, `duration`, `whyItMatters`, `sections[]` (`heading`, `body`, `bullets?`, `codeExample?`), `checklist[]`, `pitfalls[]`, `interviewPrompts[]`, `diagram|null`, `related[]`. Optional: `likelyAnswerPoints`, `practiceMode`, `runtimeTarget`, `questionHighlights`, `questionBank`, `exercises`, `interactive`. DSA/AI/HLD learning labs may use `exercises[]` with `starterCode`, `solution`, `hints`, and `expectedOutput` for in-page coding practice.
+`slug`, `title`, `summary`, `duration`, `whyItMatters`, `sections[]` (`heading`, `body`, `bullets?`, `codeExample?`), `checklist[]`, `pitfalls[]`, `interviewPrompts[]`, `diagram|null`, `related[]`. Optional: `likelyAnswerPoints`, `practiceMode`, `runtimeTarget`, `questionHighlights`, `questionBank`, `exercises`, `interactive`. DSA/AI/HLD learning labs may use `exercises[]` with `starterCode`, `solution`, `hints`, and `expectedOutput` for in-page coding practice, plus `type: 'design'` drills where authored.
+
+AI learning expansion lessons under `ml-interactive-lab` and `deep-learning-from-scratch` are self-contained concept lessons: 5-7 long sections per lesson, multiple `codeExample` snippets, and at least two runnable coding exercises. DSA learning expansion lessons under the four DSA labs follow the same density and also ship design drills.
 
 HLD exhaustive labs (`data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`) are self-contained: 6 long sections, multiple `codeExample`s, design + coding exercises, curated `likelyAnswerPoints`, interactive topic labs, deep dives, and module-specific simulation blueprints.
 
@@ -47,7 +50,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 ## Deep knowledge (`lessonDeepKnowledge.js`)
 
 - `getLessonDeepKnowledge(lessonId)` — curated deeper insights + external references per lesson
-- Sources under `deepKnowledge/` including `learningExpansionDeepKnowledge.js` (spreads `hldExhaustiveLabDeepKnowledge.js`) for all 33 expansion lessons
+- Sources under `deepKnowledge/` including `learningExpansionDeepKnowledge.js` (spreads `hldExhaustiveLabDeepKnowledge.js` plus DSA pattern snippets) for all 39 expansion lessons
 - Each entry: `insights[]` (`heading`, `body`) and `references[]` (`title`, `url`, `source`, `note`)
 - Loaded in lesson route (`+page.js`) and rendered in the lesson page **Deep dive** section
 
@@ -55,7 +58,8 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
-- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including expansion interactive maps for all 33 expansion lessons
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js` for all 39 expansion lessons
+- Expansion lessons include on-page teaching sections, code examples, exercises, interactive topic labs, and deep-dive essays (not reference-only), including `learningExpansionInteractive.js`
 - `simulationLessons.js` — authored + generated HLD sims; module blueprints include the three exhaustive HLD lab modules
 - `scripts/hld_lab_content.py` + `scripts/build_hld_exhaustive_labs.py` — author/regenerate exhaustive HLD lab payloads
 - `lessonEnhancements.js` + `solutionLoader.js` — rich solutions for case studies

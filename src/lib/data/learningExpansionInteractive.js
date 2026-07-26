@@ -1,4 +1,5 @@
 import { hldExhaustiveLabInteractive } from './hldExhaustiveLabInteractive.js';
+import { dsaPatternsInteractive } from './_dsaPatternsInteractiveSnippet.js';
 
 function caseStudy({ title, prompt, steps, metrics }) {
   return {
@@ -18,9 +19,7 @@ function caseStudy({ title, prompt, steps, metrics }) {
 }
 
 /** @type {Record<string, any>} */
-export const learningExpansionInteractive = {
-  ...hldExhaustiveLabInteractive,
-  'systems-fundamentals-lab/request-lifecycle-deep-dive': {
+const baseLearningExpansionInteractive = {  'systems-fundamentals-lab/request-lifecycle-deep-dive': {
     title: 'Request lifecycle tracing lab',
     summary:
       'Walk a single user request from device tap to durable state change, then decide where latency, retries, queues, and observability belong.',
@@ -3334,4 +3333,11 @@ export const learningExpansionInteractive = {
       `
     }
   }
+};
+
+/** @type {Record<string, any>} */
+export const learningExpansionInteractive = {
+  ...hldExhaustiveLabInteractive,
+  ...baseLearningExpansionInteractive,
+  ...dsaPatternsInteractive
 };

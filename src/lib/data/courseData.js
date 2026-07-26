@@ -1,5 +1,6 @@
 import { rawDsaModules } from './dsaCourseData.js';
 import { rawDsaLearningModules } from './dsaLearningExpansion.js';
+import { rawDsaPatternsLearningModules } from './dsaPatternsLearningExpansion.js';
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 import { rawAiLearningModules } from './aiLearningExpansion.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
@@ -29,9 +30,9 @@ export const siteOverview = {
     {
       "title": "Algorithms path",
       "flowSlug": "data-structures-and-algorithms",
-      "summary": "Build mental models for complexity, trees, graphs, and DP, then drill patterns with runnable coding practice.",
+      "summary": "Build mental models for complexity, arrays, trees, graphs, and DP, then drill patterns with interactive labs and runnable coding practice.",
       "startModule": "dsa-concepts-lab",
-      "focus": ["Concept labs", "Algorithm cookbooks", "Mock coding rounds"]
+      "focus": ["Concept & pattern labs", "Interactive topic labs", "Mock coding rounds"]
     },
     {
       "title": "AI / ML engineer path",
@@ -4191,7 +4192,11 @@ const rawLowLevelModules = [
 
 const hldModules = [...rawModules, ...rawHldLearningModules];
 const lldModules = [...rawLowLevelModules, ...rawLldLearningModules];
-const dsaModules = [...rawDsaModules, ...rawDsaLearningModules];
+const dsaModules = [
+  ...rawDsaLearningModules,
+  ...rawDsaPatternsLearningModules,
+  ...rawDsaModules
+];
 const aiModules = [...rawAiEngineerModules, ...rawAiLearningModules];
 
 const dsaPracticeQuestionHighlightsBySlug = Object.fromEntries(
@@ -4206,7 +4211,13 @@ const dsaExpansionPracticeSourceBySlug = {
   'trees-graphs-mental-models': 'trees-heaps-and-intro-dp',
   'sorting-and-divide-and-conquer': 'linked-lists-binary-search-and-ordering',
   'shortest-paths-and-union-find': 'graphs-greedy-and-harder-dp',
-  'dynamic-programming-cookbook': 'graphs-greedy-and-harder-dp'
+  'dynamic-programming-cookbook': 'graphs-greedy-and-harder-dp',
+  'arrays-two-pointers-and-prefix-sums': 'arrays-hashmaps-and-two-pointers',
+  'linked-lists-and-pointer-invariants': 'linked-lists-binary-search-and-ordering',
+  'binary-search-on-answer-spaces': 'linked-lists-binary-search-and-ordering',
+  'sliding-window-and-substring-invariants': 'sliding-window-prefix-and-interval-style-thinking',
+  'heaps-topk-and-priority-queues': 'trees-heaps-and-intro-dp',
+  'recursion-backtracking-and-pruning': 'recursion-backtracking-and-search-trees'
 };
 
 const flowDefinitions = [
@@ -4251,12 +4262,12 @@ const flowDefinitions = [
     summary: 'Learn complexity, structures, and algorithm cookbooks, then drill patterns with runnable coding practice and mock rounds.',
     description: 'Use this flow to build algorithmic intuition and to prepare for coding screens that expect algorithm selection, complexity discussion, and live problem solving.',
     audience: 'Best for learners building DSA fundamentals and for coding screens, online assessments, and onsite algorithm rounds.',
-    cadence: 'Start with concept and algorithm labs, then alternate pattern drills with timed mock-style modules.',
+    cadence: 'Start with concept, algorithm, and pattern labs, then alternate pattern drills with timed mock-style modules.',
     heroGuidance: 'Build the mental model, choose the pattern deliberately, defend the invariant or recurrence, then code the cleanest correct version before optimizing.',
     focusAreas: [
-      'Concept labs for complexity, hash tables, trees, graphs, sorting, and DP',
-      'Core coding patterns with in-browser Python, C++, and Java runtimes',
-      'Company-specific practice sets and mock loops'
+      'Concept and pattern labs for complexity, arrays, linked lists, binary search, windows, heaps, graphs, sorting, and DP',
+      'Interactive topic labs plus runnable coding and design exercises on every study lesson',
+      'Interview drills with in-browser Python, C++, and Java runtimes, company sets, and mock loops'
     ],
     outcome: 'You should understand why algorithms work, recognize patterns quickly, and complete structured mock rounds with fewer implementation mistakes.',
     moduleSlugs: dsaModules.map((module) => module.slug)

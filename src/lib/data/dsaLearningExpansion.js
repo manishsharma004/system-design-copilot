@@ -327,7 +327,20 @@ print(first_unique_char("interview"))
               'Think about the all-duplicates case.'
             ],
             expectedOutput: 'w, then None, then n.'
-          }
+          },
+          {
+            id: 'complexity-tradeoff-narration',
+            title: 'Defend a complexity trade-off aloud',
+            difficulty: 'beginner',
+            type: 'design',
+            description:
+              'Given a membership-query workload over a mutable list, explain when a linear scan, a sorted array plus binary search, and a hash set are each the best default. Include time, space, mutation cost, and what you would say first in an interview.',
+            hints: [
+              'Name the hot operation and how often it runs relative to updates.',
+              'Call out amortized resize cost and worst-case collision caveats for hashing.',
+              'State the input sizes where asymptotic ties break because of constants.'
+            ]
+          },
         ],
         diagram: null,
         related: ['hash-tables-and-memory-layout', 'sorting-and-divide-and-conquer']
@@ -675,7 +688,20 @@ print(group_anagrams(["listen", "silent", "enlist", "google", "gogole", "rat"]))
             ],
             expectedOutput:
               '[["listen", "silent", "enlist"], ["google", "gogole"], ["rat"]] or the same grouping with Python tuple/list formatting.'
-          }
+          },
+          {
+            id: 'hash-table-layout-tradeoff',
+            title: 'Choose a hash-table layout under constraints',
+            difficulty: 'intermediate',
+            type: 'design',
+            description:
+              'An interviewer asks you to store 50 million string keys with frequent lookups and occasional deletes. Compare separate chaining versus open addressing, then explain load factor, tombstones, and when you would rebuild the table.',
+            hints: [
+              'Separate chaining tolerates higher load; open addressing is more cache-friendly until clustering grows.',
+              'Deletion semantics differ: chaining removes nodes, open addressing often needs tombstones.',
+              'Say expected O(1) under a good hash and bounded load, worst case O(n) under pathological collisions.'
+            ]
+          },
         ],
         diagram: null,
         related: ['complexity-and-algorithmic-thinking', 'trees-graphs-mental-models']
@@ -1022,7 +1048,20 @@ print(course_order(2, [(0, 1), (1, 0)]))
               'If the final order is short, the graph has a cycle.'
             ],
             expectedOutput: 'A valid order such as [0, 1, 2, 3], then [].'
-          }
+          },
+          {
+            id: 'graph-representation-choice',
+            title: 'Pick a graph representation for the prompt',
+            difficulty: 'intermediate',
+            type: 'design',
+            description:
+              'Walk through adjacency list versus matrix versus edge list for a sparse social graph, a dense board game graph, and a streaming edge feed. For each case, state the operations that become cheap or expensive and what traversal you would start with.',
+            hints: [
+              'Sparse graphs favor adjacency lists for O(V + E) traversal.',
+              'Dense graphs or fast edge existence checks may favor matrices.',
+              'Edge lists are natural for sorting edges in Kruskal-style algorithms.'
+            ]
+          },
         ],
         diagram: null,
         related: ['shortest-paths-and-union-find', 'dynamic-programming-cookbook']
@@ -1359,7 +1398,20 @@ print(kth_largest([3, 2, 3, 1, 2, 4, 5, 5, 6], 4))
               'Only one partition can contain the target index.'
             ],
             expectedOutput: '5, then 4.'
-          }
+          },
+          {
+            id: 'sort-algorithm-selection',
+            title: 'Select a sorting strategy under constraints',
+            difficulty: 'intermediate',
+            type: 'design',
+            description:
+              'Compare mergesort, quicksort, heapsort, and counting/radix-style sorts for nearly sorted integers, huge external files, and objects with expensive comparisons. Defend stability, memory, and worst-case guarantees the way you would in an interview.',
+            hints: [
+              'Stability matters when secondary keys must preserve prior order.',
+              'External or linked data often favors merge-style approaches.',
+              'Integer keys with bounded range unlock linear-time counting/radix ideas.'
+            ]
+          },
         ],
         diagram: null,
         related: ['complexity-and-algorithmic-thinking', 'dynamic-programming-cookbook']
@@ -1796,7 +1848,20 @@ print(count_components(5, []))
               'If roots are already equal, do not decrement the count.'
             ],
             expectedOutput: '2, then 5.'
-          }
+          },
+          {
+            id: 'path-algorithm-selection',
+            title: 'Choose BFS, Dijkstra, or Union-Find',
+            difficulty: 'intermediate',
+            type: 'design',
+            description:
+              'Given three prompts — unweighted reachability, non-negative weighted shortest path, and dynamic connectivity with many union queries — explain which algorithm fits each, what state you maintain, and the complexity you would claim.',
+            hints: [
+              'Unweighted shortest path is BFS layers, not Dijkstra.',
+              'Dijkstra needs a priority queue and non-negative weights.',
+              'Union-Find answers connectivity without reconstructing explicit paths.'
+            ]
+          },
         ],
         diagram: null,
         related: ['trees-graphs-mental-models', 'dynamic-programming-cookbook']
@@ -2108,7 +2173,20 @@ print(lcs_length("abc", "def"))
               'Non-matching characters choose the better result from dropping one side.'
             ],
             expectedOutput: '3, then 0.'
-          }
+          },
+          {
+            id: 'dp-state-design-drill',
+            title: 'Design a DP state before coding',
+            difficulty: 'advanced',
+            type: 'design',
+            description:
+              'For a knapsack-like prompt and an LIS-like prompt, write the state definition, transition, base cases, answer extraction, and time/space bounds in plain language. Then say what you would memoize first versus tabulate first and why.',
+            hints: [
+              'State must capture every future-affecting decision.',
+              'Time is usually number of states times work per transition.',
+              'Memoization helps discover the recurrence; tabulation helps control fill order and space.'
+            ]
+          },
         ],
         diagram: null,
         related: ['sorting-and-divide-and-conquer', 'shortest-paths-and-union-find']

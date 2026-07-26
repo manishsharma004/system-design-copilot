@@ -153,6 +153,43 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
   ].forEach((title) => assert.ok(aiLessonTitles.has(title), `missing AI learning lesson: ${title}`));
 });
 
+test('DSA learning expansion lessons expose coding and design exercises', () => {
+  const dsaExpansionLessons = getModulesByFlow('data-structures-and-algorithms')
+    .flatMap((module) => module.lessons)
+    .filter((lesson) =>
+      ['dsa-concepts-lab', 'dsa-algorithms-lab', 'dsa-patterns-lab', 'dsa-search-lab'].includes(lesson.moduleSlug)
+    );
+
+  assert.equal(dsaExpansionLessons.length, 12);
+  dsaExpansionLessons.forEach((lesson) => {
+    const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
+    const designExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'design');
+    assert.ok(codingExercises.length >= 2, `missing coding exercises for ${lesson.id}`);
+    assert.ok(designExercises.length >= 1, `missing design exercise for ${lesson.id}`);
+    codingExercises.forEach((exercise) => {
+      assert.ok(exercise.id);
+      assert.ok(exercise.starterCode?.includes('TODO') || exercise.starterCode?.length > 40);
+      assert.ok(exercise.solution?.length > 40);
+      assert.ok(Array.isArray(exercise.hints));
+    });
+  });
+});
+
+test('DSA practice lessons bridge back to study labs', () => {
+  const practiceLessons = getModulesByFlow('data-structures-and-algorithms')
+    .flatMap((module) => module.lessons)
+    .filter((lesson) =>
+      ['dsa-foundations', 'dsa-core-patterns'].includes(lesson.moduleSlug)
+    );
+
+  assert.equal(practiceLessons.length, 6);
+  practiceLessons.forEach((lesson) => {
+    assert.ok(lesson.sections.some((section) => section.heading === 'Study bridge'), `missing study bridge for ${lesson.id}`);
+    assert.ok((lesson.related ?? []).length >= 1, `missing related study labs for ${lesson.id}`);
+    assert.ok(lesson.sections.length >= 4, `practice lesson still too thin: ${lesson.id}`);
+  });
+});
+
 test('AI learning expansion lessons expose runnable coding exercises', () => {
   const interactiveLessons = getModulesByFlow('ai-engineer')
     .flatMap((module) => module.lessons)
@@ -185,11 +222,13 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'lld-project-labs',
     'dsa-concepts-lab',
     'dsa-algorithms-lab',
+    'dsa-patterns-lab',
+    'dsa-search-lab',
     'ml-interactive-lab',
     'deep-learning-from-scratch'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 33);
+  assert.equal(expansionLessons.length, 39);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);

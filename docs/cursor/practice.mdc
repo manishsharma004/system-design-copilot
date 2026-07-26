@@ -16,10 +16,13 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 ## DSA Practice IDE
 
 - Component: `DsaPracticeIDE.svelte`
-- Questions from `lesson.questionHighlights` (curated runnable set)
-- Languages + WASM: `runtimes.mdc`; harness via `dsa/practice.js`
-- Attempt timer: `practiceTimer.js` nested in practice store
-- **Check (AI)** on code (question statement + draft); does not replace Run test case
+- Dual mode when a lesson has coding `exercises[]`:
+  - **Lesson exercises** — starter/solution picker, stdlib Python via Pyodide, expected-output check
+  - **Interview drills** — curated `questionHighlights` with Python/C++/Java WASM harnesses
+- Defaults to lesson exercises on study labs; practice-only lessons stay on interview drills
+- Drafts persist via `practiceAnswers` keys `dsa-exercise:{lessonId}:{exerciseId}` and `dsa-practice:{lessonId}:{frontendId}:{language}`
+- Attempt timer: `practiceTimer.js` nested in practice store (`dsa-exercise-attempt:…` / `dsa-attempt:…`)
+- **Check (AI)** on code (exercise brief or question statement + draft); does not replace Run
 
 ## Question bank IDE
 
