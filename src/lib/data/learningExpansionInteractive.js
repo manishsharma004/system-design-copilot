@@ -1,3 +1,5 @@
+import { hldExhaustiveLabInteractive } from './hldExhaustiveLabInteractive.js';
+
 function caseStudy({ title, prompt, steps, metrics }) {
   return {
     title,
@@ -17,6 +19,7 @@ function caseStudy({ title, prompt, steps, metrics }) {
 
 /** @type {Record<string, any>} */
 export const learningExpansionInteractive = {
+  ...hldExhaustiveLabInteractive,
   'systems-fundamentals-lab/request-lifecycle-deep-dive': {
     title: 'Request lifecycle tracing lab',
     summary:

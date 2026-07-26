@@ -64,7 +64,9 @@ Last reviewed: 2026-07-26
 
 **Key paths:** `PracticeIDE.svelte`, `practiceTimer.js`, `practicePhaseLimits.js`, `interviewAnswers.js`, `solutionLoader.js`, `lessonEnhancements.js`, `+page.svelte` (lesson)
 
-**Next content targets for 4.2:** remaining HLD modules (data storage, security, distributed systems).  
+**Next content targets for 4.2:** remaining core HLD primers still using heuristic answers (edge cases outside the new exhaustive labs).  
+**Shipped content for 4.2 labs:** `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab` with curated `likelyAnswerPoints`.  
+
 **Next content targets for 4.3:** `partitioning-and-sharding`, `queues-and-streams`, `chat-notifications`.
 
 ---

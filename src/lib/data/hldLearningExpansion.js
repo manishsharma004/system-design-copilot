@@ -1,3 +1,5 @@
+import { rawHldExhaustiveLabModules } from './hldExhaustiveLabModules.js';
+
 export const rawHldLearningModules = [
   {
     slug: 'systems-fundamentals-lab',
@@ -1476,5 +1478,6 @@ Game days keep the loop alive between real incidents. Pick one scenario, announc
         ]
       }
     ]
-  }
+  },
+  ...rawHldExhaustiveLabModules
 ];

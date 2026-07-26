@@ -27,6 +27,25 @@ test('url shortener lesson exposes an authored simulation scenario', () => {
   assert.match(simulation.starterDiagram, /node edge/)
 })
 
+test('exhaustive HLD labs use dedicated simulation blueprints', () => {
+  /** @type {Array<[string, RegExp, RegExp]>} */
+  const cases = [
+    ['data-storage-lab/polyglot-storage-selection', /replica freshness|authoritative write|projection lag/i, /primary/],
+    ['security-operations-lab/auth-threat-modeling-for-hld', /identity checks|tenant-safe|audit paths/i, /auth/],
+    ['distributed-systems-lab/consensus-quorums-and-leadership', /partition ownership|leadership|workflow retries/i, /leader|coordinator/]
+  ]
+
+  for (const [lessonId, summaryPattern, diagramPattern] of cases) {
+    const simulation = getSimulationLesson(lessonId)
+    assert.ok(simulation, `missing simulation for ${lessonId}`)
+    assert.match(simulation.title, /Simulation lab:/)
+    assert.match(simulation.summary, summaryPattern)
+    assert.match(simulation.starterDiagram, diagramPattern)
+    assert.equal(simulation.apis.length >= 2, true)
+    assert.equal(simulation.workloadProfiles.length >= 3, true)
+  }
+})
+
 test('flow graph compiler parses nodes, links, and warnings', () => {
   const simulation = getSimulationLesson('case-studies/url-shortener')
   const graph = compileFlowGraph(`${simulation.starterDiagram}\nnode stray type=service latencyMs=8 capacityRps=1200`)

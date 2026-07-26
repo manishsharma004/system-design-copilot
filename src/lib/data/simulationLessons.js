@@ -1,4 +1,5 @@
 import { lessonIndex } from './courseData.js'
+import { hldExhaustiveLabSimBlueprints } from './hldExhaustiveLabSimBlueprints.js'
 
 /** @type {Record<string, any>} */
 const authoredSimulationLessons = {
@@ -678,7 +679,8 @@ link queue -> workers async=true`,
     scriptTemplate: `workload('user-read', { rpm: 1680000, concurrency: 7000, retries: 2 })
 failure('cache', { hitRate: 0.66, extraLatencyMs: 8 })
 node('primary', { capacityRps: 7000, latencyMs: 26 })`
-  }
+  },
+  ...hldExhaustiveLabSimBlueprints
 }
 
 /** @type {Map<string, any>} */

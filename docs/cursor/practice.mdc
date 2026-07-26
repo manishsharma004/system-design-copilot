@@ -5,7 +5,9 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 ## Markdown Practice IDE (HLD / LLD / AI)
 
 - Component: `PracticeIDE.svelte` → `IDEWorkspace` + Monaco markdown
-- Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review; AI uses ML-oriented structures)
+- Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review)
+- HLD learning labs (`systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`) use lab-oriented structures that pull design-exercise prompts and `likelyAnswerPoints` into guardrails
+- AI lessons use ML-oriented structures
 - Per-phase mock timer: 25 / 35 / 45 min targets (`practicePhaseLimits.js`); persisted via `practiceAnswers.startAttempt` on step keys
 - Workspace id: `practice:{lesson.id}` (IndexedDB)
 - Drafts: `practiceAnswers` store (`persistence.mdc`)
@@ -30,12 +32,12 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Reading items: “Your answer” textarea → `practiceAnswers` key `question-bank-answer:{bankKey}:{itemId}`
 - **Check (AI)** on code or reading draft
 
-## ML Practice IDE (AI)
+## ML Practice IDE (AI + HLD/LLD expansion coding drills)
 
 - Component: `MLPracticeIDE.svelte`
 - Runs NumPy / pandas / matplotlib / scikit-learn in `static/ml-py-worker.js`
 - When `lesson.exercises` includes coding items with `starterCode`, shows an exercise picker, loads starter into the editor, and supports Reset starter / Load solution
-- Shown with AI study guide on ai-engineer lessons
+- Shown with the study guide on AI lessons and on HLD/LLD expansion labs that ship coding exercises
 
 ## Heuristics and solutions
 

@@ -5,7 +5,7 @@ HLD-only interactive lab: edit a topology, run a workload, inspect diagnostics. 
 ## Entry points
 
 - UI: `SimulationIDE.svelte` + `TopologyBuilder.svelte`
-- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback
+- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback (module blueprints include exhaustive HLD labs via `hldExhaustiveLabSimBlueprints.js`)
 - Engine: `src/lib/simulation/` — `graphCompiler.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`
 - Session store: `stores/simulation.js` → localStorage `system-design-copilot-simulation-v1`
 

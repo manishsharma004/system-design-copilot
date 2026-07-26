@@ -1,8 +1,11 @@
+import { hldExhaustiveLabDeepKnowledge } from '../hldExhaustiveLabDeepKnowledge.js';
+
 /** @type {(...paragraphs: string[]) => string} */
 const teachingBody = (...paragraphs) => paragraphs.join('\n\n');
 
 /** @type {Record<string, import('../lessonDeepKnowledge.js').LessonDeepKnowledge>} */
 export const learningExpansionDeepKnowledge = {
+  ...hldExhaustiveLabDeepKnowledge,
   'systems-fundamentals-lab/request-lifecycle-deep-dive': {
     insights: [
       {
