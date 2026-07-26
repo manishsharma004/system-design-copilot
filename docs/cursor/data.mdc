@@ -16,12 +16,12 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | File | Flow |
 |------|------|
 | `courseData.js` | Core HLD + LLD lessons |
-| `hldLearningExpansion.js` | HLD labs: systems fundamentals, reliability/observability |
+| `hldLearningExpansion.js` | HLD labs: systems fundamentals, reliability/observability with full on-page sections, code examples, and exercises |
 | `lldLearningExpansion.js` | LLD labs: design patterns, project labs |
 | `dsaCourseData.js` | DSA interview practice modules |
-| `dsaLearningExpansion.js` | DSA concept + algorithm labs |
-| `aiEngineerCourseData.js` | AI modules; lessons may include `exercises[]` |
-| `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs |
+| `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding exercises |
+| `aiEngineerCourseData.js` | AI modules; many lessons include runnable `exercises[]` |
+| `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs with full on-page teaching sections, code examples, and exercises |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
 
 ## Modules by flow
@@ -34,7 +34,9 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 ## Lesson shape (typical)
 
-`slug`, `title`, `summary`, `duration`, `whyItMatters`, `sections[]` (`heading`, `body`, `bullets?`, `codeExample?`), `checklist[]`, `pitfalls[]`, `interviewPrompts[]`, `diagram|null`, `related[]`. Optional: `likelyAnswerPoints`, `practiceMode`, `runtimeTarget`, `questionHighlights`, `questionBank`, `exercises`, `interactive`.
+`slug`, `title`, `summary`, `duration`, `whyItMatters`, `sections[]` (`heading`, `body`, `bullets?`, `codeExample?`), `checklist[]`, `pitfalls[]`, `interviewPrompts[]`, `diagram|null`, `related[]`. Optional: `likelyAnswerPoints`, `practiceMode`, `runtimeTarget`, `questionHighlights`, `questionBank`, `exercises`, `interactive`. DSA/AI learning labs may use `exercises[]` with `starterCode`, `solution`, `hints`, and `expectedOutput` for in-page coding practice.
+
+AI learning expansion lessons under `ml-interactive-lab` and `deep-learning-from-scratch` are self-contained concept lessons: 5-7 long sections per lesson, multiple `codeExample` snippets, and at least two runnable coding exercises.
 
 Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
