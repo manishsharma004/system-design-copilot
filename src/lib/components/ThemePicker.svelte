@@ -59,7 +59,7 @@
   }
 
   .theme-picker-select {
-    max-width: 8.5rem;
+    max-width: 10rem;
     min-height: 34px;
     padding: 0.3rem 1.6rem 0.3rem 0.45rem;
     border-radius: 0.4rem;
@@ -83,7 +83,7 @@
     }
 
     .theme-picker-select {
-      max-width: 9.5rem;
+      max-width: 11rem;
     }
   }
 </style>

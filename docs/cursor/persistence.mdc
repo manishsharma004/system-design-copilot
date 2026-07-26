@@ -13,7 +13,7 @@ Canonical list: `BACKUP_STORAGE_KEYS` in `src/lib/backup.js`.
 | `system-design-copilot-simulation-v1` | `stores/simulation.js` | Per-`lessonId` simulation session |
 | `system-design-copilot-llm-v1` | `stores/llm.js` | Provider, endpoint, model, apiKey, templates, systemPrompt |
 | `system-design-copilot-sidebar-v4` | `+layout.svelte` | Sidebar open/filter UI (not a store) |
-| `system-design-copilot-theme-v1` | `stores/theme.js` | Active color theme id (6 dark + 6 light schemes in `themes.js`) |
+| `system-design-copilot-theme-v1` | `stores/theme.js` | Active color theme id (9 dark + 10 light schemes in `themes.js`, including Bloom group) |
 
 Question-bank completion flags also use localStorage keys like `question-bank:{key}:completed` (see `QuestionBankIDE.svelte`). Reading answers for Check (AI) use practice-store keys `question-bank-answer:{bankKey}:{itemId}`.
 
