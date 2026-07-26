@@ -1,1 +1,0 @@
-import{t as e}from"./CNNRXRtw.js";import{t}from"./DGwcvWKM.js";t({id:`markdown`,extensions:[`.md`,`.markdown`,`.mdown`,`.mkdn`,`.mkd`,`.mdwn`,`.mdtxt`,`.mdtext`],aliases:[`Markdown`,`markdown`],loader:()=>e(()=>import(`./Cimd5fb32.js`),[],import.meta.url)});

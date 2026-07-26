@@ -10,6 +10,9 @@ const config = {
     }),
     paths: {
       base: '/system-design-copilot'
+    },
+    serviceWorker: {
+      register: false
     }
   }
 };
