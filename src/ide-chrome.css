@@ -317,6 +317,21 @@
   color: var(--vscode-statusBar-fg);
 }
 
+/* Monaco input textarea must never inherit app form-field styles */
+.monaco-editor textarea.inputarea {
+  width: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  resize: none !important;
+  outline: none !important;
+}
+
 /* Monaco editor surface must follow theme tokens (scoped Svelte styles previously forced dark). */
 [data-theme] .monaco-editor,
 [data-theme] .monaco-editor .margin,

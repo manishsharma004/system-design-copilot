@@ -731,16 +731,14 @@
   }
 
   .bank-search input,
-  textarea {
+  .test-card textarea,
+  .reading-answer-field textarea {
     background: var(--bg-soft);
     border: 1px solid var(--border);
     border-radius: 0.85rem;
     color: var(--text);
     font: inherit;
     padding: 0.6rem 0.75rem;
-  }
-
-  textarea {
     line-height: 1.45;
     resize: vertical;
   }
@@ -971,7 +969,7 @@
     gap: 0.45rem;
   }
 
-  textarea {
+  .test-card textarea {
     padding: 0.8rem 0.9rem;
   }
 

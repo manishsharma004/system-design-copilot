@@ -750,7 +750,7 @@
     gap: 0.45rem;
   }
 
-  textarea {
+  .test-card textarea {
     background: var(--bg-soft);
     border: 1px solid var(--border);
     border-radius: 0.85rem;
