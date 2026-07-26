@@ -1,8 +1,9 @@
 import { learningExpansionInteractive } from './learningExpansionInteractive.js';
 import { aiInteractiveExtras } from './aiInteractiveExtras.js';
+import { mergeInteractiveCurrency } from './aiInteractiveCurrency2026.js';
 
 /** @type {Record<string, any>} */
-export const interactiveLessons = {
+export const interactiveLessons = mergeInteractiveCurrency({
   'data-storage/relational-data-modeling': {
     title: 'Interactive database decision lab',
     summary:
@@ -1878,7 +1879,7 @@ export const interactiveLessons = {
   },
   ...learningExpansionInteractive,
   ...aiInteractiveExtras
-};
+});
 
 /** @param {string} lessonId */
 export function getInteractiveLesson(lessonId) {

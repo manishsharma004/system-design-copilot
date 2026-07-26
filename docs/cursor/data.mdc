@@ -7,7 +7,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 - `siteOverview` — marketing copy, `learningPaths`, study tracks, study loop, reading list
 - `rawModules` / `rawLowLevelModules` — core HLD + LLD lessons
 - Expansion modules concatenated: `hldModules`, `lldModules`, `dsaModules` (study labs first, then practice drills), `aiModules`
-- AI modules apply `applyAiCoreEnrichment(rawAiEngineerModules)` then append `rawAiLearningModules` + `rawAiAdvancedLearningModules`
+- AI modules: `applyAiCoreEnrichment` → append learning/advanced/LLMOps labs → `applyAiIndustryCurrencyPatches` for mid-2026 industry updates
 - DSA concept/pattern labs without highlights inherit runnable `questionHighlights` via `dsaExpansionPracticeSourceBySlug`
 - `flowDefinitions` → `courseFlows`, `modules`, `allLessons`, indexes
 - Helpers: `getFlowBySlug`, `getModuleBySlug`, `getLessonBySlug`, `getModuleProgress`, `getLessonPracticeSteps`, `getResumeLesson`
@@ -28,7 +28,10 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `aiCoreLessonEnrichment.js` | Exhaustive sections/exercises for all 23 core AI lessons; Pyodide-safe coding drills |
 | `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs |
 | `aiLearningExpansionAdvanced.js` | Transformers/attention, LLM retrieval, and ML production labs |
+| `aiIndustryCurrencyLabs.js` | LLMOps evaluation, cost/latency observability, shipping gates/guardrails labs (2026) |
+| `aiIndustryCurrencyPatches.js` | Mid-2026 patches for LLM/RAG/agents/serving/governance lessons |
 | `aiInteractiveExtras.js` | Topic labs for remaining AI core lessons + advanced labs; merged into `interactiveLessons.js` |
+| `aiInteractiveCurrency2026.js` | Interactive overlays + LLMOps topic labs; `mergeInteractiveCurrency` |
 | `learningExpansionInteractive.js` | On-page interactive labs for HLD/LLD/DSA/AI expansion lessons (incl. HLD exhaustive labs); merged into `interactiveLessons.js` |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
 
@@ -37,7 +40,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 - **HLD (14):** foundations … case-studies + `systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`
 - **LLD (6):** lld-foundations … lld-machine-coding + `lld-design-patterns-lab`, `lld-project-labs`
 - **DSA (9):** `dsa-concepts-lab`, `dsa-algorithms-lab`, `dsa-patterns-lab`, `dsa-search-lab`, `dsa-interview-essentials-lab`, then dsa-foundations … dsa-mock-loops
-- **AI (13):** ml-foundations … data-engineering-for-ml + `ml-interactive-lab`, `deep-learning-from-scratch`, `transformers-attention-lab`, `llm-retrieval-lab`, `ml-production-lab`
+- **AI (14):** ml-foundations … data-engineering-for-ml + `ml-interactive-lab`, `deep-learning-from-scratch`, `transformers-attention-lab`, `llm-retrieval-lab`, `ml-production-lab`, `llmops-eval-lab`
 - **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
 
 ## Lesson shape (typical)
@@ -57,7 +60,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 ## Deep knowledge (`lessonDeepKnowledge.js`)
 
 - `getLessonDeepKnowledge(lessonId)` — curated deeper insights + external references per lesson
-- Sources under `deepKnowledge/` including `learningExpansionDeepKnowledge.js` (spreads `hldExhaustiveLabDeepKnowledge.js` plus DSA pattern/essentials snippets) and `aiAdvancedDeepKnowledge.js`
+- Sources under `deepKnowledge/` including `learningExpansionDeepKnowledge.js` (spreads `hldExhaustiveLabDeepKnowledge.js` plus DSA pattern/essentials snippets), `aiAdvancedDeepKnowledge.js`, and `aiIndustryDeepKnowledge2026.js`
 - Each entry: `insights[]` (`heading`, `body`) and `references[]` (`title`, `url`, `source`, `note`)
 - Loaded in lesson route (`+page.js`) and rendered in the lesson page **Deep dive** section
 
@@ -66,7 +69,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
 - DSA practice modules select highlights with chapter + title filters (`strictChapters`) so drills stay on-pattern for current company mixes
-- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including expansion interactive maps and `aiInteractiveExtras`
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including expansion interactive maps, `aiInteractiveExtras`, and 2026 AI currency overlays
 - `_dsaEssentialsInteractiveSnippet.js` and `_dsaEssentialsDeepKnowledgeSnippet.js` — companion interactive/deep-dive records keyed by `dsa-interview-essentials-lab/{lesson}`
 - Expansion lessons include on-page teaching sections, code examples, exercises, interactive topic labs, and deep-dive essays (not reference-only)
 - `simulationLessons.js` — authored + generated HLD sims; module blueprints include the three exhaustive HLD lab modules

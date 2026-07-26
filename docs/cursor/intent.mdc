@@ -15,7 +15,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | High-level design (HLD) | Engineers learning distributed systems; backend / platform interviews |
 | Low-level design (LLD) | Engineers leveling up OO design; machine-coding rounds |
 | DSA + interview questions | Learners building algorithmic intuition; coding-round candidates |
-| AI engineer | Engineers learning ML/DL, transformers, retrieval, and production ML with exhaustive lessons and runnable labs; ML / LLM roles |
+| AI engineer | Engineers learning ML/DL plus 2026 AI-engineer skills (RAG, agents, LLMOps eval, serving/governance) with exhaustive lessons and runnable labs |
 
 ## Core value props (shipped)
 
@@ -43,7 +43,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
-Scale today: **5 flows · 46 modules · 161 lessons**.
+Scale today: **5 flows · 47 modules · 164 lessons**.
 
 ## Attribution
 
