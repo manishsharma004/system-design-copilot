@@ -41,6 +41,7 @@
   ];
   $: lessonSections = [
     { id: 'lesson-content', label: 'Read' },
+    ...(data.lesson.deepKnowledge ? [{ id: 'deep-knowledge', label: 'Deep dive' }] : []),
     ...(showTopicLab ? [{ id: 'topic-lab', label: 'Topic lab' }] : []),
     ...(showSimulationLab ? [{ id: 'simulation-lab', label: 'Simulate' }] : []),
     { id: 'practice-lab', label: 'Practice' },
@@ -194,6 +195,42 @@
         {/if}
       </article>
     {/each}
+
+    {#if data.lesson.deepKnowledge}
+      <article class="panel hero-card lesson-step-panel" id="deep-knowledge">
+        <div class="lesson-step-header">
+          <div class="lesson-step-badge">{data.lesson.sections.length + 2}</div>
+          <div>
+            <p class="eyebrow">Go deeper</p>
+            <h2>Deeper knowledge and references</h2>
+          </div>
+        </div>
+        <p class="hero-subtitle lesson-deep-intro">
+          These notes extend the lesson with production-minded detail and curated external references you can study after the core read-through.
+        </p>
+        <div class="lesson-deep-grid">
+          {#each data.lesson.deepKnowledge.insights as insight}
+            <article class="lesson-deep-insight">
+              <h3>{insight.heading}</h3>
+              <p>{insight.body}</p>
+            </article>
+          {/each}
+        </div>
+        <div class="reading-list lesson-reference-list">
+          {#each data.lesson.deepKnowledge.references as reference}
+            <article class="reading-card">
+              <div>
+                <a href={reference.url} target="_blank" rel="noreferrer">
+                  <strong>{reference.title}</strong>
+                </a>
+                <p class="reading-author">{reference.source}</p>
+              </div>
+              <p>{reference.note}</p>
+            </article>
+          {/each}
+        </div>
+      </article>
+    {/if}
   </div>
 
   <aside class="lesson-rail">
