@@ -17,7 +17,7 @@ test('sidebar modules are scoped to the selected flow', () => {
 
 test('sidebar search stays within the selected flow', () => {
   const dsaFlow = courseFlows.find((flow) => flow.slug === 'data-structures-and-algorithms');
-  const visibleModules = getVisibleSidebarModules({ modules, activeFlow: dsaFlow, query: 'google' });
+  const visibleModules = getVisibleSidebarModules({ modules, activeFlow: dsaFlow, query: 'amazon oa' });
 
   assert.equal(visibleModules.some((module) => module.flowSlug !== 'data-structures-and-algorithms'), false);
   assert.deepEqual(visibleModules.map((module) => module.slug), ['dsa-company-rounds']);

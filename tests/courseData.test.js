@@ -157,10 +157,10 @@ test('DSA learning expansion lessons expose coding and design exercises', () => 
   const dsaExpansionLessons = getModulesByFlow('data-structures-and-algorithms')
     .flatMap((module) => module.lessons)
     .filter((lesson) =>
-      ['dsa-concepts-lab', 'dsa-algorithms-lab', 'dsa-patterns-lab', 'dsa-search-lab'].includes(lesson.moduleSlug)
+      ['dsa-concepts-lab', 'dsa-algorithms-lab', 'dsa-patterns-lab', 'dsa-search-lab', 'dsa-interview-essentials-lab'].includes(lesson.moduleSlug)
     );
 
-  assert.equal(dsaExpansionLessons.length, 12);
+  assert.equal(dsaExpansionLessons.length, 15);
   dsaExpansionLessons.forEach((lesson) => {
     const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
     const designExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'design');
@@ -224,11 +224,12 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'dsa-algorithms-lab',
     'dsa-patterns-lab',
     'dsa-search-lab',
+    'dsa-interview-essentials-lab',
     'ml-interactive-lab',
     'deep-learning-from-scratch'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 39);
+  assert.equal(expansionLessons.length, 42);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);

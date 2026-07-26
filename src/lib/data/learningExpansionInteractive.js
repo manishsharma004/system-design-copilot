@@ -1,5 +1,6 @@
 import { hldExhaustiveLabInteractive } from './hldExhaustiveLabInteractive.js';
 import { dsaPatternsInteractive } from './_dsaPatternsInteractiveSnippet.js';
+import { dsaEssentialsInteractive } from './_dsaEssentialsInteractiveSnippet.js';
 
 function caseStudy({ title, prompt, steps, metrics }) {
   return {
@@ -3339,5 +3340,6 @@ const baseLearningExpansionInteractive = {  'systems-fundamentals-lab/request-li
 export const learningExpansionInteractive = {
   ...hldExhaustiveLabInteractive,
   ...baseLearningExpansionInteractive,
-  ...dsaPatternsInteractive
+  ...dsaPatternsInteractive,
+  ...dsaEssentialsInteractive
 };

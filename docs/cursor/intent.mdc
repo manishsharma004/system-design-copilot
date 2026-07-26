@@ -20,7 +20,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 ## Core value props (shipped)
 
 - **Five learning tracks** with guided modules and lessons (`src/lib/data/courseData.js`)
-- **Learning expansion labs** for HLD (fundamentals, reliability, data storage, security/ops, distributed systems — including 2026-era vector/lakehouse, zero-trust, cell, and durable-workflow patterns), LLD, DSA concepts/patterns/algorithms, and interactive ML/DL
+- **Learning expansion labs** for HLD (fundamentals, reliability, data storage, security/ops, distributed systems — including 2026-era vector/lakehouse, zero-trust, cell, and durable-workflow patterns), LLD, DSA concepts/patterns/essentials/algorithms, and interactive ML/DL
 - **Structured answers**: frame → estimate → sketch → defend (Practice IDE steps)
 - **Topic labs**: decision guides, Mermaid, worked examples (`interactiveLessons.js`)
 - **Simulation lab** (HLD): topology DSL + workload engine
@@ -43,7 +43,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
-Scale today: **5 flows · 42 modules · 149 lessons**.
+Scale today: **5 flows · 43 modules · 152 lessons**.
 
 ## Attribution
 

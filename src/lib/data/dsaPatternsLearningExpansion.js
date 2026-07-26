@@ -1309,6 +1309,8 @@ When a window seems tempting, test the monotonicity verbally. "If the sum is too
           'Can apply at-most-K subtraction to exact-K counting problems.'
         ],
         pitfalls: [
+          'Escalating past windows: when equality of arbitrary substrings matters, consider rolling hash or KMP instead of forcing a window.',
+
           'Recording an answer before the window is valid or after it has already been broken.',
           'Using sliding windows for negative-number sum constraints without monotonicity.',
           'Keeping zero-count keys and accidentally inflating distinct counts.',

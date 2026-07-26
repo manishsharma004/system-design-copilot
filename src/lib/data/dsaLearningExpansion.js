@@ -12,11 +12,11 @@ export const rawDsaLearningModules = [
     slug: 'dsa-concepts-lab',
     title: 'DSA concepts lab',
     summary:
-      'Build durable mental models for algorithmic complexity, memory behavior, hashing, trees, and graphs before jumping into timed coding drills.',
+      'Build durable mental models for algorithmic complexity, memory behavior, hashing, trees, graphs, and topological ordering before jumping into timed coding drills.',
     objectives: [
       'Explain Big-O with concrete Python operations and input-growth intuition',
       'Choose data structures based on access patterns, mutation cost, and memory locality',
-      'Model tree and graph problems with representations that make traversal simple'
+      'Model tree and graph problems with representations, BFS/DFS, and topological order that match current interview prompts'
     ],
     lessons: [
       {
@@ -26,7 +26,7 @@ export const rawDsaLearningModules = [
           'Big-O intuition, amortized analysis, and data-structure choice using Python examples you can reason about at interview speed.',
         duration: '45-55 min',
         whyItMatters:
-          'Interviewers are testing whether you can predict how a solution grows before coding it. Complexity analysis turns implementation choices into defendable trade-offs instead of guesses.',
+          'Current coding screens still expect complexity judgment, but the bar is practical: read constraints, pick a structure whose Python costs you can defend, and know when OA finish-correct-first differs from phone narration or onsite follow-ups.',
         sections: [
           {
             heading: 'Intuition: count how work grows',
@@ -210,6 +210,65 @@ for value in range(1, 18):
         f"append={value:2d} size={array.size:2d} "
         f"capacity={array.capacity:2d} copied_now={copied_now:2d}"
     )
+              `)
+            }
+          },
+          {
+            heading: 'Interview ops: Python costs, constraints, and round type',
+            body: block(`
+In modern interviews you are usually coding in a real language, not pseudocode. Interviewers expect you to know the practical costs of Python builtins: list append and pop from the end are amortized O(1), but list.pop(0) and x in list are O(n). dict and set average O(1) membership, deque gives O(1) pops from both ends, heapq gives O(log n) push/pop, and bisect gives O(log n) search over a sorted list without rewriting binary search from scratch.
+
+Round type changes the policy. In an online assessment, finish a correct solution and cover the main tests before polishing. In a phone screen, narrate the invariant while coding so the interviewer can follow. In an onsite, expect follow-ups that change constraints: less memory, streaming input, or a harder bound. Do not over-optimize a quadratic solution when n is 100 and the interviewer is still waiting for a clear first pass.
+            `),
+            bullets: [
+              'Read n, value bounds, mutability, and online-versus-offline queries before choosing a structure.',
+              'Prefer deque over list when you need popleft; prefer Counter/defaultdict for counting and grouping.',
+              'OA: correct + tested first. Phone: narrate. Onsite: survive follow-ups without rewriting from zero.'
+            ],
+            codeExample: {
+              title: 'Python structure costs you should be ready to say aloud',
+              language: 'python',
+              code: block(`
+from collections import Counter, defaultdict, deque
+from time import perf_counter
+import heapq
+
+
+def demo_costs(n=20000):
+    values = list(range(n))
+
+    start = perf_counter()
+    found = -1 in values
+    scan = perf_counter() - start
+
+    start = perf_counter()
+    found_set = -1 in set(values)
+    hashed = perf_counter() - start
+
+    queue = deque(values)
+    start = perf_counter()
+    while queue:
+        queue.popleft()
+    deque_time = perf_counter() - start
+
+    heap = []
+    start = perf_counter()
+    for value in values:
+        heapq.heappush(heap, value)
+    while heap:
+        heapq.heappop(heap)
+    heap_time = perf_counter() - start
+
+    counts = Counter(values)
+    groups = defaultdict(list)
+    for value in values:
+        groups[value % 10].append(value)
+
+    print("scan", round(scan, 5), "set", round(hashed, 5), "deque", round(deque_time, 5), "heap", round(heap_time, 5))
+    print("counter_unique", len(counts), "groups", len(groups), "found", found, found_set)
+
+
+demo_costs()
               `)
             }
           },
@@ -889,6 +948,51 @@ graph = {
     5: []
 }
 print(connected_components(graph))
+              `)
+            }
+          },
+          {
+            heading: 'Interview staple: topological order and cycle detection',
+            body: block(`
+Course-schedule style prompts are still among the most common graph interview questions because they combine representation, BFS/DFS, and correctness under cycles. Topological order exists only for directed acyclic graphs. Kahn's algorithm repeatedly removes nodes with indegree zero. A DFS coloring algorithm marks nodes as visiting and visited; seeing a visiting neighbor means a cycle.
+
+Say the interview sentence clearly: "I will build an adjacency list and indegrees, then BFS from zero-indegree nodes. If I process fewer than n nodes, a cycle blocks a valid order." That framing transfers to build systems, prerequisite graphs, alien-dictionary style ordering, and many hidden DAG prompts.
+            `),
+            bullets: [
+              'Kahn BFS uses indegrees and a queue; processed count < n means cycle.',
+              'DFS colors (unvisited / visiting / visited) detect back edges for cycle rejection.',
+              'Return any valid order unless the prompt asks for lexicographically smallest.'
+            ],
+            codeExample: {
+              title: 'Kahn topological order for course prerequisites',
+              language: 'python',
+              code: block(`
+from collections import defaultdict, deque
+
+
+def course_order(num_courses, prerequisites):
+    graph = defaultdict(list)
+    indegree = [0] * num_courses
+    for course, need in prerequisites:
+        graph[need].append(course)
+        indegree[course] += 1
+
+    queue = deque([node for node in range(num_courses) if indegree[node] == 0])
+    order = []
+
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for neighbor in graph[node]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+
+    return order if len(order) == num_courses else []
+
+
+print(course_order(4, [[1, 0], [2, 0], [3, 1], [3, 2]]))
+print(course_order(2, [[0, 1], [1, 0]]))
               `)
             }
           },
@@ -1639,6 +1743,80 @@ print(uf.connected(0, 4))
             }
           },
           {
+            heading: 'Current variants: 0-1 BFS and practical Union-Find uses',
+            body: block(`
+When every edge weight is 0 or 1, Dijkstra still works, but a deque is enough: appendleft for weight 0 and append for weight 1. That 0-1 BFS pattern shows up in grid problems with cheap/expensive moves and is a strong follow-up after ordinary BFS.
+
+Union-Find interview uses are broader than Kruskal. Accounts-merge, redundant connection, and "number of provinces after unions" are more common phone/onsite prompts than building an MST from scratch. Keep the story practical: find with path compression, union by rank/size, and answer connectivity queries in nearly constant time. Mention inverse Ackermann only as "effectively constant for interview sizes," not as a chalkboard proof.
+            `),
+            bullets: [
+              '0-1 BFS: deque, weight 0 to the front, weight 1 to the back.',
+              'Union-Find shines for dynamic connectivity, cycle detection on undirected edges, and merge-style grouping.',
+              'Prefer practical component problems over proving MST theorems unless the prompt asks for a minimum spanning structure.'
+            ],
+            codeExample: {
+              title: '0-1 BFS distances and Union-Find components',
+              language: 'python',
+              code: block(`
+from collections import deque
+
+
+def zero_one_bfs(graph, start):
+    distances = {start: 0}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        for neighbor, weight in graph[node]:
+            candidate = distances[node] + weight
+            if neighbor not in distances or candidate < distances[neighbor]:
+                distances[neighbor] = candidate
+                if weight == 0:
+                    queue.appendleft(neighbor)
+                else:
+                    queue.append(neighbor)
+    return distances
+
+
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+        self.components = n
+
+    def find(self, x):
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]
+            x = self.parent[x]
+        return x
+
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if self.rank[ra] < self.rank[rb]:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        if self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += 1
+        self.components -= 1
+        return True
+
+
+graph = {
+    0: [(1, 0), (2, 1)],
+    1: [(3, 1)],
+    2: [(3, 0)],
+    3: []
+}
+print(zero_one_bfs(graph, 0))
+uf = UnionFind(4)
+for a, b in [(0, 1), (1, 2), (2, 3)]:
+    uf.union(a, b)
+print(uf.components, uf.find(0) == uf.find(3))
+              `)
+            }
+          },
+          {
             heading: 'Common mistakes: choose the question you are answering',
             body: block(`
 The most important mistake is using the right-looking graph tool for the wrong question. Union-Find can tell you that two cities are connected after roads are added, but it cannot tell you the shortest route between them. Dijkstra can compute cheapest routes, but it is overkill for plain unweighted distance where BFS is simpler and faster.
@@ -1873,48 +2051,46 @@ print(count_components(5, []))
           'A pattern catalog for knapsack, LIS, grid paths, memoization, tabulation, and state design in Python.',
         duration: '60-70 min',
         whyItMatters:
-          'Dynamic programming stops feeling mysterious when you consistently name the state, transition, base case, and fill order.',
+          'Dynamic programming still appears in Google-heavy and harder onsite loops. Current interviews reward a spoken state sentence first — Climbing Stairs / House Robber style — before knapsack or LIS machinery.',
         sections: [
           {
             heading: 'Intuition: cache repeated questions',
             body: block(`
 Dynamic programming is useful when a recursive search asks the same subquestion many times. Instead of recomputing that subquestion, store its answer and reuse it. The hard part is not the cache; the hard part is choosing a state that contains exactly the information needed for future decisions.
 
-A good DP explanation has four parts: state, transition, base case, and answer. For example, "best(i, remaining)" might mean "the best value using items from index i onward with this remaining capacity." Once the meaning is precise, the recurrence becomes much easier to defend.
+Lead with interview-shaped examples before abstract Fibonacci. Climbing Stairs is "ways(i) = ways(i-1) + ways(i-2)". House Robber is "best(i) = max(best(i-1), best(i-2) + nums[i])". A good DP explanation still has four parts: state, transition, base case, and answer. Say them aloud before coding.
             `),
             bullets: [
-              'State names the subproblem.',
+              'State names the subproblem in one sentence.',
               'Transition connects the current state to smaller states.',
-              'Base cases provide known answers that stop recursion.'
+              'Base cases provide known answers that stop recursion or fill the table.'
             ],
             codeExample: {
-              title: 'Fibonacci: recursion, memoization, and tabulation',
+              title: 'Climbing Stairs and House Robber as first DP stories',
               language: 'python',
               code: block(`
 from functools import lru_cache
 
 
-def fib_memo(n):
+def climb_stairs(n):
     @lru_cache(maxsize=None)
-    def solve(k):
-        if k <= 1:
-            return k
-        return solve(k - 1) + solve(k - 2)
+    def ways(i):
+        if i <= 2:
+            return i
+        return ways(i - 1) + ways(i - 2)
 
-    return solve(n)
-
-
-def fib_tab(n):
-    if n <= 1:
-        return n
-    prev, curr = 0, 1
-    for _ in range(2, n + 1):
-        prev, curr = curr, prev + curr
-    return curr
+    return ways(n)
 
 
-for n in [0, 1, 5, 10, 30]:
-    print(n, fib_memo(n), fib_tab(n))
+def house_robber(nums):
+    prev2 = prev1 = 0
+    for value in nums:
+        prev2, prev1 = prev1, max(prev1, prev2 + value)
+    return prev1
+
+
+print(climb_stairs(5), climb_stairs(10))
+print(house_robber([2, 7, 9, 3, 1]), house_robber([1, 2, 3, 1]))
               `)
             }
           },
