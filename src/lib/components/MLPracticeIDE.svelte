@@ -184,12 +184,17 @@ plt.show()
 <section id="practice-lab" class="ml-practice-shell panel hero-card">
   <div class="ml-heading-row">
     <div>
-      <p class="eyebrow">ML playground</p>
-      <h2>In-browser Python ML editor</h2>
+      <p class="eyebrow">{codingExercises.length ? 'Python lab' : 'ML playground'}</p>
+      <h2>{codingExercises.length ? 'In-browser Python editor' : 'In-browser Python ML editor'}</h2>
       <p class="practice-copy">
-        Run NumPy, Pandas, Matplotlib, and scikit-learn scripts entirely in your browser via Pyodide WebAssembly.
+        Run Python in your browser via Pyodide WebAssembly
+        {#if codingExercises.some((exercise) => /sklearn|numpy|matplotlib|pandas/i.test(exercise.starterCode || ''))}
+          with NumPy, Pandas, Matplotlib, and scikit-learn available.
+        {:else}
+          (stdlib plus common scientific packages when needed).
+        {/if}
         {#if codingExercises.length}
-          Load a lesson exercise below, fill in the TODOs, and iterate with live output and plots.
+          Load a lesson exercise below, fill in the TODOs, and iterate with live output.
         {:else}
           No server, no install — all compute stays on your device.
         {/if}
