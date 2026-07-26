@@ -4,11 +4,11 @@ export const lldDsaDeepKnowledge = {
     insights: [
       {
         heading: 'Scope as a design artifact, not a disclaimer',
-        body: 'Strong LLD answers treat version-one scope as an explicit contract: actors, happy paths, and deferred features are written down before any class names appear. Interviewers reward candidates who can say what they are optimizing for (correctness, extensibility, or time-to-demo) because that choice drives every later trade-off. A bounded MVP also gives you a natural place to park follow-ups without letting the model sprawl.'
+        body: 'Strong LLD answers treat version-one scope as an explicit contract: actors, happy paths, and deferred features are written down before any class names appear. In current interviews, that usually means spending 5-10 minutes clarifying the core functional slice, the acceptance bar for a running demo, and the explicit non-goals. A bounded MVP gives you a natural place to park follow-ups without letting the model sprawl or drifting into HLD topics such as load balancers before the object model exists.'
       },
       {
         heading: 'Invariants before implementation details',
-        body: 'Translate requirements into enforceable rules—uniqueness, ordering, authorization, idempotency—rather than into a list of nouns. When you name invariants early, validation placement and state machines become obvious instead of improvised. This is the bridge between product language ("a user cannot book twice") and object design (illegal transitions rejected at the aggregate boundary).'
+        body: 'Translate requirements into enforceable rules—uniqueness, ordering, authorization, idempotency, or expiry—rather than into a list of nouns. When you name invariants early, validation placement and state machines become obvious instead of improvised. This is the bridge between product language ("a user cannot book twice") and object design (illegal transitions rejected at the aggregate boundary), and it also helps you separate LLD-relevant non-functional concerns such as concurrency or clock injection from scale topics that can wait.'
       }
     ],
     references: [
@@ -16,7 +16,7 @@ export const lldDsaDeepKnowledge = {
         title: 'How to Approach a System Design Interview Question',
         url: 'https://www.educative.io/blog/system-design-interview-questions',
         source: 'Educative',
-        note: 'Problem-framing habits from system design transfer directly to LLD scope control and requirement clarification.'
+        note: 'Use the requirement-clarification cadence as a model for the first 5-10 minutes of an LLD round, while keeping the discussion anchored on local object design rather than HLD.'
       },
       {
         title: 'Domain Model',
@@ -301,11 +301,11 @@ export const lldDsaDeepKnowledge = {
     insights: [
       {
         heading: 'Vertical slice first, abstraction second',
-        body: 'Implement one end-to-end path—create, mutate, query—before factories, observers, or persistence adapters. This proves the model quickly and gives the interviewer a mental anchor for follow-ups. Narrate the roadmap aloud: “Next I would extract a strategy for pricing and stub the repository.” That signals senior judgment without burning clock on unused layers.'
+        body: 'Implement one end-to-end path—create, mutate, query—before factories, observers, or persistence adapters. This proves the model quickly and gives the interviewer a mental anchor for follow-ups. In a 45-60 minute LLD round or a 60-90 minute machine-coding round, a running happy path is the main milestone: a slightly messy working demo scores better than polished scaffolding that never runs.'
       },
       {
         heading: 'Stable public API, evolving internals',
-        body: 'Choose method names and entry points early so refactors stay behind a coherent façade. Small, well-named types beat a single Service class that accretes every requirement. Pause after each milestone to summarize trade-offs; interviewers often score communication as heavily as syntax.'
+        body: 'Choose method names and entry points early so refactors stay behind a coherent facade. Small, well-named types beat a single Service class that accretes every requirement. A practical live-coding layout is models, services, and ports or adapters, plus a tiny main() driver that proves the happy path still works after each refactor. Pause after each milestone to summarize trade-offs; interviewers often score communication as heavily as syntax.'
       }
     ],
     references: [
@@ -313,7 +313,7 @@ export const lldDsaDeepKnowledge = {
         title: 'Vertical Slice Architecture',
         url: 'https://jimmybogard.com/vertical-slice-architecture/',
         source: 'Jimmy Bogard',
-        note: 'Incremental delivery mindset that maps well to timed machine-coding rounds.'
+        note: 'Incremental delivery mindset that maps well to timed machine-coding rounds where you need a running happy path early.'
       },
       {
         title: 'Refactoring: Improving the Design of Existing Code',
@@ -367,11 +367,11 @@ export const lldDsaDeepKnowledge = {
     insights: [
       {
         heading: 'Name shared mutable hotspots explicitly',
-        body: 'Thread-safety answers start by listing what concurrent actors touch: counters, caches, seat maps, singleton registries. Then pick a strategy—per-key locking, copy-on-write, atomic operations, or serializing through a single worker—that matches contention. Hand-waving “I would synchronize” without scope and deadlock awareness weakens otherwise solid designs.'
+        body: 'Thread-safety answers start by listing what concurrent actors touch: counters, caches, seat maps, singleton registries. Then pick a strategy—per-key locking, copy-on-write, atomic operations, or serializing through a single worker—that matches contention. In interview practice, say the local answer first: a lock, transaction, or atomic repository method protecting one invariant. Hand-waving “I would synchronize” without scope and deadlock awareness weakens otherwise solid designs.'
       },
       {
         heading: 'Bridge to scale without throwing away the model',
-        body: 'When interviewers pivot to distributed scale, show what stays local object logic versus what becomes infrastructure: in-memory maps become databases, observer calls become queues, ID generation becomes a central service. Reuse abstractions where they still fit; admit when a process-local lock must become distributed coordination. The first scaling step matters more than a full cloud diagram.'
+        body: 'When interviewers pivot to distributed scale, show what stays local object logic versus what becomes infrastructure: in-memory maps become databases, observer calls become queues, ID generation becomes a central service. Reuse abstractions where they still fit; admit when a process-local lock must become distributed coordination. For hot paths such as rate limiting, it is reasonable to mention Redis atomic counters or shared cache state, but only after you have explained the process-local design and why the hotspot demands a bridge.'
       }
     ],
     references: [
@@ -391,7 +391,7 @@ export const lldDsaDeepKnowledge = {
         title: 'Message Queue Pattern',
         url: 'https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling',
         source: 'Microsoft Azure Architecture Center',
-        note: 'Typical bridge from synchronous observer callbacks to scaled-out asynchronous processing.'
+        note: 'Useful HLD handoff after you explain the local LLD design and need a credible bridge from synchronous callbacks to scaled-out processing.'
       }
     ]
   },
