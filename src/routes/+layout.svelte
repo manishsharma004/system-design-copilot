@@ -7,8 +7,10 @@
   import { getTrackNavItems, headerNavHref, headerNavItems, isHeaderNavActive } from '$lib/navigation';
   import { getVisibleSidebarModules } from '$lib/sidebar';
   import { progress } from '$lib/stores/progress';
+  import PwaUpdateBanner from '$lib/components/PwaUpdateBanner.svelte';
   import { derived } from 'svelte/store';
   import { onMount } from 'svelte';
+  import { pwaInfo } from 'virtual:pwa-info';
 
   let navOpen = false;
   let desktopNavOpen = true;
@@ -115,6 +117,12 @@
     mediaQuery.addEventListener('change', syncViewport);
     window.addEventListener('keydown', handleGlobalKeydown);
 
+    if (pwaInfo) {
+      import('virtual:pwa-register').then(({ registerSW }) => {
+        registerSW({ immediate: true });
+      });
+    }
+
     return () => {
       mediaQuery.removeEventListener('change', syncViewport);
       window.removeEventListener('keydown', handleGlobalKeydown);
@@ -122,6 +130,7 @@
   });
 
   $: pathname = $page.url.pathname;
+  $: webManifestLink = pwaInfo ? pwaInfo.webManifest.linkTag : '';
   $: normalizedPathname = pathname !== homeHref && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
   $: activeModule = modules.find((module) =>
     normalizedPathname === moduleHref(module.slug) || normalizedPathname.startsWith(`${moduleHref(module.slug)}/lesson/`)
@@ -176,6 +185,11 @@
 <svelte:head>
   <title>{siteOverview.title}</title>
   <meta name="description" content={siteOverview.description} />
+  {@html webManifestLink}
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SD Copilot" />
+  <link rel="apple-touch-icon" href={`${base}/favicon.svg`} />
 </svelte:head>
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -301,4 +315,6 @@
       <slot />
     </main>
   </div>
+
+  <PwaUpdateBanner />
 </div>

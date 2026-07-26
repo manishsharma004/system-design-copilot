@@ -6,6 +6,7 @@
 
 - **SvelteKit 2** + **Svelte 5** (many components still use legacy `export let` / `runes={false}`)
 - **adapter-static** → `dist/`; **base path** `/system-design-copilot` (GitHub Pages)
+- **PWA**: `@vite-pwa/sveltekit` — `manifest.webmanifest` + `sw.js`; precaches prerendered lesson HTML; runtime cache for JS chunks and Google Fonts
 - **CSS**: Tailwind 4 + Skeleton tokens in `src/app.css` / `src/copilot-theme.css`; prefer semantic classes (`pill`, `panel`, `hero-card`, …)
 - **Diagrams**: Mermaid + static primer images; **Markdown**: `markdown-it` (LLM replies)
 - **Persistence**: localStorage (progress/practice/simulation/LLM/sidebar) + IndexedDB (IDE workspaces)
