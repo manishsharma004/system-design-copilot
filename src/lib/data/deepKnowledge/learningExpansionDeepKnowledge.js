@@ -1,11 +1,13 @@
 import { hldExhaustiveLabDeepKnowledge } from '../hldExhaustiveLabDeepKnowledge.js';
 import { dsaPatternsDeepKnowledge } from '../_dsaPatternsDeepKnowledgeSnippet.js';
+import { dsaEssentialsDeepKnowledge } from '../_dsaEssentialsDeepKnowledgeSnippet.js';
 
 /** @type {(...paragraphs: string[]) => string} */
 const teachingBody = (...paragraphs) => paragraphs.join('\n\n');
 
 /** @type {Record<string, import('../lessonDeepKnowledge.js').LessonDeepKnowledge>} */
-const baseLearningExpansionDeepKnowledge = {  'systems-fundamentals-lab/request-lifecycle-deep-dive': {
+const baseLearningExpansionDeepKnowledge = {
+  'systems-fundamentals-lab/request-lifecycle-deep-dive': {
     insights: [
       {
         heading: 'Critical path accounting',
@@ -1282,5 +1284,6 @@ const baseLearningExpansionDeepKnowledge = {  'systems-fundamentals-lab/request-
 export const learningExpansionDeepKnowledge = {
   ...hldExhaustiveLabDeepKnowledge,
   ...baseLearningExpansionDeepKnowledge,
-  ...dsaPatternsDeepKnowledge
+  ...dsaPatternsDeepKnowledge,
+  ...dsaEssentialsDeepKnowledge
 };

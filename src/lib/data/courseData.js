@@ -1,6 +1,7 @@
 import { rawDsaModules } from './dsaCourseData.js';
 import { rawDsaLearningModules } from './dsaLearningExpansion.js';
 import { rawDsaPatternsLearningModules } from './dsaPatternsLearningExpansion.js';
+import { rawDsaInterviewEssentialsModules } from './dsaInterviewEssentialsExpansion.js';
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 import { rawAiLearningModules } from './aiLearningExpansion.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
@@ -30,9 +31,9 @@ export const siteOverview = {
     {
       "title": "Algorithms path",
       "flowSlug": "data-structures-and-algorithms",
-      "summary": "Build mental models for complexity, arrays, trees, graphs, and DP, then drill patterns with interactive labs and runnable coding practice.",
+      "summary": "Build current interview-ready mental models for arrays, graphs, DP, tries, monotonic stacks, and design DS, then drill company-shaped prompts with runnable practice.",
       "startModule": "dsa-concepts-lab",
-      "focus": ["Concept & pattern labs", "Interactive topic labs", "Mock coding rounds"]
+      "focus": ["Concept & pattern labs", "Interview essentials (tries, mono stacks, LRU)", "Company OA / phone / mock rounds"]
     },
     {
       "title": "AI / ML engineer path",
@@ -4195,6 +4196,7 @@ const lldModules = [...rawLowLevelModules, ...rawLldLearningModules];
 const dsaModules = [
   ...rawDsaLearningModules,
   ...rawDsaPatternsLearningModules,
+  ...rawDsaInterviewEssentialsModules,
   ...rawDsaModules
 ];
 const aiModules = [...rawAiEngineerModules, ...rawAiLearningModules];
@@ -4217,7 +4219,10 @@ const dsaExpansionPracticeSourceBySlug = {
   'binary-search-on-answer-spaces': 'linked-lists-binary-search-and-ordering',
   'sliding-window-and-substring-invariants': 'sliding-window-prefix-and-interval-style-thinking',
   'heaps-topk-and-priority-queues': 'trees-heaps-and-intro-dp',
-  'recursion-backtracking-and-pruning': 'recursion-backtracking-and-search-trees'
+  'recursion-backtracking-and-pruning': 'recursion-backtracking-and-search-trees',
+  'tries-and-prefix-decision-trees': 'recursion-backtracking-and-search-trees',
+  'monotonic-stacks-and-next-greater': 'sliding-window-prefix-and-interval-style-thinking',
+  'bits-strings-hashing-and-lru-design': 'arrays-hashmaps-and-two-pointers'
 };
 
 const flowDefinitions = [
@@ -4262,14 +4267,14 @@ const flowDefinitions = [
     summary: 'Learn complexity, structures, and algorithm cookbooks, then drill patterns with runnable coding practice and mock rounds.',
     description: 'Use this flow to build algorithmic intuition and to prepare for coding screens that expect algorithm selection, complexity discussion, and live problem solving.',
     audience: 'Best for learners building DSA fundamentals and for coding screens, online assessments, and onsite algorithm rounds.',
-    cadence: 'Start with concept, algorithm, and pattern labs, then alternate pattern drills with timed mock-style modules.',
-    heroGuidance: 'Build the mental model, choose the pattern deliberately, defend the invariant or recurrence, then code the cleanest correct version before optimizing.',
+    cadence: 'Start with concept, pattern, and interview-essentials labs, then alternate pattern drills with company OA/phone sets and timed mocks.',
+    heroGuidance: 'Read constraints, choose the pattern deliberately, defend the invariant or recurrence aloud, ship a correct first version, then optimize only if the round still has time.',
     focusAreas: [
-      'Concept and pattern labs for complexity, arrays, linked lists, binary search, windows, heaps, graphs, sorting, and DP',
-      'Interactive topic labs plus runnable coding and design exercises on every study lesson',
-      'Interview drills with in-browser Python, C++, and Java runtimes, company sets, and mock loops'
+      'Concept and pattern labs for complexity, arrays, graphs, sorting, DP, tries, monotonic stacks, and design DS',
+      'Interactive topic labs plus runnable coding and design exercises aligned to current OA/phone/onsite expectations',
+      'Company-specific practice and mock loops with in-browser Python, C++, and Java runtimes'
     ],
-    outcome: 'You should understand why algorithms work, recognize patterns quickly, and complete structured mock rounds with fewer implementation mistakes.',
+    outcome: 'You should recognize high-frequency patterns quickly, narrate invariants under follow-ups, and finish structured mock rounds with fewer implementation mistakes.',
     moduleSlugs: dsaModules.map((module) => module.slug)
   },
   {
