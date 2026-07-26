@@ -5,7 +5,10 @@ import {
   markdownCompletions,
   simulationScriptCompletions
 } from '$lib/editor/exerciseMetadata'
+import { normalizeMonacoHexColor } from '$lib/editor/monacoColors.js'
 import { getThemeOption } from '$lib/themes.js'
+
+export { normalizeMonacoHexColor } from '$lib/editor/monacoColors.js'
 
 let initialized = false
 let monacoPromise
@@ -173,7 +176,7 @@ function registerTheme(monaco) {
 function cssVar(name, fallback = '') {
   if (typeof document === 'undefined') return fallback
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  return value || fallback
+  return normalizeMonacoHexColor(value || fallback, fallback)
 }
 
 const DARK_TOKEN_RULES = [
