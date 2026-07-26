@@ -293,13 +293,14 @@
   <div class="practice-ide-toolbar">
     <div class="practice-ide-steps">
       {#each steps as step, index}
+        {@const stepLimit = getPracticePhaseLimitMs(step.id)}
         <button
           class="practice-ide-step-btn"
           class:active={index === currentStepIndex}
           class:done={$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt}
           type="button"
           onclick={() => goToStep(index)}
-          title="{step.title}{getPracticePhaseLimitMs(step.id) ? ` · ${formatPhaseTargetLabel(getPracticePhaseLimitMs(step.id))}` : ''}"
+          title="{step.title}{stepLimit != null ? ` · ${formatPhaseTargetLabel(stepLimit)}` : ''}"
         >
           {index + 1}
         </button>
