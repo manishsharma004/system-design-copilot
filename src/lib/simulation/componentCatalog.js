@@ -18,7 +18,7 @@
  *   color: string,
  *   accent: string,
  *   icon: string,
- *   diagram?: { kind: 'primer', src: string, alt: string, caption?: string } | { kind: 'mermaid', code: string, caption?: string }
+ *   diagram?: { kind: 'primer', src: string, alt: string, caption?: string } | { kind: 'svg', caption?: string }
  * }} ComponentDef
  */
 
@@ -54,7 +54,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.edge },
     color: '#1b3a4b',
     accent: '#5ec8f0',
-    icon: 'CL',
+    icon: 'clients',
     diagram: {
       kind: 'primer',
       src: '/primer-images/IOyLj4i.jpg',
@@ -73,7 +73,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 5, capacityRps: 120000, queueCapacity: 0 },
     color: '#1b3a4b',
     accent: '#5ec8f0',
-    icon: 'DNS',
+    icon: 'dns',
     diagram: {
       kind: 'primer',
       src: '/primer-images/IOyLj4i.jpg',
@@ -92,7 +92,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 2, capacityRps: 150000, queueCapacity: 80000, hitRate: 0.92 },
     color: '#243b55',
     accent: '#7dd3fc',
-    icon: 'CDN',
+    icon: 'cdn',
     diagram: {
       kind: 'primer',
       src: '/primer-images/h9TAuGI.jpg',
@@ -111,7 +111,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 3, capacityRps: 80000, queueCapacity: 5000 },
     color: '#2a3344',
     accent: '#93c5fd',
-    icon: 'LB',
+    icon: 'load-balancer',
     diagram: {
       kind: 'primer',
       src: '/primer-images/h81n9iK.png',
@@ -130,7 +130,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 6, capacityRps: 45000, queueCapacity: 4000 },
     color: '#2a3344',
     accent: '#a5b4fc',
-    icon: 'GW',
+    icon: 'api-gateway',
     diagram: {
       kind: 'primer',
       src: '/primer-images/n41Azff.png',
@@ -149,7 +149,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.service },
     color: '#2b2c40',
     accent: '#696cff',
-    icon: 'SVC',
+    icon: 'service',
     diagram: {
       kind: 'primer',
       src: '/primer-images/yB5SYwm.png',
@@ -168,14 +168,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 10, capacityRps: 28000, queueCapacity: 3000 },
     color: '#3b2f45',
     accent: '#e879f9',
-    icon: 'AUTH',
+    icon: 'auth-service',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  client[Client] --> gateway[API gateway]
-  gateway --> auth[Auth service]
-  auth --> app[App service]
-  auth --> sessions[(Session / JWKS cache)]`,
+      kind: 'svg',
       caption: 'Keep auth checks fast with cached keys and short-lived tokens.'
     }
   },
@@ -190,13 +185,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 2, capacityRps: 90000, queueCapacity: 1000 },
     color: '#3b2f45',
     accent: '#f0abfc',
-    icon: 'RL',
+    icon: 'rate-limiter',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  edge[Edge] --> limiter[Rate limiter]
-  limiter -->|allowed| service[Service]
-  limiter -->|shed| client[429 / retry-after]`,
+      kind: 'svg',
       caption: 'Shed low-value traffic before expensive hops.'
     }
   },
@@ -211,13 +202,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 3, capacityRps: 100000, queueCapacity: 0 },
     color: '#3b2f45',
     accent: '#d946ef',
-    icon: 'WAF',
+    icon: 'waf',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  internet[Internet] --> waf[WAF]
-  waf --> cdn[CDN / LB]
-  waf -.->|blocked| drop[Drop / challenge]`,
+      kind: 'svg',
       caption: 'Filter bad traffic before it consumes origin capacity.'
     }
   },
@@ -232,13 +219,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 8, capacityRps: 15000, queueCapacity: 8000 },
     color: '#2b2c40',
     accent: '#818cf8',
-    icon: 'WS',
+    icon: 'realtime',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  clients[Clients] --> gateway[WS gateway]
-  gateway --> broker[Pub/Sub / stream]
-  broker --> workers[Fan-out workers]`,
+      kind: 'svg',
       caption: 'Separate connection tier from fan-out and persistence.'
     }
   },
@@ -253,7 +236,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.cache },
     color: '#1f3d2f',
     accent: '#4ade80',
-    icon: 'CACHE',
+    icon: 'cache',
     diagram: {
       kind: 'primer',
       src: '/primer-images/Q6z24La.png',
@@ -272,7 +255,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.database },
     color: '#3a2e1f',
     accent: '#fbbf24',
-    icon: 'DB',
+    icon: 'database',
     diagram: {
       kind: 'primer',
       src: '/primer-images/C9ioGtn.png',
@@ -291,7 +274,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 16, capacityRps: 12000, queueCapacity: 10000 },
     color: '#3a2e1f',
     accent: '#f59e0b',
-    icon: 'RR',
+    icon: 'read-replica',
     diagram: {
       kind: 'primer',
       src: '/primer-images/C9ioGtn.png',
@@ -310,7 +293,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 40, capacityRps: 25000, queueCapacity: 20000 },
     color: '#3a2e1f',
     accent: '#d97706',
-    icon: 'S3',
+    icon: 'object-storage',
     diagram: {
       kind: 'primer',
       src: '/primer-images/wXGqG5f.png',
@@ -329,7 +312,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 22, capacityRps: 14000, queueCapacity: 12000 },
     color: '#3a2e1f',
     accent: '#ea580c',
-    icon: 'IDX',
+    icon: 'search-index',
     diagram: {
       kind: 'primer',
       src: '/primer-images/n16iOGk.png',
@@ -348,12 +331,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 2, capacityRps: 100000, queueCapacity: 50000, hitRate: 0.95 },
     color: '#1f3d2f',
     accent: '#34d399',
-    icon: 'KV',
+    icon: 'kv-store',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  service[Service] --> kv[(KV store)]
-  service -->|miss / write| db[(Primary DB)]`,
+      kind: 'svg',
       caption: 'KV stores excel at simple, hot key access patterns.'
     }
   },
@@ -368,7 +348,7 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 18, capacityRps: 9000, queueCapacity: 9000 },
     color: '#3a2e1f',
     accent: '#fcd34d',
-    icon: 'SH',
+    icon: 'shard',
     diagram: {
       kind: 'primer',
       src: '/primer-images/wU8x5Id.png',
@@ -387,7 +367,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.queue },
     color: '#1f2f3a',
     accent: '#38bdf8',
-    icon: 'Q',
+    icon: 'queue',
     diagram: {
       kind: 'primer',
       src: '/primer-images/ONjORqk.png',
@@ -406,13 +386,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 8, capacityRps: 40000, queueCapacity: 200000 },
     color: '#1f2f3a',
     accent: '#22d3ee',
-    icon: 'STR',
+    icon: 'stream',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  producers[Producers] --> stream[(Event stream)]
-  stream --> c1[Consumer A]
-  stream --> c2[Consumer B]`,
+      kind: 'svg',
       caption: 'Streams support fan-out and replay with consumer offsets.'
     }
   },
@@ -427,13 +403,9 @@ export const COMPONENT_CATALOG = [
     defaults: { latencyMs: 9, capacityRps: 35000, queueCapacity: 150000 },
     color: '#1f2f3a',
     accent: '#67e8f9',
-    icon: 'PS',
+    icon: 'pubsub',
     diagram: {
-      kind: 'mermaid',
-      code: `flowchart LR
-  pub[Publisher] --> topic{{Topic}}
-  topic --> s1[Subscriber]
-  topic --> s2[Subscriber]`,
+      kind: 'svg',
       caption: 'Pub/Sub fans events out without coupling producers to consumers.'
     }
   },
@@ -448,7 +420,7 @@ export const COMPONENT_CATALOG = [
     defaults: { ...PHYSICS_DEFAULTS.worker },
     color: '#243044',
     accent: '#60a5fa',
-    icon: 'WRK',
+    icon: 'worker',
     diagram: {
       kind: 'primer',
       src: '/primer-images/54GYsSx.png',
@@ -542,6 +514,6 @@ export function getTypeStyle(type) {
   return {
     fill: fallback?.color ?? '#2b2c40',
     accent: fallback?.accent ?? '#696cff',
-    icon: (type || 'NA').slice(0, 3).toUpperCase()
+    icon: fallback?.icon ?? physics
   }
 }

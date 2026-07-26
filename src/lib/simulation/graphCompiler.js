@@ -316,8 +316,8 @@ export function autoLayout(graph) {
 
   /** @type {Record<string, { x: number, y: number }>} */
   const layout = {}
-  const columnWidth = 220
-  const rowHeight = 110
+  const columnWidth = 180
+  const rowHeight = 140
   for (const [column, ids] of [...columns.entries()].sort((left, right) => left[0] - right[0])) {
     ids.forEach((id, index) => {
       layout[id] = {
