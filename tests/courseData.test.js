@@ -89,7 +89,7 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
   assert.match(dsaFlow.title, /data structures and algorithms/i);
   assert.match(aiFlow.title, /AI Engineer/i);
   assert.match(questionBankFlow.title, /question bank/i);
-  assert.ok(highLevelFlow.modules.length >= 11);
+  assert.ok(highLevelFlow.modules.length >= 14);
   assert.ok(lowLevelFlow.modules.length >= 6);
   assert.ok(dsaFlow.modules.length >= 6);
   assert.ok(aiFlow.modules.length >= 10);
@@ -132,7 +132,16 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
   [
     'Request lifecycle deep dive',
     'SLIs, SLOs, and error budgets',
-    'Failure injection and incidents'
+    'Failure injection and incidents',
+    'Indexing and query path design',
+    'Replication, sharding, and consistency',
+    'Polyglot storage selection',
+    'Auth and threat modeling for HLD',
+    'Encryption, secrets, and tenancy',
+    'Safe change, DR, and degradation',
+    'Partitioning and hot-key control',
+    'Consensus, quorums, and leadership',
+    'Sagas, idempotency, and workflows'
   ].forEach((title) => assert.ok(hldLessonTitles.has(title), `missing HLD learning lesson: ${title}`));
 
   const aiLessonTitles = new Set(getModulesByFlow('ai-engineer').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
@@ -169,6 +178,9 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
   const expansionModuleSlugs = new Set([
     'systems-fundamentals-lab',
     'reliability-observability-lab',
+    'data-storage-lab',
+    'security-operations-lab',
+    'distributed-systems-lab',
     'lld-design-patterns-lab',
     'lld-project-labs',
     'dsa-concepts-lab',
@@ -177,7 +189,7 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'deep-learning-from-scratch'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 24);
+  assert.equal(expansionLessons.length, 33);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
@@ -424,6 +436,25 @@ test('AI engineer practice steps use ML-specific structure', () => {
   // AI-specific titles
   assert.match(steps[1].title, /Implementation deep dive/);
   assert.match(steps[2].title, /Evaluation and production review/);
+});
+
+test('HLD learning lab practice steps use design exercises and likely answers', () => {
+  const labLesson = allLessons.find((lesson) => lesson.id === 'data-storage-lab/indexing-and-query-path-design');
+  assert.ok(labLesson);
+  const steps = getLessonPracticeSteps(labLesson);
+  assert.equal(steps.length, 3);
+  assert.ok(steps[0].structure.includes('Core model'));
+  assert.ok(steps[1].structure.includes('Critical path / topology'));
+  assert.ok(steps[2].structure.includes('What you would defend'));
+  assert.match(steps[0].title, /Teach the lab concept/);
+  assert.ok(
+    steps[1].guardrails.some((item) => /primary key|secondary indexes|paginate/i.test(item)),
+    'expected design-exercise prompt questions in design guardrails'
+  );
+  assert.ok(
+    steps[0].guardrails.some((item) => /access patterns|invariants|indexes/i.test(item)),
+    'expected curated likelyAnswerPoints in opening guardrails'
+  );
 });
 
 test('AI engineer interactive lessons cover every AI module', () => {

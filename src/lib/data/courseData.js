@@ -15,9 +15,9 @@ export const siteOverview = {
     {
       "title": "Systems engineer path",
       "flowSlug": "high-level-design",
-      "summary": "Trace real request paths, capacity, reliability, and architecture trade-offs before you sit a system design round.",
+      "summary": "Trace real request paths, capacity, storage, security, distributed coordination, and reliability trade-offs before you sit a system design round.",
       "startModule": "systems-fundamentals-lab",
-      "focus": ["Request lifecycle", "Reliability & observability", "Architecture case studies"]
+      "focus": ["Request lifecycle", "Data storage & consistency", "Security, DR, and distributed systems"]
     },
     {
       "title": "Software design path",
@@ -4402,9 +4402,78 @@ export function getLessonPracticeSteps(lesson) {
   const checklist = lesson.checklist.slice(0, 3);
   const pitfalls = lesson.pitfalls.slice(0, 2);
   const prompts = lesson.interviewPrompts.slice(0, 3);
+  const likelyPoints = (lesson.likelyAnswerPoints ?? []).slice(0, 3);
+  const designExercise = (lesson.exercises ?? []).find((exercise) => exercise.type === 'design');
   const isCaseStudy = lesson.moduleSlug === 'case-studies';
+  const hldLabModuleSlugs = [
+    'systems-fundamentals-lab',
+    'reliability-observability-lab',
+    'data-storage-lab',
+    'security-operations-lab',
+    'distributed-systems-lab'
+  ];
+  const isHldLearningLab = lesson.flowSlug === 'high-level-design' && hldLabModuleSlugs.includes(lesson.moduleSlug);
   const aiModuleSlugs = ['ml-foundations', 'deep-learning', 'llms-and-nlp', 'prompt-engineering-and-rag', 'ai-agents', 'mlops-and-deployment', 'ai-safety-and-ethics', 'data-engineering-for-ml'];
   const isAiEngineer = lesson.flowSlug === 'ai-engineer' || aiModuleSlugs.includes(lesson.moduleSlug);
+
+  if (isHldLearningLab) {
+    const openingStructure = ['Core model', 'When it matters', 'Primary trade-offs', 'Signals and metrics'];
+    const designStructure = ['Requirements and constraints', 'Critical path / topology', 'Data and consistency choices', 'Failure and ops plan'];
+    const reviewStructure = ['What you would defend', 'What you would defer', 'Incident and SLO risks', 'Next scaling lever'];
+    const designPrompt =
+      designExercise?.description ??
+      `Apply "${lesson.title}" to a realistic production system. Name the critical path, storage or coordination choices, and the first failure mode you would design for.`;
+    const designGuardrails = [
+      ...(designExercise?.promptQuestions?.slice(0, 3) ?? sectionHeadings),
+      prompts[1] ?? `Identify the highest-risk decision in ${lesson.title}.`,
+      ...checklist.slice(0, 2)
+    ];
+
+    return [
+      {
+        id: 'opening',
+        kind: 'interview',
+        title: 'Teach the lab concept',
+        objective: 'Explain the lab topic with production intuition before you jump into a full architecture sketch.',
+        prompt: `Teach "${lesson.title}" as an interviewer follow-up. Cover the mental model, when it changes architecture, and which metrics prove the design works.`,
+        guardrails: [
+          prompts[0] ?? `Start with the highest-signal idea in ${lesson.title}.`,
+          ...sectionHeadings.slice(0, 2),
+          ...(likelyPoints.slice(0, 1).length ? likelyPoints.slice(0, 1) : checklist.slice(0, 1))
+        ],
+        structure: openingStructure,
+        template: buildPracticeTemplate(lesson.title, openingStructure, currentPromptLabel(prompts[0], lesson.title))
+      },
+      {
+        id: 'design',
+        kind: 'design',
+        title: designExercise?.title ?? 'Production design drill',
+        objective: 'Turn the lab into a defendable system design with an explicit critical path and failure plan.',
+        prompt: designPrompt,
+        guardrails: designGuardrails,
+        structure: designStructure,
+        template: buildPracticeTemplate(
+          lesson.title,
+          designStructure,
+          currentPromptLabel(designExercise?.promptQuestions?.[0] ?? prompts[1], lesson.title)
+        )
+      },
+      {
+        id: 'tradeoffs',
+        kind: 'review',
+        title: 'Trade-offs and interview close',
+        objective: 'Close like a strong candidate: defend choices, name deferred work, and connect risks to SLOs and operations.',
+        prompt: `Review your answer for "${lesson.title}". Add the trade-offs, deferred complexity, observability signals, and the next scaling lever you would mention before wrapping up.`,
+        guardrails: [
+          prompts[2] ?? `Name the most important trade-off for ${lesson.title}.`,
+          ...pitfalls,
+          ...(likelyPoints.slice(1, 3).length ? likelyPoints.slice(1, 3) : [`Use these checklist items as a final pass: ${checklist.join('; ')}`])
+        ],
+        structure: reviewStructure,
+        template: buildPracticeTemplate(lesson.title, reviewStructure, currentPromptLabel(prompts[2], lesson.title))
+      }
+    ];
+  }
 
   if (isAiEngineer) {
     const conceptStructure = ['Core intuition', 'Key algorithms or techniques', 'When to apply', 'Common variants'];
