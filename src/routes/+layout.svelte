@@ -117,12 +117,6 @@
     mediaQuery.addEventListener('change', syncViewport);
     window.addEventListener('keydown', handleGlobalKeydown);
 
-    if (pwaInfo) {
-      import('virtual:pwa-register').then(({ registerSW }) => {
-        registerSW({ immediate: true });
-      });
-    }
-
     return () => {
       mediaQuery.removeEventListener('change', syncViewport);
       window.removeEventListener('keydown', handleGlobalKeydown);
