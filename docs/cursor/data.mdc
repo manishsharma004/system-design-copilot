@@ -52,7 +52,8 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
-- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js`
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js` for all 24 expansion lessons
+- Expansion lessons include on-page teaching sections, code examples, exercises, interactive topic labs, and deep-dive essays (not reference-only), including `learningExpansionInteractive.js`
 - `simulationLessons.js` — authored + generated HLD sims (`getSimulationLesson`)
 - `lessonEnhancements.js` + `solutionLoader.js` — rich solutions for case studies
 - Diagrams: `/primer-images/*` under `static/` (asserted in `tests/courseData.test.js`)

@@ -164,6 +164,37 @@ test('AI learning expansion lessons expose runnable coding exercises', () => {
   });
 });
 
+test('learning expansion lessons ship on-page teaching material, exercises, and topic labs', async () => {
+  const { getInteractiveLesson } = await import('../src/lib/data/interactiveLessons.js');
+  const expansionModuleSlugs = new Set([
+    'systems-fundamentals-lab',
+    'reliability-observability-lab',
+    'lld-design-patterns-lab',
+    'lld-project-labs',
+    'dsa-concepts-lab',
+    'dsa-algorithms-lab',
+    'ml-interactive-lab',
+    'deep-learning-from-scratch'
+  ]);
+  const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
+  assert.equal(expansionLessons.length, 24);
+
+  expansionLessons.forEach((lesson) => {
+    assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
+    const bodyChars = lesson.sections.reduce((sum, section) => sum + (section.body?.length ?? 0), 0);
+    assert.ok(bodyChars >= 2500, `thin lesson body for ${lesson.id}`);
+    assert.ok(lesson.sections.filter((section) => section.codeExample).length >= 2, `missing code examples for ${lesson.id}`);
+    assert.ok((lesson.exercises ?? []).length >= 2, `missing exercises for ${lesson.id}`);
+
+    const interactive = getInteractiveLesson(lesson.id);
+    assert.ok(interactive, `missing interactive lab for ${lesson.id}`);
+    assert.ok(interactive.examples?.length >= 2, `missing interactive examples for ${lesson.id}`);
+    assert.ok(interactive.decisionGuide?.options?.length >= 2, `missing decision guide for ${lesson.id}`);
+    assert.ok(interactive.caseStudy?.steps?.length >= 4, `missing case study for ${lesson.id}`);
+    assert.ok(interactive.mermaid?.code, `missing mermaid diagram for ${lesson.id}`);
+  });
+});
+
 test('DSA lessons expose coding-practice metadata for the local WASM runner', () => {
   const dsaLessons = getModulesByFlow('data-structures-and-algorithms').flatMap((module) => module.lessons);
 
