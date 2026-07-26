@@ -60,6 +60,10 @@
   --ide-terminal-fg: var(--vscode-foreground);
   --ide-warning-border: color-mix(in srgb, var(--danger) 35%, transparent);
   --ide-warning-bg: color-mix(in srgb, var(--danger) 12%, transparent);
+  --ide-guide-heading: var(--accent);
+  --ide-guide-body: var(--ide-fg);
+  --ide-guide-muted: var(--ide-muted);
+  --ide-toolbar-bg: var(--bg-soft);
 }
 
 [data-theme='copilot-light'],
@@ -68,10 +72,30 @@
 [data-theme='forest-light'],
 [data-theme='paper'],
 [data-theme='dawn'] {
+  --ide-fg: var(--text);
+  --ide-muted: var(--muted);
   --ide-strong-fg: var(--text);
+  --ide-tab-inactive-fg: var(--muted);
+  --ide-input-bg: var(--panel);
+  --ide-input-fg: var(--text);
+  --ide-tab-bar: var(--bg-soft);
+  --ide-button-bg: var(--panel);
+  --ide-button-fg: var(--text);
+  --ide-button-hover: var(--bg-soft);
+  --ide-border: color-mix(in srgb, var(--text) 14%, transparent);
+  --ide-helper-bg: var(--panel);
+  --ide-panel: var(--panel);
+  --ide-bottom-panel: var(--bg-soft);
+  --ide-accent-btn-fg: var(--accent-strong);
+  --ide-guide-heading: var(--accent-strong);
+  --ide-guide-body: var(--text);
+  --ide-guide-muted: color-mix(in srgb, var(--text) 78%, transparent);
+  --ide-strong-fg: var(--text);
+  --ide-surface: var(--panel);
+  --ide-toolbar-bg: var(--bg-soft);
   --ide-topology-canvas-bg: var(--bg-soft);
   --ide-topology-node-fill: var(--panel);
   --ide-topology-node-stroke: var(--border);
-  --ide-topology-grid: color-mix(in srgb, var(--muted) 28%, transparent);
+  --ide-topology-grid: color-mix(in srgb, var(--muted) 35%, transparent);
   --ide-icon-folder: #c7952e;
 }

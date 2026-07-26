@@ -693,15 +693,15 @@
     overflow: hidden;
     min-width: 0;
     max-width: 100%;
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    border: 1px solid var(--ide-border, var(--border));
     border-radius: 0.85rem;
-    background: #151821;
+    background: var(--ide-surface, var(--panel));
   }
 
   .editor-frame :global(.llm-editor-chrome) {
     flex: 0 0 auto;
     min-width: 0;
-    border-bottom: 1px solid #252a35;
+    border-bottom: 1px solid var(--ide-border, var(--border));
   }
 
   .editor-frame :global(.code-editor-shell) {

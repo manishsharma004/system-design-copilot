@@ -428,8 +428,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.7rem 0.9rem;
-    background: linear-gradient(180deg, rgba(105, 108, 255, 0.08), rgba(17, 19, 26, 0.96));
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: var(--ide-toolbar-bg, var(--bg-soft));
+    border: 1px solid var(--ide-border, var(--border));
     border-radius: 0.8rem;
   }
 
@@ -445,9 +445,9 @@
     width: 28px;
     height: 28px;
     border-radius: 4px;
-    border: 1px solid #353c4f;
-    background: #161922;
-    color: #9aa3bc;
+    border: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-button-bg, var(--panel));
+    color: var(--ide-muted, var(--muted));
     font-size: 0.75rem;
     font-weight: 700;
     cursor: pointer;
@@ -455,20 +455,20 @@
   }
 
   .practice-ide-step-btn.active {
-    background: rgba(105, 108, 255, 0.22);
-    border-color: rgba(105, 108, 255, 0.65);
-    color: #eef2ff;
+    background: var(--ide-focus-bg, var(--accent-muted));
+    border-color: var(--accent-border, var(--accent));
+    color: var(--ide-strong-fg, var(--text));
   }
 
   .practice-ide-step-btn.done {
-    border-color: rgba(113, 221, 55, 0.45);
-    color: #9be37a;
+    border-color: color-mix(in srgb, var(--success) 45%, transparent);
+    color: var(--success);
   }
 
   .practice-ide-step-btn.done.active {
-    background: rgba(105, 108, 255, 0.22);
-    border-color: rgba(105, 108, 255, 0.65);
-    color: #eef2ff;
+    background: var(--ide-focus-bg, var(--accent-muted));
+    border-color: var(--accent-border, var(--accent));
+    color: var(--ide-strong-fg, var(--text));
   }
 
   .practice-ide-actions {
@@ -480,7 +480,7 @@
   .ide-nav-btn,
   .ide-reset-btn {
     border-radius: 0.375rem;
-    border: 1px solid rgba(148, 163, 184, 0.18);
+    border: 1px solid var(--ide-border, var(--border));
     padding: 0.35rem 0.7rem;
     font-size: 0.78rem;
     font-weight: 600;
@@ -489,34 +489,36 @@
   }
 
   .ide-save-btn {
-    background: #388a34;
-    color: #fff;
-    border-color: #388a34;
+    background: var(--ide-run-bg, var(--success));
+    color: var(--ide-run-fg, var(--on-accent));
+    border-color: var(--ide-run-bg, var(--success));
   }
 
   .ide-save-btn:disabled {
-    background: #333;
-    border-color: #444;
-    color: #666;
+    background: var(--ide-button-bg, var(--bg-soft));
+    border-color: var(--ide-border, var(--border));
+    color: var(--ide-muted, var(--muted));
+    opacity: 0.65;
   }
 
   .ide-nav-btn {
-    background: #1b1f2a;
-    color: #cfd5e9;
+    background: var(--ide-button-bg, var(--panel));
+    color: var(--ide-button-fg, var(--text));
   }
 
   .ide-nav-btn:hover:not(:disabled) {
-    background: #2a3040;
+    background: var(--ide-button-hover, var(--bg-soft));
   }
 
   .ide-reset-btn {
     background: transparent;
-    color: #8b8fa7;
+    color: var(--ide-reset-fg, var(--muted));
     border-color: transparent;
   }
 
   .ide-reset-btn:hover {
-    color: #cfd3ec;
+    color: var(--ide-reset-hover-fg, var(--text));
+    background: var(--ide-reset-hover-bg, var(--accent-subtle));
   }
 
   .attempt-timer-card {
@@ -524,13 +526,13 @@
     gap: 0.75rem;
     padding: 1rem 1.1rem;
     border-radius: 0.8rem;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    background: rgba(11, 15, 24, 0.92);
+    border: 1px solid var(--ide-border, var(--border));
+    background: var(--panel);
   }
 
   .attempt-timer-card.over-limit {
-    border-color: rgba(255, 171, 0, 0.45);
-    background: linear-gradient(180deg, rgba(255, 171, 0, 0.06), rgba(11, 15, 24, 0.96));
+    border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+    background: var(--ide-warning-bg);
   }
 
   .attempt-timer-header {
@@ -544,7 +546,7 @@
   .attempt-timer-header h3 {
     margin: 0;
     font-size: 1.35rem;
-    color: #eef2ff;
+    color: var(--text);
   }
 
   .attempt-timer-pill-row,
@@ -556,7 +558,7 @@
 
   .attempt-timer-copy {
     margin: 0;
-    color: rgba(222, 230, 245, 0.78);
+    color: var(--muted);
     font-size: 0.88rem;
     line-height: 1.6;
   }
@@ -567,29 +569,30 @@
     padding: 1.1rem 1.15rem;
     border-radius: 0;
     border: none;
-    background: var(--vscode-editor-bg, #1e1e1e);
-    color: #cfd5e9;
+    background: var(--ide-panel, var(--panel));
+    color: var(--ide-guide-body, var(--text));
     font-size: 0.9rem;
     line-height: 1.75;
   }
 
   :global(.practice-preview-panel h3) {
     margin: 0;
-    color: #eef2ff;
+    color: var(--ide-guide-body, var(--text));
     font-size: 1.05rem;
   }
 
   :global(.practice-preview-panel h4) {
     margin: 0.35rem 0 0;
-    color: #9fb3ff;
+    color: var(--ide-guide-heading, var(--accent-strong));
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    font-weight: 700;
   }
 
   :global(.practice-preview-panel p) {
     margin: 0;
-    color: #bcc5de;
+    color: var(--ide-guide-body, var(--text));
   }
 
   :global(.practice-preview-panel ul) {
@@ -600,16 +603,16 @@
   }
 
   :global(.practice-preview-panel li) {
-    color: #bcc5de;
+    color: var(--ide-guide-body, var(--text));
     margin-bottom: 0;
   }
 
   :global(.practice-preview-prompt) {
     padding: 0.9rem 1rem;
     border-radius: 0.75rem;
-    border: 1px solid rgba(105, 108, 255, 0.22);
-    background: rgba(105, 108, 255, 0.08);
-    color: #eef2ff !important;
+    border: 1px solid var(--accent-border, var(--border));
+    background: var(--accent-subtle);
+    color: var(--text) !important;
     font-weight: 500;
   }
 </style>

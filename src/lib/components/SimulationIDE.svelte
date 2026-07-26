@@ -493,7 +493,7 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: var(--vscode-editor-bg, #1e1e1e);
+    background: var(--ide-editor, var(--bg));
     overflow: hidden;
   }
 
@@ -542,13 +542,13 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 700;
-    color: #696cff;
+    color: var(--ide-accent-label, var(--accent));
   }
 
   .simulation-ide-select select {
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    background: #161922;
-    color: #cfd3ec;
+    border: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-input-bg, var(--panel));
+    color: var(--ide-input-fg, var(--text));
     border-radius: 0.6rem;
     padding: 0.5rem 0.75rem;
     font-size: 0.82rem;
@@ -565,7 +565,7 @@
   .ide-reset-btn,
   .ide-fullscreen-btn {
     border-radius: 0.6rem;
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    border: 1px solid var(--ide-border, var(--border));
     padding: 0.5rem 0.9rem;
     font-size: 0.82rem;
     font-weight: 600;
@@ -576,14 +576,14 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    background: #1b1f2a;
-    color: #cfd3ec;
+    background: var(--ide-button-bg, var(--panel));
+    color: var(--ide-button-fg, var(--text));
     cursor: pointer;
   }
 
   .ide-fullscreen-btn:hover {
-    background: #2a3040;
-    color: #eef2ff;
+    background: var(--ide-button-hover, var(--bg-soft));
+    color: var(--ide-strong-fg, var(--text));
   }
 
   .ide-fullscreen-icon {
@@ -597,32 +597,32 @@
   }
 
   .ide-run-btn {
-    background: #388a34;
-    color: #fff;
-    border-color: #388a34;
+    background: var(--ide-run-bg, var(--success));
+    color: var(--ide-run-fg, var(--on-accent));
+    border-color: var(--ide-run-bg, var(--success));
   }
 
   .ide-run-btn:hover {
-    background: #45a341;
+    background: var(--ide-run-hover, var(--success));
   }
 
   .ide-save-btn {
-    background: rgba(105, 108, 255, 0.14);
-    color: #cfd3ec;
+    background: var(--ide-accent-btn-bg, var(--accent-muted));
+    color: var(--ide-accent-btn-fg, var(--accent-strong));
   }
 
   .ide-save-btn:hover {
-    background: rgba(105, 108, 255, 0.2);
+    background: var(--ide-accent-btn-hover, var(--accent-hover));
   }
 
   .ide-reset-btn {
     background: transparent;
-    color: #8b8fa7;
+    color: var(--ide-reset-fg, var(--muted));
   }
 
   .ide-reset-btn:hover {
-    color: #cfd3ec;
-    background: rgba(148, 163, 184, 0.08);
+    color: var(--ide-reset-hover-fg, var(--text));
+    background: var(--ide-reset-hover-bg, var(--accent-subtle));
   }
 
   .topology-panel-slot {
