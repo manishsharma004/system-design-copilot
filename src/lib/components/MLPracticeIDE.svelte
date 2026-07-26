@@ -317,12 +317,13 @@ plt.show()
 
   .ml-editor-pane,
   .ml-output-pane {
-    background: rgba(11, 15, 24, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 1.15rem;
     display: grid;
     gap: 0.85rem;
     padding: 1rem;
+    color: var(--text);
   }
 
   .ml-toolbar {

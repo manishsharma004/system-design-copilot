@@ -564,9 +564,9 @@
 
   .runtime-pill.ready,
   .passing {
-    background: rgba(30, 132, 73, 0.18);
-    border-color: rgba(30, 132, 73, 0.35);
-    color: #96e6b3;
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    color: var(--success);
   }
 
   .question-chip-row {
@@ -578,10 +578,10 @@
   .question-chip,
   .language-pill,
   .case-pill {
-    background: rgba(13, 18, 28, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--ide-button-bg, var(--bg-soft));
+    border: 1px solid var(--ide-border, var(--border));
     border-radius: 1rem;
-    color: inherit;
+    color: var(--text);
     cursor: pointer;
     transition: border-color 0.18s ease, transform 0.18s ease;
   }
@@ -597,14 +597,14 @@
   .empty-copy,
   .support-card p,
   label span {
-    color: rgba(222, 230, 245, 0.78);
+    color: var(--muted);
   }
 
   .question-chip.active,
   .language-pill.active,
   .case-pill.active {
-    border-color: rgba(92, 166, 255, 0.7);
-    box-shadow: 0 0 0 1px rgba(92, 166, 255, 0.18);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-muted);
     transform: translateY(-1px);
   }
 
@@ -620,9 +620,10 @@
   .support-card,
   .dsa-empty-state,
   .attempt-timer-card {
-    background: rgba(11, 15, 24, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 1.15rem;
+    color: var(--text);
   }
 
   .attempt-timer-card {
@@ -640,12 +641,13 @@
   }
 
   .attempt-timer-copy {
-    color: rgba(222, 230, 245, 0.78);
+    color: var(--muted);
     margin: 0;
   }
 
   .attempt-timer-card h3 {
     margin: 0.15rem 0 0;
+    color: var(--text);
   }
 
   .problem-pane,
@@ -661,11 +663,22 @@
     max-height: 42rem;
     overflow: auto;
     padding-right: 0.35rem;
+    color: var(--text);
+  }
+
+  .problem-body :global(p),
+  .problem-body :global(li),
+  .problem-body :global(h1),
+  .problem-body :global(h2),
+  .problem-body :global(h3),
+  .problem-body :global(h4),
+  .problem-body :global(strong) {
+    color: inherit;
   }
 
   .problem-body :global(pre) {
-    background: rgba(20, 27, 41, 0.96);
-    border: 1px solid rgba(118, 139, 186, 0.16);
+    background: var(--code-bg, var(--bg-soft));
+    border: 1px solid var(--border);
     border-radius: 0.9rem;
     flex-shrink: 0;
     max-height: none;
@@ -678,7 +691,7 @@
   }
 
   .problem-body :global(code) {
-    color: #a8d8ff;
+    color: var(--code-fg, var(--accent-strong));
   }
 
   .support-card,
@@ -738,10 +751,10 @@
   }
 
   textarea {
-    background: rgba(19, 26, 39, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 0.85rem;
-    color: #e6edf7;
+    color: var(--text);
     font: inherit;
     line-height: 1.45;
     padding: 0.8rem 0.9rem;
@@ -749,8 +762,10 @@
   }
 
   pre {
-    background: rgba(19, 26, 39, 0.92);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 0.85rem;
+    color: var(--text);
     margin: 0.3rem 0 0;
     max-height: none;
     min-height: min-content;
@@ -762,15 +777,16 @@
   }
 
   .result-error {
-    background: rgba(120, 40, 30, 0.16);
-    border: 1px solid rgba(199, 93, 78, 0.25);
+    background: var(--ide-warning-bg);
+    border: 1px solid var(--ide-warning-border);
     border-radius: 0.9rem;
     padding: 0.75rem 0.85rem;
+    color: var(--text);
   }
 
   .result-error.muted {
-    background: rgba(47, 61, 93, 0.2);
-    border-color: rgba(118, 139, 186, 0.18);
+    background: var(--bg-soft);
+    border-color: var(--border);
   }
 
   @media (max-width: 980px) {
