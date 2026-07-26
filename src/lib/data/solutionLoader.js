@@ -7,7 +7,10 @@ export const solutionLessonIds = new Set([
   'case-studies/pastebin',
   'case-studies/mint',
   'case-studies/twitter',
-  'case-studies/sales-rank'
+  'case-studies/sales-rank',
+  'product-patterns/feed-timeline',
+  'performance-and-resilience/caching-layers',
+  'application-architecture/api-design'
 ]);
 
 /**

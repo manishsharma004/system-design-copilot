@@ -821,6 +821,12 @@ const rawModules = [
           "How would you roll out a new auth policy safely?",
           "When should a reverse proxy cache responses?"
         ],
+        "likelyAnswerPoints": [
+          "Put cross-cutting edge policy in the gateway or reverse proxy: TLS termination, authn/z, rate limits, routing, and request shaping — not business workflows or domain rules.",
+          "Roll out a new auth policy with a shadow or canary mode first, dual-read old and new tokens during migration, and feature-flag enforcement per route before flipping globally.",
+          "A reverse proxy should cache only shared, cacheable responses with explicit cache keys and TTLs — never personalized, authenticated, or fast-changing payloads without careful key design.",
+          "Keep gateways thin: if orchestration grows complex, the product logic probably belongs in application services behind the gateway."
+        ],
         "diagram": {
           "src": "/primer-images/n41Azff.png",
           "alt": "Reverse proxy diagram",
@@ -886,6 +892,12 @@ const rawModules = [
           "How would you protect a login API from credential stuffing?",
           "When would you rate-limit by tenant instead of by user?",
           "What metrics tell you the limiter is too strict or too weak?"
+        ],
+        "likelyAnswerPoints": [
+          "Protect login with per-IP and per-account limits, CAPTCHA or proof-of-work after repeated failures, device fingerprinting, and anomaly detection on credential-stuffing patterns.",
+          "Rate-limit by tenant when quotas are part of the product contract, noisy neighbors share infrastructure, or billing tiers define fair-use envelopes beyond per-user caps.",
+          "Watch 429 rate, retry storms, limiter latency, false-positive blocks, and origin load — too many 429s with low abuse signals means the limiter is too strict; rising abuse with few blocks means it is too weak.",
+          "Return structured retry guidance with Retry-After headers and distinguish soft throttles from hard blocks so legitimate clients can back off gracefully."
         ],
         "diagram": null,
         "related": [
@@ -959,6 +971,12 @@ const rawModules = [
           "What logic belongs in the application layer rather than the database or gateway?",
           "How do you keep a stateless service from depending on hidden local state?",
           "What changes when one domain is owned by many teams?"
+        ],
+        "likelyAnswerPoints": [
+          "The application layer owns business rules, orchestration, authorization decisions tied to product semantics, and workflow state — not TLS, routing, or raw SQL that belongs in infrastructure or persistence layers.",
+          "Externalize session and sticky state to Redis or a database, avoid in-memory singletons for request context, and design every instance to handle any request interchangeably behind the load balancer.",
+          "When many teams share a domain, split ownership by capability, define explicit APIs and events, avoid shared mutable databases, and invest in contract testing and versioning across boundaries.",
+          "Background workers should reuse domain logic from the online path but run with different SLOs, retry policies, and idempotency guarantees."
         ],
         "diagram": {
           "src": "/primer-images/yB5SYwm.png",
@@ -1147,6 +1165,12 @@ const rawModules = [
           "What makes an endpoint idempotent?",
           "When would you choose RPC over REST for an internal platform?",
           "How would you evolve an API used by mobile clients on old versions?"
+        ],
+        "likelyAnswerPoints": [
+          "An endpoint is idempotent when repeating the same request with the same intent does not create duplicate side effects — use idempotency keys, natural keys, or upsert semantics on writes.",
+          "Choose RPC for high-throughput internal calls with stable typed contracts, binary payloads, and many service-to-service interactions; REST when resources are cacheable and HTTP semantics help clients.",
+          "Evolve mobile APIs with additive changes, optional fields, versioned endpoints or feature flags, and sunset windows — never break old clients without a deprecation path and telemetry on version mix.",
+          "Document error models, pagination cursors, retry behavior, and ownership of each field in the contract, not just the URL or method name."
         ],
         "diagram": {
           "src": "/primer-images/iF4Mkb5.png",
@@ -1347,6 +1371,12 @@ const rawModules = [
           "When is asynchronous replication acceptable?",
           "How would you explain replica lag to a product manager?",
           "What changes if you need active-active writes across regions?"
+        ],
+        "likelyAnswerPoints": [
+          "Async replication is acceptable when brief staleness is tolerable on reads, the product can show slightly old data, and you have failover procedures that account for lag at promotion time.",
+          "Explain replica lag as the delay before a write appears on followers — users may see old data for seconds, which matters for feeds but is unacceptable for balances or inventory reservations.",
+          "Active-active multi-region writes need conflict resolution, careful partition keys, idempotent writes, and often per-region primaries with async cross-region sync instead of one global writer.",
+          "Failover planning must cover RPO/RTO, client discovery of the new primary, split-brain prevention, and throttled replica catch-up so survivors do not collapse."
         ],
         "diagram": {
           "src": "/primer-images/C9ioGtn.png",
@@ -1624,6 +1654,12 @@ const rawModules = [
           "How does personalized content change cache placement?",
           "When is a low hit ratio still acceptable?"
         ],
+        "likelyAnswerPoints": [
+          "Cache static product attributes, rendered HTML fragments, pricing tiers, and inventory snapshots with TTLs that match freshness needs — keep cart, checkout, and personalized recommendations out of shared caches unless keys include user context.",
+          "Personalized content lowers hit ratio and pushes caching to the application layer with user-scoped keys, shorter TTLs, or edge-side includes instead of a global CDN cache.",
+          "A low hit ratio is acceptable when the cache protects a very expensive origin path on the hits you do get, or when you are warming a new key space after a launch.",
+          "Always design miss behavior: single-flight coalescing, circuit breakers, and origin capacity for cold-start stampedes matter more than chasing 99% hit ratio on every page."
+        ],
         "diagram": {
           "src": "/primer-images/Q6z24La.png",
           "alt": "Cache layer diagram",
@@ -1755,6 +1791,12 @@ const rawModules = [
           "How would you handle notification fan-out for a celebrity account?",
           "When does a stream fit better than a queue?",
           "What metrics tell you the async system is falling behind?"
+        ],
+        "likelyAnswerPoints": [
+          "For celebrity fan-out, fan out asynchronously via a queue or stream, batch followers into chunks, use separate hot-path workers, and cap synchronous work so one post does not block the write API.",
+          "Streams fit when many consumers need ordered replay, event sourcing, CDC, or audit logs; queues fit task dispatch with competing workers and simpler at-least-once job execution.",
+          "Watch consumer lag, backlog age, DLQ depth, retry rate, and processing latency p99 — rising lag with flat throughput means consumers are falling behind or poison messages are blocking partitions.",
+          "Every async consumer should be idempotent because at-least-once delivery is the practical default."
         ],
         "diagram": {
           "src": "/primer-images/54GYsSx.png",
@@ -2529,6 +2571,12 @@ const rawModules = [
           "What would you cache in a home feed?",
           "Why is a feed usually a derived view instead of the primary source of truth?"
         ],
+        "likelyAnswerPoints": [
+          "Celebrity accounts break write-time fan-out — use hybrid fan-out: precompute for normal users, read-time merge or dedicated workers for high-follower authors, and isolate hot keys in cache and storage.",
+          "Cache the first page of the home feed per user or cohort, hot post metadata, ranking features, and precomputed timeline slices — not the entire historical event log.",
+          "The feed is a derived view because the source of truth is immutable events or posts; timelines, rankings, and filters can be recomputed, backfilled, or A/B tested without rewriting primary data.",
+          "Deletion, blocks, and privacy rules are applied when assembling the derived feed, often with tombstones and filter stages in the ranking pipeline."
+        ],
         "diagram": null,
         "related": [
           "queues-and-streams",
@@ -2711,6 +2759,12 @@ const rawModules = [
           "How would you design read receipts?",
           "Why should presence tolerate slight staleness?",
           "How do you notify offline users without duplicating sends?"
+        ],
+        "likelyAnswerPoints": [
+          "Read receipts are derived state: persist a read event per user per message or conversation, fan out to online participants via websockets, and reconcile asynchronously for offline clients on sync.",
+          "Presence is soft state — heartbeats expire, regional gateways shard connections, and slight staleness is acceptable because showing someone online 30 seconds late rarely breaks the product.",
+          "Notify offline users via push with deduplication keys, idempotent downstream workers, and per-device notification tokens; retries must not create duplicate pushes for the same message event.",
+          "Persist the canonical message first, then fan out delivery, receipts, badges, and push as separate downstream reactions to the same event."
         ],
         "diagram": null,
         "related": [

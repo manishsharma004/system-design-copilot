@@ -6,6 +6,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 
 - Component: `PracticeIDE.svelte` → `IDEWorkspace` + Monaco markdown
 - Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review; AI uses ML-oriented structures)
+- Per-phase mock timer: 25 / 35 / 45 min targets (`practicePhaseLimits.js`); persisted via `practiceAnswers.startAttempt` on step keys
 - Workspace id: `practice:{lesson.id}` (IndexedDB)
 - Drafts: `practiceAnswers` store (`persistence.mdc`)
 - Optional coach: `LlmAssistantPanel` in IDEWorkspace `editor-chrome` — **Check (AI)** + **Configure model** above Monaco (`llm.mdc`)
@@ -38,7 +39,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 ## Heuristics and solutions
 
 - “Show likely answer” under prompts: `interviewAnswers.js` (+ optional `likelyAnswerPoints` on lessons)
-- Enhanced walkthroughs (9 HLD case studies): `LessonSolutionPanel` + `solutionLoader.js` / `lessonEnhancements.js`
+- Enhanced walkthroughs (12 lessons: 9 case studies + feed-timeline, caching-layers, api-design): `LessonSolutionPanel` + `solutionLoader.js` / `lessonEnhancements.js`
 
 ## Orphans
 
