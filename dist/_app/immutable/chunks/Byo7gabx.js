@@ -1,1 +1,0 @@
-import{x as e}from"./CvnSWM0P.js";export{e as createArchitectureServices};
