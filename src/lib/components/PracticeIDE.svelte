@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { onDestroy } from 'svelte';
   import { practiceAnswers } from '$lib/stores/practice';
   import IDEWorkspace from '$lib/components/IDEWorkspace.svelte';
   import LlmAssistantPanel from '$lib/components/LlmAssistantPanel.svelte';
@@ -11,6 +12,12 @@
     findFileByPath,
     resetWorkspace
   } from '$lib/editor/workspace';
+  import { getAttemptTimerElapsed, resolveAttemptTimer } from '$lib/stores/practiceTimer';
+  import {
+    formatPhaseTargetLabel,
+    formatPracticeDuration,
+    getPracticePhaseLimitMs
+  } from '$lib/practicePhaseLimits';
 
   /** @type {any} */
   export let lesson;
@@ -23,6 +30,9 @@
   let workspaceReady = false;
   /** @type {any} */
   let ideWorkspace;
+  let timerNow = Date.now();
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let timerIntervalId = null;
 
   $: steps = getLessonPracticeSteps(lesson);
   $: currentStep = steps[currentStepIndex];
@@ -39,6 +49,29 @@
   $: canAdvance = isSaved && currentStepIndex < steps.length - 1;
   $: draftMetadata = buildMarkdownMetadata(draft);
   $: activeFileId = `step-${currentStepIndex}`;
+  $: activeAttemptTimer = resolveAttemptTimer(savedEntry?.timer);
+  $: activeAttemptElapsedMs = getAttemptTimerElapsed(activeAttemptTimer, timerNow);
+  $: phaseLimitMs = getPracticePhaseLimitMs(currentStep?.id);
+  $: activeAttemptElapsedLabel = formatPracticeDuration(activeAttemptElapsedMs);
+  $: phaseTargetLabel = phaseLimitMs ? formatPhaseTargetLabel(phaseLimitMs) : null;
+  $: isOverPhaseLimit = phaseLimitMs !== null && activeAttemptElapsedMs > phaseLimitMs;
+  $: attemptStatusLabel = activeAttemptTimer.status === 'running' ? 'Running' : activeAttemptTimer.status === 'paused' ? 'Paused' : 'Idle';
+  $: lastAttemptLabel = activeAttemptTimer.lastCompletedMs
+    ? formatPracticeDuration(activeAttemptTimer.lastCompletedMs)
+    : 'No completed attempt yet';
+  $: {
+    const shouldTick = activeAttemptTimer.status === 'running';
+    if (shouldTick && !timerIntervalId) {
+      timerNow = Date.now();
+      timerIntervalId = setInterval(() => {
+        timerNow = Date.now();
+      }, 250);
+    } else if (!shouldTick && timerIntervalId) {
+      clearInterval(timerIntervalId);
+      timerIntervalId = null;
+      timerNow = Date.now();
+    }
+  }
   $: editorSnippetActions = [
     ...markdownCompletions.map((item) => ({
       label: item.label,
@@ -175,6 +208,31 @@
     }
   }
 
+  function startAttempt() {
+    if (!currentKey) return;
+    practiceAnswers.startAttempt(currentKey);
+    timerNow = Date.now();
+  }
+
+  function pauseAttempt() {
+    if (!currentKey) return;
+    practiceAnswers.pauseAttempt(currentKey);
+    timerNow = Date.now();
+  }
+
+  function stopAttempt() {
+    if (!currentKey) return;
+    practiceAnswers.stopAttempt(currentKey);
+    timerNow = Date.now();
+  }
+
+  onDestroy(() => {
+    if (timerIntervalId) {
+      clearInterval(timerIntervalId);
+      timerIntervalId = null;
+    }
+  });
+
   /** @param {CustomEvent} event */
   function handleStepFileChange(event) {
     const { fileId } = event.detail;
@@ -241,7 +299,7 @@
           class:done={$practiceAnswers[`${lesson.id}/${step.id}`]?.savedAt}
           type="button"
           onclick={() => goToStep(index)}
-          title={step.title}
+          title="{step.title}{getPracticePhaseLimitMs(step.id) ? ` · ${formatPhaseTargetLabel(getPracticePhaseLimitMs(step.id))}` : ''}"
         >
           {index + 1}
         </button>
@@ -254,6 +312,38 @@
       <button class="ide-nav-btn" type="button" onclick={goToPrevious} disabled={currentStepIndex === 0}>←</button>
       <button class="ide-nav-btn" type="button" onclick={goToNext} disabled={!canAdvance}>→</button>
       <button class="ide-reset-btn" type="button" onclick={clearLessonAnswers}>Clear all</button>
+    </div>
+  </div>
+
+  <div class="attempt-timer-card" class:over-limit={isOverPhaseLimit}>
+    <div class="attempt-timer-header">
+      <div>
+        <p class="eyebrow">Mock interview timer</p>
+        <h3>{activeAttemptElapsedLabel}</h3>
+      </div>
+      <div class="attempt-timer-pill-row">
+        {#if phaseTargetLabel}
+          <span class="pill">{phaseTargetLabel}</span>
+        {/if}
+        <span class="pill">{attemptStatusLabel}</span>
+        <span class="pill">{activeAttemptTimer.attemptCount} completed</span>
+        <span class="pill">Last {lastAttemptLabel}</span>
+      </div>
+    </div>
+    <p class="attempt-timer-copy">
+      Phase {currentStepIndex + 1}: {currentStep?.title ?? 'Practice step'}.
+      {#if phaseLimitMs}
+        Aim for about {Math.round(phaseLimitMs / 60_000)} minutes before moving on — real interviews rarely give unlimited time per section.
+      {:else}
+        Track time per phase so you build pacing muscle for the real interview.
+      {/if}
+    </p>
+  <div class="attempt-timer-actions">
+      <button class="action-link primary" type="button" onclick={startAttempt}>
+        {activeAttemptTimer.status === 'paused' ? 'Resume phase' : activeAttemptTimer.attemptCount ? 'Start new phase' : 'Start phase timer'}
+      </button>
+      <button class="action-link" type="button" onclick={pauseAttempt} disabled={activeAttemptTimer.status !== 'running'}>Pause</button>
+      <button class="action-link" type="button" onclick={stopAttempt} disabled={activeAttemptTimer.status === 'idle' && activeAttemptElapsedMs === 0}>Stop</button>
     </div>
   </div>
 
@@ -426,6 +516,48 @@
 
   .ide-reset-btn:hover {
     color: #cfd3ec;
+  }
+
+  .attempt-timer-card {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(11, 15, 24, 0.92);
+  }
+
+  .attempt-timer-card.over-limit {
+    border-color: rgba(255, 171, 0, 0.45);
+    background: linear-gradient(180deg, rgba(255, 171, 0, 0.06), rgba(11, 15, 24, 0.96));
+  }
+
+  .attempt-timer-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: start;
+  }
+
+  .attempt-timer-header h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: #eef2ff;
+  }
+
+  .attempt-timer-pill-row,
+  .attempt-timer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .attempt-timer-copy {
+    margin: 0;
+    color: rgba(222, 230, 245, 0.78);
+    font-size: 0.88rem;
+    line-height: 1.6;
   }
 
   :global(.practice-preview-panel) {

@@ -1484,6 +1484,219 @@ class SalesRankAggregator {
 }`
       }
     ]
+  },
+  'product-patterns/feed-timeline': {
+    solutionOverview: {
+      summary: 'Feeds are derived views over immutable events: store posts or activities as the source of truth, fan out or assemble timelines asynchronously, and cache hot first pages aggressively.',
+      requirements: [
+        'Serve a personalized home timeline with low read latency at scale.',
+        'Handle celebrity skew without blocking writes or melting storage.',
+        'Apply deletion, blocks, and privacy rules when assembling the final feed.'
+      ],
+      estimates: [
+        'Read volume is often 10–100× writes, so precomputation and caching dominate the design.',
+        'Celebrity posts can fan out to millions of followers — treat them as a separate hot-path class.',
+        'First-page latency matters most; deep pagination can be slower and less cached.'
+      ],
+      keyDecisions: [
+        'Choose write-time fan-out for normal users and hybrid or read-time merge for celebrities.',
+        'Keep immutable events separate from ranked timeline rows or cache entries.',
+        'Run ranking as a pipeline: candidates → filters → rank → paginate.'
+      ]
+    },
+    detailedSolution: [
+      {
+        heading: '1. Separate source of truth from the timeline view',
+        body: 'Posts, follows, and blocks are authoritative records. The home feed is a materialized or assembled view that can be rebuilt, A/B tested, or re-ranked without rewriting history.',
+        bullets: [
+          'Store events or posts in an append-friendly log or wide-row store.',
+          'Derive per-user timeline rows, cache entries, or ranked slices from those events.',
+          'Use tombstones and filter stages so deletes and privacy propagate into derived views.'
+        ]
+      },
+      {
+        heading: '2. Pick fan-out strategy by follower graph shape',
+        body: 'Normal users benefit from write-time fan-out into follower inboxes. Celebrity authors break that model — isolate them with read-time merge, dedicated workers, or hybrid precomputation.',
+        bullets: [
+          'Precompute timelines for users with modest follower counts.',
+          'For celebrities, push the post ID into a hot list merged at read time.',
+          'Shard fan-out workers by follower ID ranges to parallelize celebrity bursts.'
+        ]
+      },
+      {
+        heading: '3. Cache and rank for the hot read path',
+        body: 'The first screen is the product. Cache ranked first pages, precompute ranking features offline, and accept eventual consistency for counters and non-critical signals.',
+        bullets: [
+          'Cache `home:{userId}:page1` with a short TTL and invalidate on new writes when affordable.',
+          'Run candidate generation and ranking asynchronously when freshness allows.',
+          'Observe fan-out lag, cache hit ratio, and ranking freshness — not just average read latency.'
+        ]
+      }
+    ],
+    sampleAnswer: [
+      {
+        heading: 'Requirements and framing',
+        bullets: [
+          'I need a personalized home feed with fast first-page reads, support for follows, blocks, and deletes, and scale for both normal and celebrity accounts.',
+          'Reads dominate writes, so I will optimize assembly and caching on the read path while keeping writes lightweight.',
+          'The feed is a derived view — posts and social graph edges are the source of truth.'
+        ]
+      },
+      {
+        heading: 'High-level design',
+        bullets: [
+          'A post service writes immutable post events; a graph service tracks follows and blocks.',
+          'Fan-out workers push post IDs into follower inboxes for normal users; celebrities merge at read time from a hot-post list.',
+          'A feed API assembles page 1 from cache or inbox rows, runs ranking filters, and paginates deeper pages with looser latency goals.'
+        ]
+      },
+      {
+        heading: 'Trade-offs and growth',
+        bullets: [
+          'Write-time fan-out makes reads cheap but celebrity posts are expensive — hybrid strategies are the pragmatic answer.',
+          'Eventual consistency is fine for like counts; blocks and privacy filters must be fresher on the assembly path.',
+          'If inbox storage grows too large, archive cold timelines and rebuild from the event log on demand.'
+        ]
+      }
+    ]
+  },
+  'performance-and-resilience/caching-layers': {
+    referenceSource: {
+      label: 'System Design Primer · Cache',
+      url: 'https://github.com/donnemartin/system-design-primer#cache'
+    },
+    solutionOverview: {
+      summary: 'Place caches where they remove the most repeated work, design keys and TTLs for your freshness model, and always plan for misses, stampedes, and cache outages.',
+      requirements: [
+        'Reduce latency and origin load for read-heavy endpoints.',
+        'Define staleness tolerance per resource type.',
+        'Stay correct when the cache is cold, evicts entries, or fails entirely.'
+      ],
+      estimates: [
+        'A modest hit ratio on an expensive query can still justify a cache if each miss is costly.',
+        'Personalized pages lower hit ratio — expect application-layer caching instead of CDN-wide keys.',
+        'Hot keys need stampede protection even when overall volume looks manageable.'
+      ],
+      keyDecisions: [
+        'Pick layer: CDN for static assets, reverse proxy for shared fragments, app cache for computed views.',
+        'Use cache-aside as the default; write-through or write-behind when freshness on write is critical.',
+        'Include tenant, locale, or user context in keys when responses vary.'
+      ]
+    },
+    detailedSolution: [
+      {
+        heading: '1. Choose the layer that eliminates real work',
+        body: 'Interview answers get stronger when you name what each layer caches: CDN for static bytes, edge for TLS and bot control, app cache for computed fragments, database buffer pool for pages.',
+        bullets: [
+          'CDN: immutable assets, public media, occasionally cacheable API responses.',
+          'Application cache: session-scoped or computed views with explicit TTLs.',
+          'Do not cache personalized checkout, auth, or payment state in shared layers.'
+        ]
+      },
+      {
+        heading: '2. Design keys, TTLs, and invalidation',
+        body: 'A cache without a freshness story is a bug waiting to happen. Pair every cached object with a TTL, invalidation trigger, and miss behavior.',
+        bullets: [
+          'Fingerprint asset filenames for immutable long TTLs; keep HTML shells short-lived.',
+          'Invalidate or version keys on writes when stale reads are user-visible.',
+          'Use negative caching for known-missing keys to protect the origin.'
+        ]
+      },
+      {
+        heading: '3. Plan misses and stampedes',
+        body: 'Launches, expirations, and cache failures create miss storms. The origin path must survive them.',
+        bullets: [
+          'Single-flight or request coalescing for hot keys.',
+          'Warm critical keys before big events.',
+          'Track hit ratio, miss latency, eviction rate, and origin fallthrough.'
+        ]
+      }
+    ],
+    sampleAnswer: [
+      {
+        heading: 'Product details page example',
+        bullets: [
+          'I would cache static product metadata and rendered fragments at CDN or reverse-proxy layer with versioned asset names.',
+          'Inventory and price might use a short TTL application cache with write-through or explicit invalidation on stock changes.',
+          'Cart, recommendations, and user-specific promos stay out of shared caches or use user-scoped keys with tight TTLs.'
+        ]
+      },
+      {
+        heading: 'Operational follow-through',
+        bullets: [
+          'On cache miss I still serve from origin with timeouts and circuit breakers so a cold cache does not take down the database.',
+          'I monitor hit ratio per endpoint — a low ratio on a cheap query may mean the cache is not worth the complexity.',
+          'For hot keys I add coalescing and optional local in-process caches in front of the shared cache tier.'
+        ]
+      }
+    ]
+  },
+  'application-architecture/api-design': {
+    solutionOverview: {
+      summary: 'API design is contract design: pick REST or RPC based on clients and workload, then nail idempotency, errors, pagination, versioning, and timeout semantics.',
+      requirements: [
+        'Expose clear resource or service contracts to web, mobile, and internal callers.',
+        'Support safe retries and backward-compatible evolution.',
+        'Match serialization and protocol choices to latency and coupling needs.'
+      ],
+      estimates: [
+        'Mobile clients on old versions often dominate API compatibility work for years.',
+        'Internal RPC can cut payload size but does not remove network failure modes.',
+        'Pagination and filtering prevent accidental over-fetch on list endpoints.'
+      ],
+      keyDecisions: [
+        'REST for cacheable resources and broad HTTP ecosystem; RPC/gRPC for typed internal high-throughput calls.',
+        'Idempotency keys on non-safe writes; stable error codes with machine-readable bodies.',
+        'Cursor-based pagination for live lists; explicit versioning or additive schemas for mobile.'
+      ]
+    },
+    detailedSolution: [
+      {
+        heading: '1. Match protocol to client and coupling',
+        body: 'There is no universal winner. Explain why REST fits public resource APIs and why RPC fits internal service meshes with stable generated clients.',
+        bullets: [
+          'REST leverages HTTP caching, verbs, and tooling; watch over-fetch and large JSON payloads.',
+          'RPC improves schema consistency and binary efficiency for service-to-service calls.',
+          'GraphQL or BFF layers can help mobile clients fetch shaped views without chatty REST.'
+        ]
+      },
+      {
+        heading: '2. Design for failure and retries',
+        body: 'Every distributed API must define what happens when callers retry, duplicate, or arrive out of order.',
+        bullets: [
+          'Document which endpoints are idempotent and how duplicate detection works.',
+          'Return stable error codes, retry hints, and correlation IDs.',
+          'Set client and server timeouts; retries need jitter and caps to avoid retry storms.'
+        ]
+      },
+      {
+        heading: '3. Evolve without breaking old clients',
+        body: 'Versioning strategy should be explicit before you have ten mobile builds in the wild.',
+        bullets: [
+          'Prefer additive schema changes and optional fields.',
+          'Sunset old endpoints with telemetry on version mix and forced-upgrade only when necessary.',
+          'Publish contract tests or schema registries for internal consumers.'
+        ]
+      }
+    ],
+    sampleAnswer: [
+      {
+        heading: 'Idempotency example',
+        bullets: [
+          'POST /payments should accept an Idempotency-Key header and return the same result for duplicate submits within a TTL window.',
+          'PUT to a natural resource ID and DELETE are idempotent by definition; POST creates need explicit keys or dedupe tables.',
+          'Retries from mobile clients are inevitable — design the API assuming at-least-once delivery from the client edge.'
+        ]
+      },
+      {
+        heading: 'REST vs RPC choice',
+        bullets: [
+          'I would expose public product APIs as REST for cacheability and third-party compatibility.',
+          'Internal inventory or ranking services might use gRPC between services for typed contracts and smaller payloads.',
+          'Either way I keep business rules in the service layer, not in the gateway protocol adapter.'
+        ]
+      }
+    ]
   }
 
 };

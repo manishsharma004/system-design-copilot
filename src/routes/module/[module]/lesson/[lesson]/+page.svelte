@@ -74,6 +74,13 @@
   <h1>{data.lesson.title}</h1>
   <p class="hero-subtitle">{data.lesson.summary}</p>
   <div class="action-row">
+    <a class="action-link primary" href="#practice-lab">Start mock interview</a>
+    {#if showSimulationLab}
+      <a class="action-link" href="#simulation-lab">Open simulation lab</a>
+    {/if}
+    {#if showTopicLab}
+      <a class="action-link" href="#topic-lab">Open topic lab</a>
+    {/if}
     <span class="pill">{data.lesson.duration}</span>
     {#if flow}
       <span class="pill">{flow.shortTitle} flow</span>
