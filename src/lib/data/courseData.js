@@ -5,7 +5,9 @@ import { rawDsaInterviewEssentialsModules } from './dsaInterviewEssentialsExpans
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 import { rawAiLearningModules } from './aiLearningExpansion.js';
 import { rawAiAdvancedLearningModules } from './aiLearningExpansionAdvanced.js';
+import { rawAiIndustryCurrencyModules } from './aiIndustryCurrencyLabs.js';
 import { applyAiCoreEnrichment } from './aiCoreLessonEnrichment.js';
+import { applyAiIndustryCurrencyPatches } from './aiIndustryCurrencyPatches.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
 import { rawHldLearningModules } from './hldLearningExpansion.js';
 import { rawLldLearningModules } from './lldLearningExpansion.js';
@@ -40,9 +42,9 @@ export const siteOverview = {
     {
       "title": "AI / ML engineer path",
       "flowSlug": "ai-engineer",
-      "summary": "Learn classical ML, transformers, retrieval, and production ML with exhaustive on-page lessons and interactive NumPy/scikit-learn labs that run entirely in the browser.",
+      "summary": "Learn classical ML plus the 2026 AI-engineer stack—transformers, production RAG, agents, LLMOps evaluation, and serving—with exhaustive on-page lessons and interactive NumPy/scikit-learn labs.",
       "startModule": "ml-interactive-lab",
-      "focus": ["Interactive ML labs", "Transformers & retrieval", "Production ML systems"]
+      "focus": ["Interactive ML labs", "RAG, agents & LLMOps", "Production ML systems"]
     }
   ],
   "studyTracks": [
@@ -4201,11 +4203,12 @@ const dsaModules = [
   ...rawDsaInterviewEssentialsModules,
   ...rawDsaModules
 ];
-const aiModules = [
+const aiModules = applyAiIndustryCurrencyPatches([
   ...applyAiCoreEnrichment(rawAiEngineerModules),
   ...rawAiLearningModules,
-  ...rawAiAdvancedLearningModules
-];
+  ...rawAiAdvancedLearningModules,
+  ...rawAiIndustryCurrencyModules
+]);
 
 const dsaPracticeQuestionHighlightsBySlug = Object.fromEntries(
   rawDsaModules
@@ -4287,17 +4290,17 @@ const flowDefinitions = [
     slug: 'ai-engineer',
     shortTitle: 'AI/ML',
     title: 'AI Engineer learning path',
-    summary: 'Learn machine learning end to end — classical ML, transformers, retrieval, agents, and production systems — with exhaustive lessons and interactive in-browser Python labs.',
-    description: 'Use this flow to build or level up skills in classical ML, deep learning from scratch, transformers and attention, LLM retrieval systems, AI agents, and production ML — with runnable NumPy and scikit-learn exercises on every major topic.',
-    audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and learners who want hands-on ML practice in the browser.',
-    cadence: 'Start with interactive ML labs, deepen foundations with enriched core lessons, then specialize through transformers, retrieval, agents, or production labs.',
-    heroGuidance: 'Start with interactive labs, build intuition for training and evaluation, then specialize in transformers, retrieval, agents, or production ML systems based on your goals.',
+    summary: 'Learn machine learning end to end — classical ML, transformers, production RAG, agents, LLMOps evaluation, and serving — aligned to current industry interview expectations.',
+    description: 'Use this flow to build skills hiring teams screen for in 2026: classical ML and deep learning foundations, transformers, hybrid RAG with evaluation, tool-calling agents, LLMOps (cost, latency, golden-set gates), and production serving/governance — with runnable NumPy and scikit-learn exercises throughout.',
+    audience: 'Best for software engineers transitioning to AI/ML or AI platform roles, data scientists moving to engineering, and candidates preparing for RAG/agents/LLMOps interview loops.',
+    cadence: 'Start with interactive ML labs, deepen foundations, then specialize through transformers, retrieval, agents, LLMOps evaluation, or production labs.',
+    heroGuidance: 'Start with interactive labs, build training and evaluation intuition, then specialize in RAG, agents, LLMOps, or production ML based on the roles you are targeting.',
     focusAreas: [
-      'Interactive ML labs, deep learning from scratch, and transformers/attention labs',
-      'LLM retrieval systems, prompt engineering, RAG evaluation, and AI agents',
-      'Production pipelines, drift monitoring, serving contracts, and responsible AI'
+      'Interactive ML labs, deep learning from scratch, and transformers/attention',
+      'Production RAG, prompt/tool contracts, agents, and LLM evaluation harnesses',
+      'Serving, observability, cost/latency SLOs, guardrails, and risk-tiered governance'
     ],
-    outcome: 'You should be able to implement core ML/DL ideas by hand, design retrieval and production AI systems, and make informed tradeoffs between quality, cost, latency, and safety.',
+    outcome: 'You should be able to implement core ML/DL ideas by hand, design evaluated RAG and agent systems, and defend quality/cost/latency/safety tradeoffs in interviews and production reviews.',
     moduleSlugs: aiModules.map((module) => module.slug)
   },
   {

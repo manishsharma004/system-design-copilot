@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allLessons, courseFlows, getFlowBySlug, getLessonPracticeSteps, getModulesByFlow, modules, siteOverview } from '../courseData.js';
+import { allLessons, courseFlows, getFlowBySlug, getLessonBySlug, getLessonPracticeSteps, getModulesByFlow, modules, siteOverview } from '../courseData.js';
 import { getInteractiveLesson } from '../src/lib/data/interactiveLessons.js';
 import { buildLessonAnswerContext, getLikelyAnswerPoints } from '../src/lib/interviewAnswers.js';
 import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
@@ -152,7 +152,9 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
     'CNN building blocks with NumPy',
     'Scaled dot-product attention from scratch',
     'Tokenization workshop',
-    'Drift and monitoring lab'
+    'Drift and monitoring lab',
+    'LLM evaluation harnesses that catch regressions',
+    'Shipping gates, guardrails, and incident response'
   ].forEach((title) => assert.ok(aiLessonTitles.has(title), `missing AI learning lesson: ${title}`));
 });
 
@@ -199,13 +201,14 @@ test('AI learning expansion lessons expose runnable coding exercises', () => {
     'deep-learning-from-scratch',
     'transformers-attention-lab',
     'llm-retrieval-lab',
-    'ml-production-lab'
+    'ml-production-lab',
+    'llmops-eval-lab'
   ];
   const interactiveLessons = getModulesByFlow('ai-engineer')
     .flatMap((module) => module.lessons)
     .filter((lesson) => expansionModuleSlugs.includes(lesson.moduleSlug));
 
-  assert.equal(interactiveLessons.length, 15);
+  assert.equal(interactiveLessons.length, 18);
   interactiveLessons.forEach((lesson) => {
     const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
     assert.ok(codingExercises.length >= 2, `missing coding exercises for ${lesson.id}`);
@@ -278,10 +281,11 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'deep-learning-from-scratch',
     'transformers-attention-lab',
     'llm-retrieval-lab',
-    'ml-production-lab'
+    'ml-production-lab',
+    'llmops-eval-lab'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 51);
+  assert.equal(expansionLessons.length, 54);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
@@ -530,6 +534,29 @@ test('AI engineer practice steps use ML-specific structure', () => {
   assert.match(steps[2].title, /Evaluation and production review/);
 });
 
+test('AI curriculum reflects current industry LLMOps and RAG practices', () => {
+  const llm = getLessonBySlug('llms-and-nlp', 'llm-fundamentals');
+  const rag = getLessonBySlug('prompt-engineering-and-rag', 'rag-systems');
+  const agents = getLessonBySlug('ai-agents', 'agent-fundamentals');
+  const serving = getLessonBySlug('mlops-and-deployment', 'model-serving');
+  const governance = getLessonBySlug('ai-safety-and-ethics', 'ai-governance');
+  const evalLab = getLessonBySlug('llmops-eval-lab', 'llm-evaluation-harness');
+
+  const joined = (lesson) =>
+    [
+      lesson.whyItMatters,
+      ...(lesson.sections ?? []).flatMap((section) => [section.heading, section.body, ...(section.bullets ?? [])]),
+      ...(lesson.interviewPrompts ?? [])
+    ].join('\n');
+
+  assert.match(joined(llm), /open-weight|reasoning|structured output/i);
+  assert.match(joined(rag), /hybrid|rerank|GraphRAG|multi-tenant|ACL/i);
+  assert.match(joined(agents), /when not to use agents|approval|workflow/i);
+  assert.match(joined(serving), /KV cache|continuous batching|vLLM/i);
+  assert.match(joined(governance), /EU AI Act|risk-tier|system card/i);
+  assert.match(joined(evalLab), /golden|faithfulness|LLM-as-judge|RAGAS/i);
+});
+
 test('HLD learning lab practice steps use design exercises and likely answers', () => {
   const labLesson = allLessons.find((lesson) => lesson.id === 'data-storage-lab/indexing-and-query-path-design');
   assert.ok(labLesson);
@@ -551,7 +578,7 @@ test('HLD learning lab practice steps use design exercises and likely answers', 
 
 test('AI engineer interactive lessons cover every AI lesson', () => {
   const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
-  assert.ok(aiLessons.length >= 38);
+  assert.ok(aiLessons.length >= 41);
 
   aiLessons.forEach((lesson) => {
     const interactive = getInteractiveLesson(lesson.id);
