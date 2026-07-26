@@ -4,7 +4,7 @@
 
 ## What this is
 
-Browser-only **interview-prep** web app: structured lessons, interactive labs, and in-browser practice for system design and coding rounds. No backend — progress and drafts stay on the device.
+Browser-only **learning + interview-prep** web app: structured lessons, interactive labs, and in-browser practice for system design, object design, algorithms, and AI/ML. No backend — progress and drafts stay on the device.
 
 Setup/commands: `README.md`, `AGENTS.md`.
 
@@ -12,18 +12,19 @@ Setup/commands: `README.md`, `AGENTS.md`.
 
 | Flow | Who |
 |------|-----|
-| High-level design (HLD) | Backend / platform / senior engineers |
-| Low-level design (LLD) | SDE machine-coding / OO design |
-| DSA + interview questions | Coding-round candidates |
-| AI engineer | Engineers moving into ML / LLM systems |
+| High-level design (HLD) | Engineers learning distributed systems; backend / platform interviews |
+| Low-level design (LLD) | Engineers leveling up OO design; machine-coding rounds |
+| DSA + interview questions | Learners building algorithmic intuition; coding-round candidates |
+| AI engineer | Engineers learning ML/DL with runnable labs; ML / LLM roles |
 
 ## Core value props (shipped)
 
-- **Five prep flows** with guided modules and lessons (`src/lib/data/courseData.js`)
+- **Five learning tracks** with guided modules and lessons (`src/lib/data/courseData.js`)
+- **Learning expansion labs** for HLD, LLD, DSA concepts/algorithms, and interactive ML/DL
 - **Structured answers**: frame → estimate → sketch → defend (Practice IDE steps)
 - **Topic labs**: decision guides, Mermaid, worked examples (`interactiveLessons.js`)
 - **Simulation lab** (HLD): topology DSL + workload engine
-- **Runnable coding**: DSA / question bank via WASM; ML scripts via Pyodide worker
+- **Runnable coding**: DSA / question bank via WASM; ML scripts via Pyodide worker with lesson exercise picker
 - **Reveal-on-demand** sample answers and enhanced case-study solutions
 - **Local progress** + export/import backup; optional user-keyed LLM coach with **Check (AI)** on practice, DSA, question bank, and simulation
 
@@ -31,18 +32,18 @@ Setup/commands: `README.md`, `AGENTS.md`.
 
 | Area | Entry |
 |------|--------|
-| Curriculum / home | `src/routes/+page.svelte`, `courseData.js` → `siteOverview` |
+| Curriculum / home | `src/routes/+page.svelte`, `courseData.js` → `siteOverview` (+ `learningPaths`) |
 | Flow / module / lesson | `src/routes/flow/…`, `module/…`, `module/…/lesson/…` |
 | Topic lab | `LessonExplorer.svelte`, `AiLessonStudyGuide.svelte` |
 | Simulation | `SimulationIDE.svelte`, `src/lib/simulation/` |
 | Markdown practice | `PracticeIDE.svelte` |
 | DSA / banks | `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte` |
-| ML practice | `MLPracticeIDE.svelte`, `static/ml-py-worker.js` |
+| ML practice | `MLPracticeIDE.svelte`, `static/ml-py-worker.js` (loads `lesson.exercises` starters) |
 | Solutions / likely answers | `LessonSolutionPanel.svelte`, `interviewAnswers.js` |
-| LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` (Practice, DSA, question bank, simulation) |
+| LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
-Scale today: **5 flows · 29 modules · 110 lessons**.
+Scale today: **5 flows · 37 modules · 134 lessons**.
 
 ## Attribution
 

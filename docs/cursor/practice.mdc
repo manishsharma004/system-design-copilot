@@ -33,7 +33,8 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 ## ML Practice IDE (AI)
 
 - Component: `MLPracticeIDE.svelte`
-- Runs default/sklearn-style scripts in `static/ml-py-worker.js`
+- Runs NumPy / pandas / matplotlib / scikit-learn in `static/ml-py-worker.js`
+- When `lesson.exercises` includes coding items with `starterCode`, shows an exercise picker, loads starter into the editor, and supports Reset starter / Load solution
 - Shown with AI study guide on ai-engineer lessons
 
 ## Heuristics and solutions

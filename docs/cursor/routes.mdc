@@ -9,7 +9,7 @@ All routes prerender with `trailingSlash = 'always'` (`src/routes/+layout.js`). 
 | `+layout.svelte` | Slim header (brand · progress · Topics), Coursera-style underline tabs, context-aware sidebar, skip link |
 | `+layout.js` | `prerender`, trailing slash |
 
-**Tabs:** Home · System Design · Low Level · DSA · AI · Practice (`src/lib/navigation.js`).
+**Tabs:** Home · HLD · LLD · DSA · AI / ML · Questions (`src/lib/navigation.js`).
 
 **Sidebar:** On Home, LeetCode-style **tracks** list (5 flows + progress). In a flow/module/lesson, search + module accordion for the active flow only. `/` focuses search when in a flow.
 
@@ -19,7 +19,7 @@ Sidebar UI state: localStorage `system-design-copilot-sidebar-v4` (inline in lay
 
 | Route | Files | Purpose |
 |-------|-------|---------|
-| `/` | `+page.svelte` | Home: hero, five flow cards, resume card, featured HLD modules, study tracks, curriculum map + `ProgressControls` |
+| `/` | `+page.svelte` | Home: brand hero, learning paths, five track cards, resume, featured modules, study tracks, curriculum map + `ProgressControls` |
 | `/flow/[flow]/` | `flow/[flow]/+page.js`, `+page.svelte` | Flow roadmap: progress, focus areas, module runway. Entries from `courseFlows` |
 | `/module/[module]/` | `module/[module]/+page.js`, `+page.svelte` | Module overview + lesson runway |
 | `/module/[module]/lesson/[lesson]/` | `…/+page.js`, `+page.svelte` | **Main workspace**: read content, topic lab, simulation (HLD), practice IDE by flow, solutions |
@@ -38,7 +38,7 @@ Sidebar UI state: localStorage `system-design-copilot-sidebar-v4` (inline in lay
 Order on `module/…/lesson/…/+page.svelte`:
 
 1. Read body + rail (diagram, checklist, pitfalls, prompts)
-2. AI study guide + `MLPracticeIDE` (ai-engineer)
+2. AI study guide + `MLPracticeIDE` (ai-engineer) — ML IDE loads lesson coding exercises when present
 3. `LessonExplorer` if `lesson.interactive`
 4. `SimulationIDE` if HLD + simulation config
 5. `QuestionBankIDE` | `DsaPracticeIDE` | `PracticeIDE` by flow

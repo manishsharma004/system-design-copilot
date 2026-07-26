@@ -8,7 +8,7 @@ test('header navigation exposes the primary learning tracks', () => {
   assert.equal(headerNavItems.length, 6);
   assert.deepEqual(
     headerNavItems.map((item) => item.label),
-    ['Home', 'System Design', 'Low Level', 'DSA', 'AI', 'Practice']
+    ['Home', 'HLD', 'LLD', 'DSA', 'AI / ML', 'Questions']
   );
   assert.deepEqual(
     headerNavItems.map((item) => item.flowSlug),

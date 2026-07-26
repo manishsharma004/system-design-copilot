@@ -16,14 +16,14 @@ export const headerNavItems = [
     kind: 'home'
   },
   {
-    label: 'System Design',
-    shortLabel: 'System Design',
+    label: 'HLD',
+    shortLabel: 'HLD',
     flowSlug: 'high-level-design',
     kind: 'flow'
   },
   {
-    label: 'Low Level',
-    shortLabel: 'Low Level',
+    label: 'LLD',
+    shortLabel: 'LLD',
     flowSlug: 'low-level-design',
     kind: 'flow'
   },
@@ -34,14 +34,14 @@ export const headerNavItems = [
     kind: 'flow'
   },
   {
-    label: 'AI',
+    label: 'AI / ML',
     shortLabel: 'AI',
     flowSlug: 'ai-engineer',
     kind: 'flow'
   },
   {
-    label: 'Practice',
-    shortLabel: 'Practice',
+    label: 'Questions',
+    shortLabel: 'Questions',
     flowSlug: 'interview-questions',
     kind: 'flow'
   }

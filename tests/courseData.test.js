@@ -14,10 +14,18 @@ const repoRoot = path.dirname(fileURLToPath(new URL('../package.json', import.me
 test('site overview describes the expanded curriculum', () => {
   assert.match(siteOverview.title, /System Design Copilot/);
   assert.ok(siteOverview.heroGuidance);
+  assert.ok(siteOverview.learningPaths?.length >= 4);
   assert.ok(siteOverview.studyTracks.length >= 4);
   assert.ok(siteOverview.studyLoop.length >= 4);
   assert.ok(siteOverview.studyMapSections.length >= 3);
   assert.ok(siteOverview.recommendedReading.length >= 3);
+  siteOverview.learningPaths.forEach((path) => {
+    assert.ok(path.title);
+    assert.ok(path.flowSlug);
+    assert.ok(path.summary);
+    assert.ok(path.startModule);
+    assert.ok(path.focus.length >= 2);
+  });
   siteOverview.studyTracks.forEach((track) => {
     assert.ok(track.bestFor);
     assert.ok(track.cadence);
@@ -81,10 +89,10 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
   assert.match(dsaFlow.title, /data structures and algorithms/i);
   assert.match(aiFlow.title, /AI Engineer/i);
   assert.match(questionBankFlow.title, /question bank/i);
-  assert.ok(highLevelFlow.modules.length >= 7);
-  assert.ok(lowLevelFlow.modules.length >= 4);
-  assert.ok(dsaFlow.modules.length >= 4);
-  assert.ok(aiFlow.modules.length >= 5);
+  assert.ok(highLevelFlow.modules.length >= 11);
+  assert.ok(lowLevelFlow.modules.length >= 6);
+  assert.ok(dsaFlow.modules.length >= 6);
+  assert.ok(aiFlow.modules.length >= 10);
   assert.ok(questionBankFlow.modules.length >= 4);
   assert.equal(getModulesByFlow('high-level-design').every((module) => module.flowSlug === 'high-level-design'), true);
   assert.equal(getModulesByFlow('low-level-design').every((module) => module.flowSlug === 'low-level-design'), true);
@@ -105,7 +113,9 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
     'LLD prompt framing and scope control',
     'Entities, value objects, and aggregates',
     'Strategy, factory, and builder patterns in interviews',
-    'Concurrency follow-ups and bridging into scale'
+    'Concurrency follow-ups and bridging into scale',
+    'Creational patterns in practice',
+    'Parking lot design lab'
   ].forEach((title) => assert.ok(lowLevelLessonTitles.has(title), `missing LLD lesson: ${title}`));
 
   const dsaLessonTitles = new Set(getModulesByFlow('data-structures-and-algorithms').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
@@ -113,8 +123,45 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
     'Arrays, hash maps, and two pointers',
     'Recursion, backtracking, and search trees',
     'Google phone and onsite practice set',
-    'Hard stretch round and review'
+    'Hard stretch round and review',
+    'Complexity and algorithmic thinking',
+    'Dynamic programming cookbook'
   ].forEach((title) => assert.ok(dsaLessonTitles.has(title), `missing DSA lesson: ${title}`));
+
+  const hldLessonTitles = new Set(getModulesByFlow('high-level-design').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
+  [
+    'Request lifecycle deep dive',
+    'SLIs, SLOs, and error budgets',
+    'Failure injection and incidents'
+  ].forEach((title) => assert.ok(hldLessonTitles.has(title), `missing HLD learning lesson: ${title}`));
+
+  const aiLessonTitles = new Set(getModulesByFlow('ai-engineer').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
+  [
+    'Feature engineering playground',
+    'Perceptron and MLP with NumPy',
+    'Backpropagation by hand',
+    'CNN building blocks with NumPy'
+  ].forEach((title) => assert.ok(aiLessonTitles.has(title), `missing AI learning lesson: ${title}`));
+});
+
+test('AI learning expansion lessons expose runnable coding exercises', () => {
+  const interactiveLessons = getModulesByFlow('ai-engineer')
+    .flatMap((module) => module.lessons)
+    .filter((lesson) =>
+      ['ml-interactive-lab', 'deep-learning-from-scratch'].includes(lesson.moduleSlug)
+    );
+
+  assert.equal(interactiveLessons.length, 6);
+  interactiveLessons.forEach((lesson) => {
+    const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
+    assert.ok(codingExercises.length >= 2, `missing coding exercises for ${lesson.id}`);
+    codingExercises.forEach((exercise) => {
+      assert.ok(exercise.id);
+      assert.ok(exercise.starterCode?.includes('TODO') || exercise.starterCode?.length > 40);
+      assert.ok(exercise.solution?.length > 40);
+      assert.ok(Array.isArray(exercise.hints));
+    });
+  });
 });
 
 test('DSA lessons expose coding-practice metadata for the local WASM runner', () => {
