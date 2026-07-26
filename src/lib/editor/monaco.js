@@ -5,10 +5,18 @@ import {
   markdownCompletions,
   simulationScriptCompletions
 } from '$lib/editor/exerciseMetadata'
+import { getThemeOption } from '$lib/themes.js'
 
 let initialized = false
 let monacoPromise
-export const MONACO_THEME = 'system-design-copilot-dark'
+export const MONACO_THEME_DARK = 'system-design-copilot-dark'
+export const MONACO_THEME_LIGHT = 'system-design-copilot-light'
+export const MONACO_THEME = MONACO_THEME_DARK
+
+/** @param {string} themeId */
+export function getMonacoThemeId(themeId) {
+  return getThemeOption(themeId).mode === 'light' ? MONACO_THEME_LIGHT : MONACO_THEME_DARK
+}
 
 /**
  * @param {any} monaco
@@ -60,7 +68,7 @@ function registerMarkdownSupport(monaco) {
  * @param {any} monaco
  */
 function registerTheme(monaco) {
-  monaco.editor.defineTheme(MONACO_THEME, {
+  monaco.editor.defineTheme(MONACO_THEME_DARK, {
     base: 'vs-dark',
     inherit: true,
     rules: [
@@ -109,6 +117,53 @@ function registerTheme(monaco) {
       'quickInputList.focusBackground': '#252D3C',
       'quickInputTitle.background': '#1C2230',
       'statusBar.background': '#007ACC',
+      'statusBar.foreground': '#FFFFFF'
+    }
+  })
+
+  monaco.editor.defineTheme(MONACO_THEME_LIGHT, {
+    base: 'vs',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: 'AF00DB' },
+      { token: 'attribute.name', foreground: '0451A5' },
+      { token: 'type.identifier', foreground: '267F99' },
+      { token: 'string', foreground: 'A31515' },
+      { token: 'number', foreground: '098658' },
+      { token: 'comment', foreground: '6A9955' }
+    ],
+    colors: {
+      'editor.background': '#FFFFFF',
+      'editor.foreground': '#1E293B',
+      'editorGutter.background': '#F8FAFC',
+      'editorLineNumber.foreground': '#94A3B8',
+      'editorLineNumber.activeForeground': '#334155',
+      'editorLineNumber.dimmedForeground': '#CBD5E1',
+      'editorCursor.foreground': '#4F46E5',
+      'editor.selectionBackground': '#DBEAFE',
+      'editor.inactiveSelectionBackground': '#E2E8F0',
+      'editor.lineHighlightBackground': '#F8FAFC',
+      'editor.lineHighlightBorder': '#00000000',
+      'editorIndentGuide.background1': '#E2E8F0',
+      'editorIndentGuide.activeBackground1': '#CBD5E1',
+      'editorBracketMatch.background': '#E0E7FF',
+      'editorBracketMatch.border': '#6366F1',
+      'editorSuggestWidget.background': '#FFFFFF',
+      'editorSuggestWidget.border': '#E2E8F0',
+      'editorSuggestWidget.selectedBackground': '#EEF2FF',
+      'editorHoverWidget.background': '#FFFFFF',
+      'editorHoverWidget.border': '#E2E8F0',
+      'editorWidget.background': '#FFFFFF',
+      'editorWidget.border': '#E2E8F0',
+      'scrollbar.shadow': '#00000000',
+      'scrollbarSlider.background': '#CBD5E188',
+      'scrollbarSlider.hoverBackground': '#94A3B8AA',
+      'scrollbarSlider.activeBackground': '#64748BCC',
+      'quickInput.background': '#FFFFFF',
+      'quickInput.foreground': '#1E293B',
+      'quickInputList.focusBackground': '#EEF2FF',
+      'quickInputTitle.background': '#F8FAFC',
+      'statusBar.background': '#4F46E5',
       'statusBar.foreground': '#FFFFFF'
     }
   })

@@ -352,10 +352,10 @@
     <svg class="topology-canvas" style={`transform: translate(${panX}px, ${panY}px) scale(${zoom});`}>
       <defs>
         <pattern id="topology-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="1" fill="#3c3c3c" />
+          <circle cx="1" cy="1" r="1" class="topology-grid-dot" />
         </pattern>
         <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L8,3 L0,6 Z" fill="#858585" />
+          <path d="M0,0 L8,3 L0,6 Z" class="topology-link-arrow" />
         </marker>
       </defs>
       <rect width="4000" height="2400" fill="url(#topology-grid)" />
@@ -493,8 +493,8 @@
   }
 
   .topology-chip {
-    border: 1px solid var(--vscode-border, #2b2b2b);
-    background: #2d2d2d;
+    border: 1px solid var(--ide-border, var(--vscode-border));
+    background: var(--ide-topology-chip-bg, #2d2d2d);
     color: var(--vscode-foreground, #cccccc);
     border-radius: 2px;
     padding: 0.15rem 0.45rem;
@@ -535,6 +535,15 @@
     overflow: hidden;
     position: relative;
     cursor: crosshair;
+    background: var(--ide-topology-canvas-bg, var(--vscode-editor-bg));
+  }
+
+  .topology-grid-dot {
+    fill: var(--ide-topology-grid);
+  }
+
+  :global(.topology-link-arrow) {
+    fill: var(--ide-topology-link);
   }
 
   .topology-canvas {
@@ -544,8 +553,8 @@
   }
 
   .topology-node rect {
-    fill: #2d2d30;
-    stroke: #3c3c3c;
+    fill: var(--ide-topology-node-fill, #2d2d30);
+    stroke: var(--ide-topology-node-stroke, #3c3c3c);
     stroke-width: 1;
   }
 
@@ -555,23 +564,23 @@
   }
 
   .topology-node.connect-source rect {
-    stroke: #73c991;
+    stroke: var(--ide-topology-connect, #73c991);
   }
 
   .topology-node-label {
-    fill: #cccccc;
+    fill: var(--ide-topology-label, #cccccc);
     font-size: 12px;
     font-weight: 600;
   }
 
   .topology-node-type {
-    fill: #858585;
+    fill: var(--ide-topology-type, #858585);
     font-size: 10px;
     text-transform: uppercase;
   }
 
   .topology-link {
-    stroke: #858585;
+    stroke: var(--ide-topology-link, #858585);
     stroke-width: 1.5;
     fill: none;
     pointer-events: stroke;
@@ -621,8 +630,8 @@
 
   .topology-properties-grid input,
   .topology-properties-grid select {
-    border: 1px solid var(--vscode-border, #2b2b2b);
-    background: #1e1e1e;
+    border: 1px solid var(--ide-border, var(--vscode-border));
+    background: var(--ide-input-bg, var(--vscode-editor-bg));
     color: var(--vscode-foreground, #cccccc);
     border-radius: 2px;
     padding: 0.25rem 0.35rem;

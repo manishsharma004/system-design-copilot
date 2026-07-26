@@ -1,0 +1,77 @@
+/* IDE chrome tokens derived from the active app theme */
+
+[data-theme] {
+  --ide-fg: var(--vscode-foreground);
+  --ide-muted: var(--vscode-descriptionForeground);
+  --ide-strong-fg: var(--vscode-foreground);
+  --ide-border: var(--vscode-border);
+  --ide-border-subtle: var(--border);
+  --ide-surface: var(--vscode-sideBar-bg);
+  --ide-surface-raised: var(--vscode-activityBar-bg);
+  --ide-editor: var(--vscode-editor-bg);
+  --ide-panel: var(--vscode-panel-bg);
+  --ide-input-bg: var(--vscode-editor-bg);
+  --ide-input-fg: var(--vscode-foreground);
+  --ide-tab-bar: var(--vscode-sideBar-bg);
+  --ide-tab-inactive-fg: var(--vscode-descriptionForeground);
+  --ide-tab-active-fg: var(--vscode-foreground);
+  --ide-tab-active-border: var(--vscode-focusBorder);
+  --ide-bottom-panel: var(--vscode-panel-bg);
+  --ide-focus-bg: var(--accent-muted);
+  --ide-hover-bg: var(--vscode-list-hover);
+  --ide-active-bg: var(--vscode-list-active);
+  --ide-chip-bg: var(--vscode-list-hover);
+  --ide-chip-active-bg: var(--accent-muted);
+  --ide-button-bg: var(--bg-soft);
+  --ide-button-hover: var(--vscode-list-hover);
+  --ide-button-fg: var(--vscode-foreground);
+  --ide-helper-bg: var(--vscode-editor-bg);
+  --ide-helper-border: var(--vscode-border);
+  --ide-icon-folder: #dcb67a;
+  --ide-icon-badge: var(--success);
+  --ide-run-bg: var(--success);
+  --ide-run-hover: color-mix(in srgb, var(--success) 88%, white);
+  --ide-run-fg: var(--on-accent);
+  --ide-accent-label: var(--accent);
+  --ide-accent-btn-bg: var(--accent-muted);
+  --ide-accent-btn-fg: var(--text);
+  --ide-accent-btn-hover: var(--accent-hover);
+  --ide-reset-fg: var(--muted);
+  --ide-reset-hover-bg: var(--accent-subtle);
+  --ide-reset-hover-fg: var(--text);
+  --ide-activity-hover-bg: var(--vscode-list-hover);
+  --ide-activity-hover-fg: var(--vscode-foreground);
+  --ide-activity-active-bg: var(--accent-muted);
+  --ide-activity-active-fg: var(--vscode-foreground);
+  --ide-activity-active-border: var(--vscode-focusBorder);
+  --ide-topology-canvas-bg: var(--vscode-editor-bg);
+  --ide-topology-grid: color-mix(in srgb, var(--vscode-descriptionForeground) 55%, transparent);
+  --ide-topology-node-fill: var(--vscode-list-active);
+  --ide-topology-node-stroke: var(--vscode-border);
+  --ide-topology-label: var(--vscode-foreground);
+  --ide-topology-type: var(--vscode-descriptionForeground);
+  --ide-topology-link: var(--vscode-descriptionForeground);
+  --ide-topology-chip-bg: var(--vscode-list-hover);
+  --ide-topology-connect: var(--success);
+  --ide-menu-bg: var(--vscode-sideBar-bg);
+  --ide-menu-shadow: var(--shadow);
+  --ide-resize-bg: var(--vscode-panel-bg);
+  --ide-resize-active: color-mix(in srgb, var(--vscode-focusBorder) 65%, transparent);
+  --ide-terminal-fg: var(--vscode-foreground);
+  --ide-warning-border: color-mix(in srgb, var(--danger) 35%, transparent);
+  --ide-warning-bg: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+[data-theme='copilot-light'],
+[data-theme='ocean-light'],
+[data-theme='ember-light'],
+[data-theme='forest-light'],
+[data-theme='paper'],
+[data-theme='dawn'] {
+  --ide-strong-fg: var(--text);
+  --ide-topology-canvas-bg: var(--bg-soft);
+  --ide-topology-node-fill: var(--panel);
+  --ide-topology-node-stroke: var(--border);
+  --ide-topology-grid: color-mix(in srgb, var(--muted) 28%, transparent);
+  --ide-icon-folder: #c7952e;
+}

@@ -1,0 +1,318 @@
+/* Global IDE chrome overrides — wins over scoped Svelte defaults via higher specificity */
+
+[data-theme] .simulation-ide-select span {
+  color: var(--ide-accent-label);
+}
+
+[data-theme] .simulation-ide-select select,
+[data-theme] .ide-explorer-action,
+[data-theme] .ide-helper-chip,
+[data-theme] .ide-tree-action {
+  border: 1px solid var(--ide-border);
+  background: var(--ide-input-bg);
+  color: var(--ide-input-fg);
+}
+
+[data-theme] .ide-fullscreen-btn,
+[data-theme] .ide-save-btn,
+[data-theme] .ide-reset-btn {
+  border: 1px solid var(--ide-border);
+}
+
+[data-theme] .ide-fullscreen-btn {
+  background: var(--ide-button-bg);
+  color: var(--ide-button-fg);
+}
+
+[data-theme] .ide-fullscreen-btn:hover {
+  background: var(--ide-button-hover);
+  color: var(--ide-strong-fg);
+}
+
+[data-theme] .ide-run-btn {
+  background: var(--ide-run-bg);
+  color: var(--ide-run-fg);
+  border-color: var(--ide-run-bg);
+}
+
+[data-theme] .ide-run-btn:hover {
+  background: var(--ide-run-hover);
+}
+
+[data-theme] .ide-save-btn {
+  background: var(--ide-accent-btn-bg);
+  color: var(--ide-accent-btn-fg);
+}
+
+[data-theme] .ide-save-btn:hover {
+  background: var(--ide-accent-btn-hover);
+}
+
+[data-theme] .ide-reset-btn {
+  background: transparent;
+  color: var(--ide-reset-fg);
+}
+
+[data-theme] .ide-reset-btn:hover {
+  color: var(--ide-reset-hover-fg);
+  background: var(--ide-reset-hover-bg);
+}
+
+[data-theme] :global(.ide-terminal-output) {
+  color: var(--ide-terminal-fg);
+}
+
+[data-theme] .ide-workspace .ide-activity-icon {
+  color: var(--ide-muted);
+}
+
+[data-theme] .ide-workspace .ide-activity-icon:hover {
+  color: var(--ide-activity-hover-fg);
+  background: var(--ide-activity-hover-bg);
+}
+
+[data-theme] .ide-workspace .ide-activity-icon.active {
+  color: var(--ide-activity-active-fg);
+  border-left-color: var(--ide-activity-active-border);
+  background: var(--ide-activity-active-bg);
+}
+
+[data-theme] .ide-workspace .ide-explorer-section-title,
+[data-theme] .ide-workspace .ide-tree-item {
+  color: var(--ide-fg);
+}
+
+[data-theme] .ide-workspace .ide-explorer-section-title:hover,
+[data-theme] .ide-workspace .ide-tree-item:hover {
+  background: var(--ide-hover-bg);
+}
+
+[data-theme] .ide-workspace .ide-tree-item.active {
+  background: var(--ide-focus-bg);
+  color: var(--ide-strong-fg);
+}
+
+[data-theme] .ide-workspace .ide-explorer-label,
+[data-theme] .ide-workspace .ide-helper-kicker,
+[data-theme] .ide-workspace .ide-side-panel-header p,
+[data-theme] .ide-workspace .ide-helper-header p,
+[data-theme] .ide-workspace .ide-chevron,
+[data-theme] .ide-workspace .ide-panel-tab,
+[data-theme] .ide-workspace .ide-panel-close {
+  color: var(--ide-muted);
+}
+
+[data-theme] .ide-workspace .ide-helper-header strong,
+[data-theme] .ide-workspace .ide-side-panel-header strong,
+[data-theme] .ide-workspace .ide-panel-tab.active {
+  color: var(--ide-strong-fg);
+}
+
+[data-theme] .ide-workspace .ide-helper-copy,
+[data-theme] .ide-workspace .ide-helper-card p,
+[data-theme] .ide-workspace .ide-helper-empty,
+[data-theme] .ide-workspace .ide-side-panel-header span {
+  color: var(--ide-muted);
+}
+
+[data-theme] .ide-workspace .ide-explorer-action:hover,
+[data-theme] .ide-workspace .ide-helper-chip:hover,
+[data-theme] .ide-workspace .ide-tree-action:hover {
+  border-color: var(--vscode-focusBorder);
+  color: var(--ide-strong-fg);
+  background: var(--ide-focus-bg);
+}
+
+[data-theme] .ide-workspace .ide-rename-input,
+[data-theme] .ide-workspace .ide-context-menu {
+  background: var(--ide-menu-bg);
+  border: 1px solid var(--ide-border);
+  color: var(--ide-fg);
+}
+
+[data-theme] .ide-workspace .ide-context-menu {
+  box-shadow: var(--ide-menu-shadow);
+}
+
+[data-theme] .ide-workspace .ide-context-menu button:hover {
+  background: var(--ide-hover-bg);
+}
+
+[data-theme] .ide-workspace .ide-file-icon.folder {
+  color: var(--ide-icon-folder);
+}
+
+[data-theme] .ide-workspace .ide-file-badge {
+  color: var(--ide-icon-badge);
+}
+
+[data-theme] .ide-workspace .ide-helper-card {
+  border: 1px solid var(--ide-helper-border);
+  background: var(--ide-helper-bg);
+}
+
+[data-theme] .ide-workspace .ide-helper-card.warning {
+  border-color: var(--ide-warning-border);
+  background: var(--ide-warning-bg);
+}
+
+[data-theme] .ide-workspace .ide-side-panel,
+[data-theme] .ide-workspace .ide-bottom-panel,
+[data-theme] .ide-workspace .ide-resize-handle-vertical,
+[data-theme] .ide-workspace .ide-resize-handle-horizontal {
+  border-color: var(--ide-border);
+  background: var(--ide-bottom-panel);
+}
+
+[data-theme] .ide-workspace .ide-side-panel-header,
+[data-theme] .ide-workspace .ide-panel-tabs {
+  border-color: var(--ide-border);
+  background: var(--ide-tab-bar);
+}
+
+[data-theme] .ide-workspace .ide-panel-tab.active {
+  border-bottom-color: var(--ide-tab-active-border);
+}
+
+[data-theme] .ide-workspace .ide-panel-tab:hover:not(.active) {
+  color: var(--ide-fg);
+}
+
+[data-theme] .ide-workspace .ide-panel-close:hover {
+  background: var(--ide-button-hover);
+  color: var(--ide-strong-fg);
+}
+
+[data-theme] .ide-workspace .ide-resize-handle:hover::after,
+[data-theme] .ide-workspace .ide-resize-handle.dragging::after {
+  background: var(--ide-resize-active);
+}
+
+[data-theme] .topology-builder .topology-chip {
+  border: 1px solid var(--ide-border);
+  background: var(--ide-topology-chip-bg);
+  color: var(--ide-fg);
+}
+
+[data-theme] .topology-builder .topology-chip.active {
+  border-color: var(--vscode-focusBorder);
+  background: var(--ide-chip-active-bg);
+}
+
+[data-theme] .topology-builder .topology-canvas-wrap {
+  background: var(--ide-topology-canvas-bg);
+}
+
+[data-theme] .topology-builder .topology-node rect {
+  fill: var(--ide-topology-node-fill);
+  stroke: var(--ide-topology-node-stroke);
+}
+
+[data-theme] .topology-builder .topology-node.connect-source rect {
+  stroke: var(--ide-topology-connect);
+}
+
+[data-theme] .topology-builder .topology-node-label {
+  fill: var(--ide-topology-label);
+}
+
+[data-theme] .topology-builder .topology-node-type {
+  fill: var(--ide-topology-type);
+}
+
+[data-theme] .topology-builder .topology-link {
+  stroke: var(--ide-topology-link);
+}
+
+[data-theme] .topology-builder .topology-properties-grid input,
+[data-theme] .topology-builder .topology-properties-grid select {
+  border: 1px solid var(--ide-border);
+  background: var(--ide-input-bg);
+  color: var(--ide-input-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-breadcrumbs,
+[data-theme] .code-editor-shell .code-editor-tabbar {
+  background: var(--ide-tab-bar);
+  border-color: var(--ide-border);
+  color: var(--ide-muted);
+}
+
+[data-theme] .code-editor-shell .breadcrumb-segment:last-child {
+  color: var(--ide-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-tab {
+  border-right: 1px solid var(--ide-border);
+  background: var(--ide-button-bg);
+  color: var(--ide-tab-inactive-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-tab.active {
+  background: var(--ide-editor);
+  color: var(--ide-tab-active-fg);
+  border-bottom-color: var(--ide-editor);
+}
+
+[data-theme] .code-editor-shell .code-editor-tab:hover:not(.active) {
+  background: var(--ide-hover-bg);
+  color: var(--ide-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-toolbar {
+  background: var(--ide-tab-bar);
+  border-color: var(--ide-border);
+}
+
+[data-theme] .code-editor-shell .code-editor-control,
+[data-theme] .code-editor-shell .code-editor-snippet {
+  border: 1px solid var(--ide-border);
+  background: var(--ide-button-bg);
+  color: var(--ide-muted);
+}
+
+[data-theme] .code-editor-shell .code-editor-control:hover,
+[data-theme] .code-editor-shell .code-editor-snippet:hover {
+  color: var(--ide-strong-fg);
+  background: var(--ide-button-hover);
+}
+
+[data-theme] .code-editor-shell .code-editor-snippet.active {
+  border-color: var(--accent);
+  color: var(--ide-strong-fg);
+  background: var(--ide-focus-bg);
+}
+
+[data-theme] .code-editor-shell .code-editor-palette {
+  border: 1px solid var(--ide-border);
+  background: var(--ide-menu-bg);
+  box-shadow: var(--ide-menu-shadow);
+}
+
+[data-theme] .code-editor-shell .code-editor-palette-input {
+  border-bottom: 1px solid var(--ide-border);
+  color: var(--ide-strong-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-palette-item {
+  color: var(--ide-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-palette-item:hover,
+[data-theme] .code-editor-shell .code-editor-palette-item:focus-visible {
+  background: var(--ide-hover-bg);
+}
+
+[data-theme] .code-editor-shell .code-editor-palette-empty {
+  color: var(--ide-muted);
+}
+
+[data-theme] .code-editor-shell .code-editor-status-bar {
+  background: var(--vscode-statusBar-bg);
+  border-top: 1px solid var(--ide-border);
+  color: var(--vscode-statusBar-fg);
+}
+
+[data-theme] .code-editor-shell .code-editor-status-item {
+  color: inherit;
+}
