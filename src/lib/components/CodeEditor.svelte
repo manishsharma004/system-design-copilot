@@ -3,7 +3,9 @@
   // @ts-nocheck
   import { createEventDispatcher, onMount, tick } from 'svelte'
 
-  import { getMonaco, MONACO_THEME } from '$lib/editor/monaco'
+  import { getMonaco, getMonacoThemeId } from '$lib/editor/monaco'
+  import { theme } from '$lib/stores/theme.js'
+  import { get } from 'svelte/store'
   import { codiconSvg, fileCodicon } from '$lib/editor/codicons'
 
   export let value = ''
@@ -565,7 +567,7 @@
         value,
         language,
         readOnly,
-        theme: MONACO_THEME,
+        theme: getMonacoThemeId(get(theme)),
         automaticLayout: true,
         minimap: { enabled: true, maxColumn: 120, renderCharacters: false, showSlider: 'mouseover', size: 'proportional' },
         scrollBeyondLastLine: false,
@@ -677,6 +679,10 @@
       editor?.dispose()
     }
   })
+
+  $: if (ready && monaco && editor) {
+    monaco.editor.setTheme(getMonacoThemeId($theme))
+  }
 
   $: if (ready) {
     resolvedActiveFileId

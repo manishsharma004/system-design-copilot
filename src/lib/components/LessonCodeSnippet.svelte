@@ -2,7 +2,9 @@
 <script>
   // @ts-nocheck
   import { onMount } from 'svelte'
-  import { getMonaco, MONACO_THEME } from '$lib/editor/monaco'
+  import { get } from 'svelte/store'
+  import { getMonaco, getMonacoThemeId } from '$lib/editor/monaco'
+  import { theme } from '$lib/stores/theme.js'
 
   export let code = ''
   export let language = 'python'
@@ -38,7 +40,7 @@
         wordWrap: 'on',
         automaticLayout: true,
         contextmenu: false,
-        theme: MONACO_THEME,
+        theme: getMonacoThemeId(get(theme)),
         fontSize: 13,
         fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         tabSize: 4,
@@ -53,6 +55,10 @@
       model?.dispose()
     }
   })
+
+  $: if (monaco && editor) {
+    monaco.editor.setTheme(getMonacoThemeId($theme))
+  }
 
   $: if (model) {
     if (model.getValue() !== code) {
