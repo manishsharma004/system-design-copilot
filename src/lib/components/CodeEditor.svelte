@@ -664,6 +664,7 @@
       applyMonacoTheme(monaco, get(theme))
       registerEditorActions()
       syncModelsFromProps()
+      editor.layout()
     })()
 
     return () => {
@@ -770,6 +771,7 @@
 
   {#if !ready}
     <textarea
+      class="code-editor-fallback"
       rows="12"
       value={currentText}
       oninput={(event) => updateFileValue(currentFile?.id ?? '__single__', event.currentTarget.value)}
@@ -1086,6 +1088,36 @@
     min-width: 0;
     max-width: 100%;
     background: var(--ide-editor, var(--vscode-editor-bg));
+  }
+
+  /* Monaco's hidden input textarea must not pick up form field styles from app.css */
+  .code-editor-shell :global(.monaco-editor textarea.inputarea) {
+    width: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    resize: none !important;
+    outline: none !important;
+  }
+
+  .code-editor-fallback {
+    width: 100%;
+    min-height: 16rem;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-editor, var(--vscode-editor-bg));
+    color: var(--ide-fg, var(--text));
+    padding: 0.65rem 0.85rem;
+    font-family: Consolas, 'Droid Sans Mono', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    resize: vertical;
   }
 
   .code-editor-status-bar {

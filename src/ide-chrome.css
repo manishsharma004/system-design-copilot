@@ -320,9 +320,12 @@
 /* Monaco editor surface must follow theme tokens (scoped Svelte styles previously forced dark). */
 [data-theme] .monaco-editor,
 [data-theme] .monaco-editor .margin,
-[data-theme] .monaco-editor .monaco-editor-background,
-[data-theme] .monaco-editor .inputarea.ime-input {
+[data-theme] .monaco-editor .monaco-editor-background {
   background-color: var(--ide-editor, var(--vscode-editor-bg)) !important;
+}
+
+[data-theme] .monaco-editor .inputarea.ime-input {
+  background: transparent !important;
 }
 
 [data-theme] .ide-workspace .ide-editor-pane :global(.code-editor-shell),

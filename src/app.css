@@ -1671,7 +1671,7 @@ button:disabled, .action-link[disabled] {
   gap: 0.75rem;
 }
 
-.code-editor-shell textarea,
+.code-editor-shell > .code-editor-fallback,
 .llm-panel textarea,
 .llm-panel input,
 .llm-panel select {
