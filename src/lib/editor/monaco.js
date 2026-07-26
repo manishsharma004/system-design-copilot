@@ -169,6 +169,88 @@ function registerTheme(monaco) {
   })
 }
 
+/** @param {string} name @param {string} [fallback] */
+function cssVar(name, fallback = '') {
+  if (typeof document === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
+const DARK_TOKEN_RULES = [
+  { token: 'keyword', foreground: 'C586C0' },
+  { token: 'attribute.name', foreground: '9CDCFE' },
+  { token: 'type.identifier', foreground: '4EC9B0' },
+  { token: 'string', foreground: 'CE9178' },
+  { token: 'number', foreground: 'B5CEA8' },
+  { token: 'comment', foreground: '6A9955' }
+]
+
+const LIGHT_TOKEN_RULES = [
+  { token: 'keyword', foreground: 'AF00DB' },
+  { token: 'attribute.name', foreground: '0451A5' },
+  { token: 'type.identifier', foreground: '267F99' },
+  { token: 'string', foreground: 'A31515' },
+  { token: 'number', foreground: '098658' },
+  { token: 'comment', foreground: '6A9955' }
+]
+
+/** @param {any} monaco @param {string} themeId */
+export function applyMonacoTheme(monaco, themeId) {
+  const isLight = getThemeOption(themeId).mode === 'light'
+  const themeName = getMonacoThemeId(themeId)
+  const editorBg = cssVar('--vscode-editor-bg', isLight ? '#ffffff' : '#1e1e1e')
+  const editorFg = cssVar('--vscode-foreground', isLight ? '#1e293b' : '#cccccc')
+  const gutterBg = cssVar('--vscode-sideBar-bg', editorBg)
+  const muted = cssVar('--vscode-descriptionForeground', isLight ? '#64748b' : '#858585')
+  const focusBorder = cssVar('--vscode-focusBorder', '#696cff')
+  const hoverBg = cssVar('--ide-hover-bg', isLight ? '#f1f5f9' : '#2a2d2e')
+  const activeBg = cssVar('--ide-active-bg', isLight ? '#e2e8f0' : '#37373d')
+  const widgetBg = cssVar('--vscode-sideBar-bg', isLight ? '#ffffff' : '#252526')
+  const widgetBorder = cssVar('--vscode-border', isLight ? '#e2e8f0' : '#2b2b2b')
+  const statusBarBg = cssVar('--vscode-statusBar-bg', focusBorder)
+
+  monaco.editor.defineTheme(themeName, {
+    base: isLight ? 'vs' : 'vs-dark',
+    inherit: true,
+    rules: isLight ? LIGHT_TOKEN_RULES : DARK_TOKEN_RULES,
+    colors: {
+      'editor.background': editorBg,
+      'editor.foreground': editorFg,
+      'editorGutter.background': gutterBg,
+      'editorLineNumber.foreground': muted,
+      'editorLineNumber.activeForeground': editorFg,
+      'editorLineNumber.dimmedForeground': muted,
+      'editorCursor.foreground': focusBorder,
+      'editor.selectionBackground': activeBg,
+      'editor.inactiveSelectionBackground': hoverBg,
+      'editor.lineHighlightBackground': hoverBg,
+      'editor.lineHighlightBorder': '#00000000',
+      'editorIndentGuide.background1': widgetBorder,
+      'editorIndentGuide.activeBackground1': muted,
+      'editorBracketMatch.background': hoverBg,
+      'editorBracketMatch.border': focusBorder,
+      'editorSuggestWidget.background': widgetBg,
+      'editorSuggestWidget.border': widgetBorder,
+      'editorSuggestWidget.selectedBackground': activeBg,
+      'editorHoverWidget.background': widgetBg,
+      'editorHoverWidget.border': widgetBorder,
+      'editorWidget.background': widgetBg,
+      'editorWidget.border': widgetBorder,
+      'scrollbar.shadow': '#00000000',
+      'scrollbarSlider.background': isLight ? '#cbd5e188' : '#3a4252aa',
+      'scrollbarSlider.hoverBackground': isLight ? '#94a3b8aa' : '#4b5568cc',
+      'scrollbarSlider.activeBackground': isLight ? '#64748bcc' : '#677285dd',
+      'quickInput.background': widgetBg,
+      'quickInput.foreground': editorFg,
+      'quickInputList.focusBackground': activeBg,
+      'quickInputTitle.background': gutterBg,
+      'statusBar.background': statusBarBg,
+      'statusBar.foreground': '#ffffff'
+    }
+  })
+  monaco.editor.setTheme(themeName)
+}
+
 /**
  * @param {any} monaco
  */

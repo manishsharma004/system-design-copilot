@@ -1105,7 +1105,7 @@
     grid-template-columns: auto var(--explorer-width, 17rem) 6px minmax(0, 1fr);
     height: clamp(34rem, 70vh, 48rem);
     min-height: 34rem;
-    background: var(--vscode-editor-bg, #1e1e1e);
+    background: var(--ide-editor, var(--vscode-editor-bg));
     border: 1px solid var(--vscode-border, #2b2b2b);
     border-radius: 0;
     overflow: hidden;
@@ -1136,7 +1136,7 @@
     height: 48px;
     border: none;
     background: transparent;
-    color: #7f879e;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
     transition: color 0.1s;
     padding: 0;
     min-height: 0;
@@ -1145,14 +1145,14 @@
   }
 
   .ide-activity-icon:hover {
-    color: #eef2ff;
-    background: rgba(255, 255, 255, 0.04);
+    color: var(--ide-strong-fg, var(--vscode-foreground));
+    background: var(--ide-hover-bg, var(--vscode-list-hover));
   }
 
   .ide-activity-icon.active {
-    color: #eef2ff;
-    border-left-color: #007acc;
-    background: rgba(0, 122, 204, 0.16);
+    color: var(--ide-strong-fg, var(--vscode-foreground));
+    border-left-color: var(--ide-activity-active-border, var(--vscode-focusBorder));
+    background: var(--ide-activity-active-bg, var(--accent-muted));
   }
 
   .ide-explorer {
@@ -1178,7 +1178,7 @@
     padding: 0.55rem 0.65rem;
     border: none;
     background: transparent;
-    color: #d8def0;
+    color: var(--ide-fg, var(--vscode-foreground));
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1189,14 +1189,14 @@
   }
 
   .ide-explorer-section-title:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--ide-hover-bg, var(--vscode-list-hover));
   }
 
   .ide-explorer-label,
   .ide-helper-kicker,
   .ide-side-panel-header p,
   .ide-helper-header p {
-    color: #8d95ab;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
     margin: 0;
     font-size: 0.7rem;
     letter-spacing: 0.08em;
@@ -1244,7 +1244,7 @@
     flex: 1;
     min-width: 0;
     border: 1px solid var(--vscode-focusBorder, #007acc);
-    background: #1e1e1e;
+    background: var(--ide-input-bg, var(--vscode-editor-bg));
     color: var(--vscode-foreground, #cccccc);
     font-size: 0.78rem;
     padding: 0.1rem 0.25rem;
@@ -1260,7 +1260,7 @@
     position: fixed;
     z-index: 41;
     min-width: 10rem;
-    background: #252526;
+    background: var(--ide-menu-bg, var(--vscode-sideBar-bg));
     border: 1px solid var(--vscode-border, #2b2b2b);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     display: grid;
@@ -1284,9 +1284,9 @@
   .ide-explorer-action,
   .ide-helper-chip,
   .ide-tree-action {
-    border: 1px solid #303647;
-    background: #1b1f2a;
-    color: #cfd5e9;
+    border: 1px solid var(--ide-border, var(--vscode-border));
+    background: var(--ide-button-bg, var(--bg-soft));
+    color: var(--ide-fg, var(--vscode-foreground));
     border-radius: 0.25rem;
     min-height: 0;
   }
@@ -1299,9 +1299,9 @@
   .ide-explorer-action:hover,
   .ide-helper-chip:hover,
   .ide-tree-action:hover {
-    border-color: #007acc;
-    color: #eef2ff;
-    background: rgba(0, 122, 204, 0.16);
+    border-color: var(--vscode-focusBorder);
+    color: var(--ide-strong-fg, var(--vscode-foreground));
+    background: var(--ide-activity-active-bg, var(--accent-muted));
   }
 
   .ide-explorer-tree {
@@ -1324,7 +1324,7 @@
     padding: 0.18rem 0.4rem 0.18rem calc(0.55rem + (var(--tree-indent, 0) * 0.9rem));
     border: none;
     background: transparent;
-    color: #cfd5e9;
+    color: var(--ide-fg, var(--vscode-foreground));
     font-size: 0.78rem;
     min-height: 1.8rem;
     border-radius: 0.25rem;
@@ -1337,12 +1337,12 @@
   }
 
   .ide-tree-item:hover {
-    background: #1f2430;
+    background: var(--ide-hover-bg, var(--vscode-list-hover));
   }
 
   .ide-tree-item.active {
-    background: rgba(0, 122, 204, 0.18);
-    color: #eef2ff;
+    background: var(--ide-focus-bg, var(--accent-muted));
+    color: var(--ide-strong-fg, var(--vscode-foreground));
   }
 
   .ide-tree-actions {
@@ -1369,7 +1369,7 @@
     font-size: 0.55rem;
     width: 1rem;
     text-align: center;
-    color: #7f879e;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
   }
 
   .ide-file-icon {
@@ -1379,13 +1379,13 @@
   }
 
   .ide-file-icon.folder {
-    color: #dcb67a;
+    color: var(--ide-icon-folder);
   }
 
   .ide-file-badge {
     margin-left: auto;
     font-size: 0.65rem;
-    color: #73c991;
+    color: var(--ide-icon-badge, var(--success));
     font-weight: 600;
     letter-spacing: 0.02em;
   }
@@ -1399,7 +1399,7 @@
 
   .ide-helper-header strong,
   .ide-side-panel-header strong {
-    color: #eef2ff;
+    color: var(--ide-strong-fg, var(--vscode-foreground));
     font-size: 0.95rem;
   }
 
@@ -1408,7 +1408,7 @@
   .ide-helper-empty,
   .ide-side-panel-header span {
     margin: 0;
-    color: #a6aec6;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
     line-height: 1.5;
     font-size: 0.8rem;
   }
@@ -1428,9 +1428,9 @@
     display: grid;
     gap: 0.2rem;
     padding: 0.55rem 0.6rem;
-    border: 1px solid #252a35;
+    border: 1px solid var(--ide-border, var(--vscode-border));
     border-radius: 0.3rem;
-    background: #11131a;
+    background: var(--ide-bottom-panel, var(--vscode-panel-bg));
   }
 
   .ide-helper-card.warning {
@@ -1489,8 +1489,8 @@
   .ide-side-panel {
     display: flex;
     flex-direction: column;
-    border-left: 1px solid #252a35;
-    background: #0f1118;
+    border-left: 1px solid var(--ide-border, var(--vscode-border));
+    background: var(--ide-panel, var(--vscode-panel-bg));
     min-width: 0;
     overflow: hidden;
   }
@@ -1500,13 +1500,13 @@
     gap: 0.35rem;
     padding: 0.95rem 0.95rem 0.75rem;
     border-bottom: 1px solid #252a35;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+    background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
   }
 
   .ide-panel-tabs {
     display: flex;
     align-items: center;
-    background: #161922;
+    background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
     border-bottom: 1px solid #252a35;
     min-height: 35px;
     padding: 0 0.5rem;
@@ -1520,7 +1520,7 @@
     padding: 0.4rem 0.75rem;
     border: none;
     background: transparent;
-    color: #8f96ab;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
     font-size: 0.78rem;
     min-height: 35px;
     border-radius: 0;
@@ -1529,12 +1529,12 @@
   }
 
   .ide-panel-tab.active {
-    color: #eef2ff;
-    border-bottom-color: #007acc;
+    color: var(--ide-strong-fg, var(--vscode-foreground));
+    border-bottom-color: var(--ide-tab-active-border, var(--vscode-focusBorder));
   }
 
   .ide-panel-tab:hover:not(.active) {
-    color: #cfd5e9;
+    color: var(--ide-fg, var(--vscode-foreground));
   }
 
   .ide-panel-close {
@@ -1546,7 +1546,7 @@
     margin-left: auto;
     border: none;
     background: transparent;
-    color: #7f879e;
+    color: var(--ide-muted, var(--vscode-descriptionForeground));
     font-size: 1rem;
     padding: 0;
     min-height: 0;
@@ -1555,8 +1555,8 @@
   }
 
   .ide-panel-close:hover {
-    background: #2a3040;
-    color: #eef2ff;
+    background: var(--ide-button-hover, var(--vscode-list-hover));
+    color: var(--ide-strong-fg, var(--vscode-foreground));
   }
 
   .ide-panel-content {
@@ -1566,7 +1566,7 @@
   }
 
   .ide-preview-content {
-    background: var(--vscode-editor-bg, #1e1e1e);
+    background: var(--ide-editor, var(--vscode-editor-bg));
     padding: 0;
   }
 
@@ -1575,8 +1575,8 @@
   }
 
   .ide-bottom-panel {
-    border-top: 1px solid #252a35;
-    background: #11131a;
+    border-top: 1px solid var(--ide-border, var(--vscode-border));
+    background: var(--ide-bottom-panel, var(--vscode-panel-bg));
     height: var(--bottom-panel-height, 220px);
     max-height: none;
     min-height: 120px;
@@ -1604,20 +1604,20 @@
 
   .ide-resize-handle:hover::after,
   .ide-resize-handle.dragging::after {
-    background: rgba(0, 122, 204, 0.65);
+    background: var(--ide-resize-active);
   }
 
   .ide-resize-handle-vertical {
     width: 6px;
     cursor: ew-resize;
-    background: #11131a;
+    background: var(--ide-bottom-panel, var(--vscode-panel-bg));
   }
 
   .ide-resize-handle-horizontal {
     height: 6px;
     width: 100%;
     cursor: ns-resize;
-    background: #11131a;
+    background: var(--ide-bottom-panel, var(--vscode-panel-bg));
   }
 
   @media (max-width: 768px) {
