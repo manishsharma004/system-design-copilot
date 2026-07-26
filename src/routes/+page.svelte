@@ -18,29 +18,30 @@
 
   $: resumeLesson = getResumeLesson($progress.completedLessonIds);
   $: resumeFlow = resumeLesson ? courseFlows.find((flow) => flow.slug === resumeLesson.flowSlug) : null;
+  $: learningPaths = siteOverview.learningPaths ?? [];
 </script>
 
 <svelte:head>
-  <title>{siteOverview.title} · Curriculum</title>
+  <title>{siteOverview.title} · Learn & practice</title>
 </svelte:head>
 
 <section class="hero panel">
   <div class="hero-grid home-hero-grid">
     <div class="hero-card hero-primary-card">
-      <p class="eyebrow">Four prep flows</p>
+      <p class="eyebrow">Learn systems · design · algorithms · AI</p>
       <div class="hero-kicker-row">
-        <span class="pill">Self-paced SvelteKit guide</span>
-        <span class="pill">{courseFlows.length} focused prep flows · {allLessons.length} lessons</span>
+        <span class="pill">Browser-only curriculum</span>
+        <span class="pill">{courseFlows.length} learning tracks · {allLessons.length} lessons</span>
       </div>
-      <h1 class="hero-title">Prepare for system design, low-level design, DSA, and AI engineering interviews in one place.</h1>
-      <p class="hero-subtitle">{siteOverview.description}</p>
-      <p class="hero-guidance">Pick the flow that matches the interview in front of you, then work the modules in order so your answers sound structured instead of improvised.</p>
+      <h1 class="hero-title">System Design Copilot</h1>
+      <p class="hero-subtitle">{siteOverview.subtitle}</p>
+      <p class="hero-guidance">{siteOverview.heroGuidance}</p>
       <div class="action-row">
-        <a class="action-link primary" href={`${base}/flow/high-level-design`}>Open HLD flow</a>
-        <a class="action-link" href={`${base}/flow/low-level-design`}>Open LLD flow</a>
-        <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Open DSA flow</a>
-        <a class="action-link" href={`${base}/flow/ai-engineer`}>Open AI flow</a>
-        <a class="action-link" href={`${base}/flow/interview-questions`}>Open question bank</a>
+        <a class="action-link primary" href={`${base}/flow/high-level-design`}>Learn HLD</a>
+        <a class="action-link" href={`${base}/flow/low-level-design`}>Learn LLD</a>
+        <a class="action-link" href={`${base}/flow/data-structures-and-algorithms`}>Learn DSA</a>
+        <a class="action-link" href={`${base}/flow/ai-engineer`}>Learn AI / ML</a>
+        <a class="action-link" href={`${base}/flow/interview-questions`}>Practice questions</a>
       </div>
       <div class="hero-stat-strip">
         <article class="hero-stat-card">
@@ -51,27 +52,27 @@
         <article class="hero-stat-card">
           <span class="eyebrow">Modules</span>
           <strong>{modules.length}</strong>
-          <p>Organized into flow-specific sequences so the next step stays obvious.</p>
+          <p>Learning labs plus interview modules, sequenced so the next step stays obvious.</p>
         </article>
         <article class="hero-stat-card">
-          <span class="eyebrow">Practice labs</span>
-          <strong>3</strong>
-          <p>Simulation, markdown practice IDE, and browser-side DSA runtimes with saved answers.</p>
+          <span class="eyebrow">Interactive labs</span>
+          <strong>4</strong>
+          <p>Simulation, markdown practice, DSA WASM runtimes, and in-browser ML with Pyodide.</p>
         </article>
       </div>
     </div>
     <article class="hero-card study-loop-card">
-      <p class="eyebrow">Session loop</p>
+      <p class="eyebrow">Learning loop</p>
       <div class="hero-orbit">
         <div class="hero-orbit-ring hero-orbit-ring-outer"></div>
         <div class="hero-orbit-ring hero-orbit-ring-inner"></div>
         <div class="hero-orbit-core">
-          <strong>Practice</strong>
-          <span>Frame, estimate, sketch, defend</span>
+          <strong>Learn</strong>
+          <span>Concept → lab → practice</span>
         </div>
       </div>
-      <h2>Use the same four-part rhythm in every practice session.</h2>
-      <p class="hero-note">The goal is not to collect diagrams. It is to build a repeatable answer shape that stays coherent under follow-up pressure.</p>
+      <h2>Build intuition first, then rehearse under pressure.</h2>
+      <p class="hero-note">Use concept labs to understand the idea, project labs to apply it, and interview practice when you are ready to explain trade-offs out loud.</p>
       <div class="study-loop-list">
         {#each siteOverview.studyLoop as step}
           <article class="study-loop-step">
@@ -109,12 +110,46 @@
   </section>
 {/if}
 
+{#if learningPaths.length}
+  <section class="panel hero-card">
+    <div class="curriculum-map-header">
+      <div>
+        <p class="eyebrow">Start with a learning path</p>
+        <h2>Four skill tracks beyond interview cramming</h2>
+        <p class="hero-subtitle">Each path mixes fundamentals, hands-on labs, and optional interview rehearsal.</p>
+      </div>
+    </div>
+    <div class="section-grid hero-featured-grid">
+      {#each learningPaths as path}
+        <article class="module-card study-track-card">
+          <div class="study-track-heading">
+            <div>
+              <p class="eyebrow">Learning path</p>
+              <h2>{path.title}</h2>
+            </div>
+          </div>
+          <p>{path.summary}</p>
+          <div class="card-meta">
+            {#each path.focus as focusItem}
+              <span class="pill">{focusItem}</span>
+            {/each}
+          </div>
+          <div class="action-row">
+            <a class="action-link primary" href={`${base}/flow/${path.flowSlug}`}>Open track</a>
+            <a class="action-link" href={`${base}/module/${path.startModule}`}>Start {path.startModule.replace(/-/g, ' ')}</a>
+          </div>
+        </article>
+      {/each}
+    </div>
+  </section>
+{/if}
+
 <section class="section-grid hero-featured-grid">
   {#each courseFlows as flow}
     <article class="module-card study-track-card">
       <div class="study-track-heading">
         <div>
-          <p class="eyebrow">{flow.shortTitle} flow</p>
+          <p class="eyebrow">{flow.shortTitle} track</p>
           <h2>{flow.title}</h2>
         </div>
         <div class="card-meta">
@@ -143,7 +178,7 @@
 <section class="section-grid hero-featured-grid">
   <article class="hero-card home-detail-card">
     <p class="eyebrow">HLD starting points</p>
-    <h2>Three strong entry points into the high-level design flow.</h2>
+    <h2>Three strong entry points into systems learning.</h2>
     <div class="hero-featured-modules">
       {#each featuredModules as module, index}
         <a class="featured-module-card" href={`${base}/module/${module.slug}`}>
@@ -160,19 +195,19 @@
   </article>
   <article class="hero-card home-detail-card home-commitment-card">
     <p class="eyebrow">What changes when this clicks</p>
-    <h2>Answers stop sounding like component lists and start sounding like design decisions.</h2>
+    <h2>You stop collecting topics and start building judgment.</h2>
     <div class="study-section-list compact-list">
       <article class="study-section-card emphasis-card">
-        <strong>Requirement-first structure</strong>
-        <p>You open with scope, workload, and correctness constraints instead of jumping straight to Kafka, caches, and databases.</p>
+        <strong>Systems intuition</strong>
+        <p>You can explain where latency and cost come from, not just name caches, queues, and databases.</p>
       </article>
       <article class="study-section-card emphasis-card">
-        <strong>Clear baseline architecture</strong>
-        <p>You can explain one request path end to end before discussing scale levers, failure isolation, and regional expansion.</p>
+        <strong>Design judgment</strong>
+        <p>Patterns and object models become tools for change, not memorized class diagrams.</p>
       </article>
       <article class="study-section-card emphasis-card">
-        <strong>Sharper trade-off language</strong>
-        <p>You get faster at defending choices around consistency, cost, complexity, and operational risk when the interviewer pushes deeper.</p>
+        <strong>Hands-on AI practice</strong>
+        <p>ML and deep-learning exercises run in the browser, so learning loops stay interactive instead of passive.</p>
       </article>
     </div>
   </article>
@@ -189,8 +224,8 @@
 
   <section class="track-grid study-track-grid home-collapsible-body">
     <article class="hero-card home-detail-card">
-      <p class="eyebrow">High-level design study modes</p>
-      <h2>Structured repetition paths mapped to the HLD curriculum.</h2>
+      <p class="eyebrow">Study modes</p>
+      <h2>Learning paths and interview rehearsal rhythms.</h2>
       <p>{siteOverview.heroGuidance}</p>
     </article>
     {#each siteOverview.studyTracks as track}
@@ -221,7 +256,7 @@
   <section class="section-grid home-reference-grid home-collapsible-body">
     <article class="hero-card home-detail-card">
       <p class="eyebrow">How the map builds depth</p>
-      <h2>Move from design vocabulary to product-shaped systems.</h2>
+      <h2>Move from vocabulary to working systems judgment.</h2>
       <div class="study-section-list">
         {#each siteOverview.studyMapSections as section}
           <article class="study-section-card">
@@ -255,7 +290,7 @@
     <div>
       <p class="eyebrow">Curriculum map</p>
       <h2>All modules and lesson progress</h2>
-      <p class="hero-subtitle">Browse every module across HLD, LLD, DSA, and AI flows. Progress is tracked per lesson.</p>
+      <p class="hero-subtitle">Browse every module across HLD, LLD, DSA, AI, and question-bank tracks. Progress is tracked per lesson.</p>
     </div>
     <ProgressControls />
   </div>

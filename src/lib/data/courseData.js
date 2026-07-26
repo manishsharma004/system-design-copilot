@@ -8,9 +8,39 @@ import { rawLldLearningModules } from './lldLearningExpansion.js';
 
 export const siteOverview = {
   "title": "System Design Copilot",
-  "subtitle": "Parallel interview prep flows for high-level design, low-level design, and DSA rounds, with guided lessons, case studies, and interactive practice labs.",
-  "description": "Study distributed systems architecture, low-level object design, and data structures and algorithms in separate guided flows, with mobile-friendly lessons, saved practice answers, and interactive drills.",
-  "heroGuidance": "Treat the map like a progression from framing to trade-offs. The best interview answers do not list components at random; they move from requirements and estimates into a clear baseline, then spend the remaining time defending the hardest decisions.",
+  "subtitle": "Learn high-level design, low-level design, DSA, and AI/ML with guided lessons, labs, and interview-ready practice in one browser app.",
+  "description": "Build durable engineering skills across distributed systems, object design, algorithms, and machine learning — then rehearse the same material in interview form with interactive labs and in-browser runtimes.",
+  "heroGuidance": "Learn first, then rehearse. Use concept labs to build intuition, project labs to apply it, and timed practice when you are ready to sound sharp under follow-ups.",
+  "learningPaths": [
+    {
+      "title": "Systems engineer path",
+      "flowSlug": "high-level-design",
+      "summary": "Trace real request paths, capacity, reliability, and architecture trade-offs before you sit a system design round.",
+      "startModule": "systems-fundamentals-lab",
+      "focus": ["Request lifecycle", "Reliability & observability", "Architecture case studies"]
+    },
+    {
+      "title": "Software design path",
+      "flowSlug": "low-level-design",
+      "summary": "Master OOP modeling, design patterns, and project labs like parking lots and elevators, then transfer the skill to machine-coding interviews.",
+      "startModule": "lld-design-patterns-lab",
+      "focus": ["Design patterns", "Object modeling", "Project labs"]
+    },
+    {
+      "title": "Algorithms path",
+      "flowSlug": "data-structures-and-algorithms",
+      "summary": "Build mental models for complexity, trees, graphs, and DP, then drill patterns with runnable coding practice.",
+      "startModule": "dsa-concepts-lab",
+      "focus": ["Concept labs", "Algorithm cookbooks", "Mock coding rounds"]
+    },
+    {
+      "title": "AI / ML engineer path",
+      "flowSlug": "ai-engineer",
+      "summary": "Learn classical ML and deep learning with interactive NumPy/scikit-learn exercises that run entirely in the browser.",
+      "startModule": "ml-interactive-lab",
+      "focus": ["Interactive ML labs", "Deep learning from scratch", "LLM & MLOps tracks"]
+    }
+  ],
   "studyTracks": [
     {
       "title": "Interview sprint",
@@ -4183,69 +4213,69 @@ const flowDefinitions = [
   {
     slug: 'high-level-design',
     shortTitle: 'HLD',
-    title: 'High-level design interview prep',
-    summary: 'Architecture, distributed systems trade-offs, and end-to-end system walkthroughs for classic system design rounds.',
-    description: 'Use this flow when the interview expects requirements framing, scale estimates, APIs, storage choices, bottleneck analysis, and operational trade-offs across distributed systems.',
-    audience: 'Best for backend, platform, and senior product-engineering interviews that emphasize architecture under scale.',
-    cadence: 'Follow the modules in order or jump into case studies once the core building blocks feel familiar.',
-    heroGuidance: 'Start with requirements and workload shape, then defend the one architectural decision that most affects correctness, latency, or cost.',
+    title: 'High-level design learning path',
+    summary: 'Learn how real systems work — request paths, capacity, reliability, and architecture — then rehearse the same ideas in interview form.',
+    description: 'Use this flow to learn distributed systems engineering and to prepare for interviews that expect requirements framing, scale estimates, APIs, storage choices, bottleneck analysis, and operational trade-offs.',
+    audience: 'Best for engineers building backend or platform systems, and for interview prep that emphasizes architecture under scale.',
+    cadence: 'Start with fundamentals and reliability labs, then move through building-block modules and finish with case studies.',
+    heroGuidance: 'Learn the critical path and failure modes first, then defend the one architectural decision that most affects correctness, latency, or cost.',
     focusAreas: [
-      'Requirements, estimation, and architecture baselines',
+      'Systems fundamentals, capacity, and reliability labs',
       'Distributed systems building blocks such as caching, queues, replication, and partitioning',
-      'Product-shaped case studies that rehearse full interview narratives'
+      'Product-shaped case studies that connect learning to interview narratives'
     ],
-    outcome: 'You should be able to drive a whiteboard-style conversation from user needs to deep trade-off discussion without drifting into generic component lists.',
+    outcome: 'You should understand how systems behave in production and be able to drive a whiteboard conversation from user needs to deep trade-off discussion.',
     moduleSlugs: hldModules.map((module) => module.slug)
   },
   {
     slug: 'low-level-design',
     shortTitle: 'LLD',
-    title: 'Low-level design interview prep',
-    summary: 'Object modeling, extensible APIs, machine-coding structure, and follow-up handling for class-design rounds.',
-    description: 'Use this flow when the interview focuses on classes, interfaces, workflows, patterns, testing seams, and how code structure adapts to changing requirements.',
-    audience: 'Best for SDE-1 to senior engineer rounds that test object-oriented design, machine coding, and code-level architecture judgment.',
-    cadence: 'Work module by module and code small examples alongside the lessons so the design vocabulary turns into implementation muscle memory.',
+    title: 'Low-level design learning path',
+    summary: 'Learn object modeling, design patterns, and project labs, then transfer that skill into machine-coding interviews.',
+    description: 'Use this flow to build durable OO design judgment and to prepare for interviews focused on classes, interfaces, workflows, patterns, testing seams, and evolving requirements.',
+    audience: 'Best for engineers leveling up software design skills, and for SDE rounds that test object-oriented design and machine coding.',
+    cadence: 'Work foundations and patterns labs first, code the project labs, then practice machine-coding execution.',
     heroGuidance: 'Frame the scope first, sketch the smallest coherent object model, then explain how your contracts absorb follow-up requirements without collapsing into a god class.',
     focusAreas: [
       'Prompt framing, invariants, and responsibility assignment',
-      'Object modeling, workflow orchestration, and change-friendly abstractions',
+      'Design patterns and object-design project labs',
       'Machine-coding execution, testing seams, concurrency, and scale follow-ups'
     ],
-    outcome: 'You should be able to produce a clean class design quickly, justify pattern choices, and extend the design under interviewer follow-ups without rewriting everything.',
+    outcome: 'You should be able to design maintainable object models, apply patterns with judgment, and extend designs under interviewer follow-ups.',
     moduleSlugs: lldModules.map((module) => module.slug)
   },
   {
     slug: 'data-structures-and-algorithms',
     shortTitle: 'DSA',
-    title: 'Data structures and algorithms interview prep',
-    summary: 'Curated coding-round practice across general problem sets and company-specific question banks for array, tree, graph, DP, and mock-round prep.',
-    description: 'Use this flow when the interview expects coding, algorithm selection, complexity discussion, and live problem solving under follow-up questions.',
-    audience: 'Best for coding screens, online assessments, phone interviews, and onsite rounds centered on data structures and algorithms.',
-    cadence: 'Alternate between one concept-focused module and one mock-style module so pattern study turns into timed execution.',
-    heroGuidance: 'Restate the problem, choose the pattern deliberately, defend the invariant or recurrence, then code the cleanest correct version before optimizing.',
+    title: 'Data structures and algorithms learning path',
+    summary: 'Learn complexity, structures, and algorithm cookbooks, then drill patterns with runnable coding practice and mock rounds.',
+    description: 'Use this flow to build algorithmic intuition and to prepare for coding screens that expect algorithm selection, complexity discussion, and live problem solving.',
+    audience: 'Best for learners building DSA fundamentals and for coding screens, online assessments, and onsite algorithm rounds.',
+    cadence: 'Start with concept and algorithm labs, then alternate pattern drills with timed mock-style modules.',
+    heroGuidance: 'Build the mental model, choose the pattern deliberately, defend the invariant or recurrence, then code the cleanest correct version before optimizing.',
     focusAreas: [
-      'Core DSA patterns such as arrays, hash maps, trees, graphs, and dynamic programming',
-      'Execution habits for live coding: invariants, complexity, tests, and follow-up handling',
-      'Company-specific practice sets built from Amazon, Google, Microsoft, Meta, and Apple question banks'
+      'Concept labs for complexity, hash tables, trees, graphs, sorting, and DP',
+      'Core coding patterns with in-browser Python, C++, and Java runtimes',
+      'Company-specific practice sets and mock loops'
     ],
-    outcome: 'You should be able to identify common coding patterns quickly, explain trade-offs clearly, and complete structured mock rounds with less drift and fewer implementation mistakes.',
+    outcome: 'You should understand why algorithms work, recognize patterns quickly, and complete structured mock rounds with fewer implementation mistakes.',
     moduleSlugs: dsaModules.map((module) => module.slug)
   },
   {
     slug: 'ai-engineer',
     shortTitle: 'AI/ML',
     title: 'AI Engineer learning path',
-    summary: 'End-to-end AI/ML engineering from foundations through LLMs, RAG, agents, MLOps, and responsible AI for building production intelligent systems.',
-    description: 'Use this flow when you want to build or level up skills in machine learning, deep learning, large language models, AI agents, and production ML systems.',
-    audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and AI engineers looking to fill knowledge gaps.',
-    cadence: 'Progress module by module, building from ML fundamentals through advanced topics like agents and MLOps. Apply each module with a hands-on project.',
-    heroGuidance: 'Start with foundations, build intuition for model training and evaluation, then specialize in LLMs, agents, or production ML systems based on your career goals.',
+    summary: 'Learn machine learning and deep learning with interactive in-browser Python labs, then specialize in LLMs, agents, and MLOps.',
+    description: 'Use this flow to build or level up skills in classical ML, deep learning from scratch, large language models, AI agents, and production ML systems — with runnable NumPy and scikit-learn exercises.',
+    audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and learners who want hands-on ML practice in the browser.',
+    cadence: 'Progress from interactive ML and deep-learning labs through foundations, then specialize in LLMs, agents, or MLOps.',
+    heroGuidance: 'Start with interactive labs, build intuition for training and evaluation, then specialize in LLMs, agents, or production ML systems based on your goals.',
     focusAreas: [
-      'ML fundamentals, deep learning architectures, and model evaluation',
+      'Interactive ML labs and deep learning from scratch with NumPy',
       'LLMs, prompt engineering, RAG pipelines, and AI agents',
       'MLOps, model serving, monitoring, and responsible AI practices'
     ],
-    outcome: 'You should be able to design, build, deploy, and monitor AI-powered applications from prototype through production, making informed tradeoffs between model quality, cost, latency, and safety.',
+    outcome: 'You should be able to implement core ML/DL ideas by hand, design production AI systems, and make informed tradeoffs between quality, cost, latency, and safety.',
     moduleSlugs: aiModules.map((module) => module.slug)
   },
   {

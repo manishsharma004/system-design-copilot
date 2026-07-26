@@ -47,8 +47,20 @@ plt.show()
   /** @type {Worker | null} */
   let worker = null
 
+  /** @type {string} */
+  let selectedExerciseId = ''
   let editorValue = DEFAULT_CODE
   let runId = 0
+
+  $: codingExercises = (lesson?.exercises ?? []).filter(
+    (/** @type {{ type?: string, starterCode?: string }} */ exercise) =>
+      exercise?.type === 'coding' && typeof exercise?.starterCode === 'string' && exercise.starterCode.trim().length > 0
+  )
+  $: if (codingExercises.length && !codingExercises.some((exercise) => exercise.id === selectedExerciseId)) {
+    selectedExerciseId = codingExercises[0].id
+    editorValue = codingExercises[0].starterCode
+  }
+  $: selectedExercise = codingExercises.find((exercise) => exercise.id === selectedExerciseId) ?? null
 
   /** @type {'idle' | 'loading-runtime' | 'loading-packages' | 'running' | 'ready' | 'error'} */
   let status = 'idle'
@@ -127,6 +139,35 @@ plt.show()
     editorValue = event.detail.value
   }
 
+  /** @param {string} exerciseId */
+  function loadExercise(exerciseId) {
+    const exercise = codingExercises.find((item) => item.id === exerciseId)
+    if (!exercise?.starterCode) return
+    selectedExerciseId = exerciseId
+    editorValue = exercise.starterCode
+    stdout = ''
+    stderr = ''
+    images = []
+    hasOutput = false
+    statusMessage = `Loaded exercise: ${exercise.title}. Edit the TODOs, then run.`
+  }
+
+  function loadSolution() {
+    if (!selectedExercise?.solution) return
+    editorValue = selectedExercise.solution
+    statusMessage = 'Loaded reference solution. Compare it with your approach, then re-run.'
+  }
+
+  function resetToStarter() {
+    if (selectedExercise?.starterCode) {
+      editorValue = selectedExercise.starterCode
+      statusMessage = 'Reset to starter code for the selected exercise.'
+      return
+    }
+    editorValue = DEFAULT_CODE
+    statusMessage = 'Reset to the default ML playground script.'
+  }
+
   $: isRunning = status === 'loading-runtime' || status === 'loading-packages' || status === 'running'
   $: statusPillReady = status === 'ready'
   $: statusPillError = status === 'error'
@@ -147,7 +188,11 @@ plt.show()
       <h2>In-browser Python ML editor</h2>
       <p class="practice-copy">
         Run NumPy, Pandas, Matplotlib, and scikit-learn scripts entirely in your browser via Pyodide WebAssembly.
-        No server, no install — all compute stays on your device.
+        {#if codingExercises.length}
+          Load a lesson exercise below, fill in the TODOs, and iterate with live output and plots.
+        {:else}
+          No server, no install — all compute stays on your device.
+        {/if}
       </p>
     </div>
     <div class="ml-pill-stack">
@@ -158,23 +203,58 @@ plt.show()
         class:loading={isRunning}
       >{statusLabel}</span>
       <span class="pill">numpy · pandas · matplotlib · scikit-learn</span>
+      {#if codingExercises.length}
+        <span class="pill">{codingExercises.length} lesson exercise{codingExercises.length === 1 ? '' : 's'}</span>
+      {/if}
     </div>
   </div>
+
+  {#if codingExercises.length}
+    <div class="ml-exercise-picker">
+      <label class="ml-exercise-label" for="ml-exercise-select">
+        <span class="eyebrow">Lesson exercises</span>
+        <select
+          id="ml-exercise-select"
+          class="ml-exercise-select"
+          value={selectedExerciseId}
+          onchange={(event) => loadExercise(/** @type {HTMLSelectElement} */ (event.currentTarget).value)}
+        >
+          {#each codingExercises as exercise}
+            <option value={exercise.id}>{exercise.title} · {exercise.difficulty}</option>
+          {/each}
+        </select>
+      </label>
+      {#if selectedExercise}
+        <p class="ml-exercise-copy">{selectedExercise.description}</p>
+        {#if selectedExercise.expectedOutput}
+          <p class="muted-hint">Expected: {selectedExercise.expectedOutput}</p>
+        {/if}
+      {/if}
+    </div>
+  {/if}
 
   <div class="ml-workspace-grid">
     <!-- Editor pane -->
     <article class="ml-editor-pane">
       <div class="ml-toolbar">
         <p class="eyebrow">script.py</p>
-        <button
-          class="action-link primary"
-          class:disabled={isRunning}
-          disabled={isRunning}
-          type="button"
-          onclick={runScript}
-        >
-          {isRunning ? 'Running…' : 'Run ML script'}
-        </button>
+        <div class="ml-toolbar-actions">
+          {#if selectedExercise?.starterCode}
+            <button class="action-link" type="button" onclick={resetToStarter}>Reset starter</button>
+          {/if}
+          {#if selectedExercise?.solution}
+            <button class="action-link" type="button" onclick={loadSolution}>Load solution</button>
+          {/if}
+          <button
+            class="action-link primary"
+            class:disabled={isRunning}
+            disabled={isRunning}
+            type="button"
+            onclick={runScript}
+          >
+            {isRunning ? 'Running…' : 'Run ML script'}
+          </button>
+        </div>
       </div>
 
       <div class="editor-frame">
@@ -276,6 +356,42 @@ plt.show()
   .ml-pill-stack {
     display: flex;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    justify-content: flex-end;
+  }
+
+  .ml-exercise-picker {
+    display: grid;
+    gap: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    padding: 0.9rem 1rem;
+  }
+
+  .ml-exercise-label {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .ml-exercise-select {
+    width: min(100%, 36rem);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--panel-strong, #1e1e2e);
+    color: var(--text);
+    padding: 0.55rem 0.75rem;
+  }
+
+  .ml-exercise-copy {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .ml-toolbar-actions {
+    display: flex;
     flex-wrap: wrap;
     gap: 0.55rem;
     justify-content: flex-end;
