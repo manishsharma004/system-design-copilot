@@ -43,6 +43,7 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 - Revealable per-exercise hints; soft output check against `expectedOutput` keywords after a successful run
 - Drafts persist in `localStorage` under `ml-practice:{lessonId}:{exerciseId}`
 - Shown with the study guide on AI lessons and on HLD/LLD expansion labs that ship coding exercises; every AI lesson ships ≥2 Pyodide-safe coding exercises
+- 2026 LLMOps labs (`llmops-eval-lab`) emphasize golden-set gates, cost/latency traces, and shipping guardrails alongside classic ML drills
 
 ## Heuristics and solutions
 
