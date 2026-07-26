@@ -33,10 +33,12 @@ Registry tag: `native-flow` in `browserRuntimes.js` (plain JS, not WASM).
 
 ## Visual editor
 
+`SimulationIDE` mounts `TopologyBuilder` as the **primary** IDE surface (`previewPrimary`, explorer collapsed). Monaco stays a secondary strip for `.flow` / overrides.
+
 `TopologyBuilder` is a three-pane architecting surface:
 
 - Left: categorized component catalog (drag or click-to-place) with search
-- Center: canvas (select / connect / pan, async-link toggle, curved edges)
+- Center: canvas (select / connect / pan, async-link toggle, curved edges, auto-fit)
 - Right: inspector — component primers/diagrams, when-to-use, pitfalls, node/link props
 
 ## Agent notes

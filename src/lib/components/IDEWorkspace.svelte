@@ -1465,7 +1465,19 @@
   }
 
   .ide-workspace.preview-primary .ide-editor-area.has-side-panel {
-    grid-template-columns: minmax(14rem, 22rem) 6px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 6px minmax(14rem, 22rem);
+  }
+
+  .ide-workspace.preview-primary .ide-side-panel {
+    order: 1;
+  }
+
+  .ide-workspace.preview-primary .ide-resize-handle-vertical {
+    order: 2;
+  }
+
+  .ide-workspace.preview-primary .ide-editor-pane {
+    order: 3;
   }
 
   .ide-workspace.preview-primary .ide-side-panel.is-primary {
