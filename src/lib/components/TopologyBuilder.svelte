@@ -420,14 +420,46 @@
   }
 
   function fitView() {
-    panX = 24
-    panY = 24
-    zoom = 1
+    if (!nodes.length || !canvasEl) {
+      panX = 24
+      panY = 24
+      zoom = 1
+      return
+    }
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const node of nodes) {
+      const pos = layout[node.id] ?? { x: 0, y: 0 }
+      minX = Math.min(minX, pos.x ?? 0)
+      minY = Math.min(minY, pos.y ?? 0)
+      maxX = Math.max(maxX, (pos.x ?? 0) + NODE_WIDTH)
+      maxY = Math.max(maxY, (pos.y ?? 0) + NODE_HEIGHT)
+    }
+    const rect = canvasEl.getBoundingClientRect()
+    const pad = 48
+    const contentW = Math.max(1, maxX - minX)
+    const contentH = Math.max(1, maxY - minY)
+    const nextZoom = Math.min(1.25, Math.max(0.45, Math.min(
+      (rect.width - pad * 2) / contentW,
+      (rect.height - pad * 2) / contentH
+    )))
+    zoom = nextZoom
+    panX = (rect.width - contentW * nextZoom) / 2 - minX * nextZoom
+    panY = (rect.height - contentH * nextZoom) / 2 - minY * nextZoom
+  }
+
+  let fittedForDiagram = ''
+  $: if (canvasEl && nodes.length && diagramText && fittedForDiagram !== diagramText && !compiled.errors.length) {
+    fittedForDiagram = diagramText
+    queueMicrotask(() => fitView())
   }
 
   onMount(() => {
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
+    queueMicrotask(() => fitView())
     return () => {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
@@ -1198,10 +1230,10 @@
     color: var(--vscode-descriptionForeground, #858585);
   }
 
-  @media (max-width: 960px) {
+  @media (max-width: 720px) {
     .topology-builder {
       grid-template-columns: 1fr;
-      grid-template-rows: auto minmax(14rem, 1fr) auto;
+      grid-template-rows: auto minmax(16rem, 1fr) auto;
     }
 
     .topology-palette-pane,
@@ -1209,7 +1241,7 @@
       border-right: none;
       border-left: none;
       border-bottom: 1px solid var(--vscode-border, #2b2b2b);
-      max-height: 12rem;
+      max-height: 11rem;
     }
   }
 </style>

@@ -33,6 +33,10 @@
   export let sidePanelDescription = ''
   /** Initial width in px for the side preview panel (e.g. architecture canvas). */
   export let initialSidePanelWidth = 360
+  /** When true, the preview/canvas panel is the primary work surface and the editor is secondary. */
+  export let previewPrimary = false
+  /** Collapse the file explorer on first paint (useful for canvas-first labs). */
+  export let startExplorerCollapsed = false
   /** @type {any} */
   export let previewContent = null
   /** @type {any} */
@@ -43,7 +47,7 @@
   const dispatch = createEventDispatcher()
 
   let codeEditor
-  let explorerCollapsed = false
+  let explorerCollapsed = startExplorerCollapsed
   let activeSidebarView = 'explorer'
   let bottomPanelCollapsed = false
   let explorerWidth = 272
@@ -726,6 +730,7 @@
 <div
   class="ide-workspace"
   class:explorer-collapsed={explorerCollapsed}
+  class:preview-primary={previewPrimary}
   style={`--explorer-width: ${explorerWidth}px; --side-panel-width: ${sidePanelWidth}px; --bottom-panel-height: ${bottomPanelHeight}px;`}
   bind:this={workspaceEl}
 >
@@ -1019,7 +1024,7 @@
           type="button"
           onpointerdown={(event) => startResize('side', event)}
         ></button>
-        <div class="ide-side-panel">
+        <div class="ide-side-panel" class:is-primary={previewPrimary}>
           <div class="ide-side-panel-header">
             <p>{sidePanelEyebrow}</p>
             <strong>{sidePanelTitle}</strong>
@@ -1459,6 +1464,15 @@
     grid-template-columns: minmax(0, 1fr) 6px minmax(16rem, var(--side-panel-width, 22.5rem));
   }
 
+  .ide-workspace.preview-primary .ide-editor-area.has-side-panel {
+    grid-template-columns: minmax(14rem, 22rem) 6px minmax(0, 1fr);
+  }
+
+  .ide-workspace.preview-primary .ide-side-panel.is-primary {
+    border-left: none;
+    border-right: 1px solid var(--ide-border, var(--vscode-border));
+  }
+
   .ide-editor-pane {
     min-width: 0;
     overflow: hidden;
@@ -1570,10 +1584,20 @@
   .ide-preview-content {
     background: var(--ide-panel, var(--panel));
     padding: 0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .ide-preview-content :global(.topology-builder) {
-    min-height: 100%;
+    flex: 1;
+    min-height: 22rem;
+    height: 100%;
+  }
+
+  .ide-workspace.preview-primary .ide-side-panel {
+    min-width: 0;
   }
 
   .ide-bottom-panel {
