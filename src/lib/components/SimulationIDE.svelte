@@ -451,7 +451,9 @@
       sidePanelEyebrow="ARCHITECTURE"
       sidePanelTitle="System design canvas"
       sidePanelDescription="Drag components, wire the critical path, inspect each hop — then Run on Topology path."
-      initialSidePanelWidth={720}
+      initialSidePanelWidth={900}
+      previewPrimary={true}
+      startExplorerCollapsed={true}
       previewContent="topology"
       resultsContent={resultsText}
       on:workspacehydrated={handleWorkspaceHydrated}
