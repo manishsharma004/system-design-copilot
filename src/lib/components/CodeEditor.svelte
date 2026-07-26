@@ -769,16 +769,14 @@
     </div>
   {/if}
 
-  {#if !ready}
-    <textarea
-      class="code-editor-fallback"
-      rows="12"
-      value={currentText}
-      oninput={(event) => updateFileValue(currentFile?.id ?? '__single__', event.currentTarget.value)}
-    ></textarea>
-  {/if}
-
-  <div class:editor-hidden={!ready} class="monaco-host" style={`min-height: ${minHeight};`} bind:this={host}></div>
+  <div class="editor-body" style={`min-height: ${minHeight};`}>
+    <div class="monaco-host" bind:this={host}></div>
+    {#if !ready}
+      <div class="code-editor-loading" aria-live="polite">
+        <span>Loading editor…</span>
+      </div>
+    {/if}
+  </div>
 
   <div class="code-editor-status-bar">
     <div class="code-editor-status-right">
@@ -1080,17 +1078,38 @@
   }
 
   .monaco-host {
-    flex: 1 1 auto;
+    position: absolute;
+    inset: 0;
     overflow: hidden;
     border-radius: 0;
     border: none;
-    min-height: 16rem;
     min-width: 0;
     max-width: 100%;
     background: var(--ide-editor, var(--vscode-editor-bg));
   }
 
-  /* Monaco's hidden input textarea must not pick up form field styles from app.css */
+  .editor-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 16rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .code-editor-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ide-editor, var(--vscode-editor-bg));
+    color: var(--ide-muted, var(--muted));
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+
+  /* Monaco's hidden input textarea must not pick up global form field styles */
   .code-editor-shell :global(.monaco-editor textarea.inputarea) {
     width: 0 !important;
     min-width: 0 !important;
@@ -1103,21 +1122,6 @@
     box-shadow: none !important;
     resize: none !important;
     outline: none !important;
-  }
-
-  .code-editor-fallback {
-    width: 100%;
-    min-height: 16rem;
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid var(--ide-border, var(--border));
-    background: var(--ide-editor, var(--vscode-editor-bg));
-    color: var(--ide-fg, var(--text));
-    padding: 0.65rem 0.85rem;
-    font-family: Consolas, 'Droid Sans Mono', 'Courier New', monospace;
-    font-size: 0.875rem;
-    line-height: 1.45;
-    resize: vertical;
   }
 
   .code-editor-status-bar {
@@ -1163,9 +1167,5 @@
     color: var(--accent);
     opacity: 0.7;
     font-style: italic;
-  }
-
-  .editor-hidden {
-    display: none;
   }
 </style>

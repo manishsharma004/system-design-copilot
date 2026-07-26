@@ -1489,7 +1489,7 @@ img { display: block; max-width: 100%; }
 }
 
 
-textarea {
+textarea:not(.inputarea) {
   width: 100%;
   border-radius: 0.375rem;
   border: 1px solid var(--border);
@@ -1671,7 +1671,6 @@ button:disabled, .action-link[disabled] {
   gap: 0.75rem;
 }
 
-.code-editor-shell > .code-editor-fallback,
 .llm-panel textarea,
 .llm-panel input,
 .llm-panel select {
