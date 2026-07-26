@@ -29,7 +29,7 @@ const raw = {
     "takeaways": [
       "Hot-path indexing begins with exact predicates and sort order, not with abstract tables.",
       "Every secondary index is a permanent write and recovery tax that must buy a measurable win.",
-      "API-level query guardrails are often as important as the index itself."
+      "Semantic and RAG paths still need explicit ANN recall-versus-latency design, usually paired with metadata indexes and query guardrails."
     ],
     "examples": [
       {
@@ -47,18 +47,18 @@ const raw = {
         "outcome": "The team keeps p95 stable for the main screen and still serves unusual requests through slower controlled paths."
       },
       {
-        "id": "pending-jobs",
-        "label": "Worker dispatch",
-        "title": "Use a partial index where state matters more than table size",
-        "scenario": "A dispatcher only needs pending jobs whose run_after is due, but the jobs table stores completed history for months.",
-        "decision": "Create a partial index on pending rows instead of indexing the full historical table for one narrow queue-read path.",
+        "id": "rag-retrieval",
+        "label": "Semantic retrieval",
+        "title": "Design vector retrieval as a bounded serving path",
+        "scenario": "A knowledge assistant needs tenant-scoped semantic retrieval for policy chunks, plus metadata filters for document type and freshness.",
+        "decision": "Use pgvector with an ANN index for embeddings, pair it with metadata filters such as GIN or composite ownership indexes, and keep the endpoint's candidate set and ranking modes bounded.",
         "why": [
-          "Most completed rows are irrelevant to dispatch and only add maintenance cost.",
-          "The partial predicate keeps the index smaller and warmer in cache.",
-          "The path stays easy to explain operationally because the index matches one well-defined read pattern."
+          "Semantic retrieval still needs a physical index and a latency budget rather than vague AI language.",
+          "Metadata filtering keeps candidate sets smaller and reduces cross-tenant noise before reranking.",
+          "The team can explain recall, storage cost, and index maintenance as clearly as any B-tree design."
         ],
-        "alternative": "A broad secondary index across all states appears simpler, but it spends write and storage budget on rows the dispatcher never touches.",
-        "outcome": "Dispatch latency improves while write amplification stays bounded."
+        "alternative": "Treating vector retrieval like magical full scans hidden behind embeddings often produces expensive p95 spikes and unclear correctness.",
+        "outcome": "Retrieval stays production-minded because the ANN path, filters, and cost budget are all explicit."
       }
     ],
     "decisionGuide": {
@@ -82,19 +82,19 @@ const raw = {
         },
         {
           "id": "derived-search",
-          "label": "Move exploratory access to a derived system",
+          "label": "Use a vector-aware derived retrieval path",
           "bestFor": "Teams that need broad filtering or ranking but still need a tight transactional path.",
           "chooseWhen": [
-            "Users need search-like behavior or many optional filters.",
-            "Staleness of a few seconds or minutes is acceptable for exploratory views.",
+            "Users need hybrid lexical plus semantic retrieval or many optional filters.",
+            "The team can define ANN recall and latency budgets instead of pretending every result is exact.",
             "The source-of-truth store should stay optimized for writes and narrow reads."
           ],
           "tradeOffs": [
-            "You need event movement, replay, and search relevance tuning.",
+            "You need event movement, replay, embedding refresh, and retrieval tuning.",
             "Derived data can lag and must be labeled honestly.",
-            "Operational surface area grows beyond one database."
+            "Operational surface area grows beyond one database unless pgvector inside Postgres is still sufficient."
           ],
-          "alternativeOutcome": "Forcing the OLTP store to behave like both a serving database and a search engine creates avoidable pain on both paths."
+          "alternativeOutcome": "Forcing the OLTP store to behave like a serving database, analytics engine, and unbounded semantic search backend creates avoidable pain on every path."
         }
       ]
     },
@@ -114,12 +114,12 @@ const raw = {
         },
         {
           "title": "Separate serving from exploration",
-          "detail": "Keep CSV export or wide filtering off the hot endpoint and route it through async jobs or search.",
+          "detail": "Keep CSV export, wide filtering, or semantic discovery off the hot endpoint unless they have their own bounded retrieval path.",
           "whatIf": "If both use cases share one path, every merchant pays the latency cost of rare investigative queries."
         },
         {
           "title": "Roll out with write-cost visibility",
-          "detail": "Build the index, watch write p95, storage growth, and replica lag, then shift reads intentionally.",
+          "detail": "Build the index, watch write p95, storage growth, replica lag, and semantic-recall regression where relevant, then shift reads intentionally.",
           "whatIf": "If index rollout is invisible operationally, the team can trade one latency win for a hidden recovery and write regression."
         }
       ],
@@ -127,7 +127,7 @@ const raw = {
         "read p95 by query shape",
         "write p95 delta after index",
         "replica lag during build",
-        "origin scan count"
+        "ann recall at k or origin scan count"
       ]
     },
     "mermaid": {
@@ -141,7 +141,7 @@ const raw = {
     "summary": "Choose who owns writes, what freshness users can expect, and how partitioning survives both growth and failure.",
     "takeaways": [
       "Replica reads are a product decision because freshness varies by workflow.",
-      "Shard keys should be defended under skew, not only under uniform traffic.",
+      "Shard keys and cell boundaries should be defended under skew, blast-radius goals, and residency requirements.",
       "Failover safety and catch-up behavior often matter more than steady-state diagrams."
     ],
     "examples": [
@@ -161,17 +161,17 @@ const raw = {
       },
       {
         "id": "merchant-shard",
-        "label": "Merchant isolation",
-        "title": "Sharding follows ownership and hotspot risk",
-        "scenario": "A commerce platform has long-tail merchants plus a few giant event-driven merchants.",
-        "decision": "Shard by merchant ownership but retain enough routing indirection to isolate exceptional merchants or move them safely later.",
+        "label": "Merchant cells",
+        "title": "Cell routing contains hotspot and residency blast radius",
+        "scenario": "A commerce platform has long-tail merchants, a few giant event-driven merchants, and contractual data-residency requirements.",
+        "decision": "Route merchants to self-contained regional cells, then shard inside the cell so failover, migrations, and hot-merchant isolation stay bounded.",
         "why": [
           "Operational isolation follows the same merchant boundary product teams understand.",
-          "The hottest merchants can be migrated or dedicated without redesigning every key externally.",
-          "Scatter-gather is reduced for the workflows most merchants care about."
+          "A bad deploy or regional fault stays inside one cell instead of becoming a global multi-tenant incident.",
+          "The hottest merchants can still be migrated or dedicated without redesigning every key externally."
         ],
-        "alternative": "A time-only shard key spreads writes today but makes merchant-local operations and targeted isolation far harder tomorrow.",
-        "outcome": "The platform balances locality for normal workflows with flexibility for abnormal success."
+        "alternative": "A time-only shard key spreads writes today but makes merchant-local operations, residency guarantees, and targeted isolation far harder tomorrow.",
+        "outcome": "The platform balances locality for normal workflows with cell-level containment for abnormal success or failure."
       }
     ],
     "decisionGuide": {
@@ -179,12 +179,12 @@ const raw = {
       "options": [
         {
           "id": "leader-followers",
-          "label": "Single write owner with follower reads",
+          "label": "Single write owner with follower reads and home-region affinity",
           "bestFor": "Workloads that need simple conflict handling and clear write authority.",
           "chooseWhen": [
             "Read traffic dominates and some bounded staleness is acceptable.",
             "User journeys that need fresh reads can be routed intentionally to primary.",
-            "Operational simplicity matters more than write locality across every region."
+            "Operational simplicity matters more than multi-writer complexity, even if writes stay anchored to a home region or cell."
           ],
           "tradeOffs": [
             "Follower lag must be visible and policy driven.",
@@ -195,17 +195,17 @@ const raw = {
         },
         {
           "id": "partitioned-authority",
-          "label": "Partitioned authority with local ownership",
-          "bestFor": "Workloads where throughput or locality demands multiple write domains.",
+          "label": "Cell-based authority with local ownership",
+          "bestFor": "Workloads where throughput, locality, or residency demands multiple write domains.",
           "chooseWhen": [
-            "A stable partition key keeps the dominant workflow local.",
+            "A stable partition key keeps the dominant workflow local inside each cell.",
             "Global transactions are rare or can be approximated asynchronously.",
-            "Traffic skew is visible and hot partitions can be isolated or rebalanced."
+            "Traffic skew is visible and hot partitions or merchants can be isolated or rebalanced within a bounded blast radius."
           ],
           "tradeOffs": [
-            "Cross-partition reads and reports become harder.",
+            "Cross-cell reads and reports become harder.",
             "Rebalancing, routing metadata, and repair add operational burden.",
-            "User-facing freshness and aggregation rules must be explained carefully."
+            "User-facing freshness, aggregation, and residency rules must be explained carefully."
           ],
           "alternativeOutcome": "Keeping one global writer for all traffic may simplify correctness but can become the wrong bottleneck or latency anchor."
         }
@@ -222,30 +222,30 @@ const raw = {
         },
         {
           "title": "Assign write ownership and read eligibility",
-          "detail": "Choose who owns reservations and define which followers are safe for browse traffic.",
+          "detail": "Choose who owns reservations, define home-region or home-cell writes, and state which followers are safe for browse traffic.",
           "whatIf": "If read routing rules are vague, engineers will accidentally serve confirmation reads from stale replicas."
         },
         {
           "title": "Choose a shard key under skew",
-          "detail": "Model giant merchants and event spikes, then explain how the system isolates or rebalances them.",
+          "detail": "Model giant merchants and event spikes, then explain how the system isolates or rebalances them inside cells.",
           "whatIf": "A key that looks even in test traffic may fail immediately during a flash sale."
         },
         {
           "title": "Plan failover and repair",
-          "detail": "Set promotion guardrails, routing discovery, and catch-up pacing before calling the topology resilient.",
+          "detail": "Set promotion guardrails, routing discovery, cell fail-in-place behavior, and catch-up pacing before calling the topology resilient.",
           "whatIf": "If failover only exists on the diagram, the first incident becomes an improvised data-loss trade-off."
         }
       ],
       "metrics": [
         "primary write latency",
         "replica lag by region",
-        "per-shard skew",
-        "promotion safety threshold"
+        "per-cell skew",
+        "residency-policy violations"
       ]
     },
     "mermaid": {
-      "title": "Freshness-aware read routing",
-      "caption": "Critical reads stay authoritative while tolerant reads absorb scale from followers.",
+      "title": "Freshness-aware cell routing",
+      "caption": "Critical reads stay authoritative while tolerant reads absorb scale from followers inside bounded cells.",
       "code": "sequenceDiagram\n    participant Client\n    participant API\n    participant Router\n    participant Primary\n    participant Replica\n    Client->>API: Reserve inventory\n    API->>Primary: Authoritative write\n    Client->>API: Browse availability\n    API->>Router: Read with freshness budget\n    Router->>Replica: If lag acceptable\n    Router->>Primary: Otherwise\n"
     }
   },
@@ -255,22 +255,22 @@ const raw = {
     "takeaways": [
       "Every datastore should have a single clear reason to exist.",
       "Authority and projection boundaries matter more than brand or benchmark comparisons.",
-      "The smallest viable portfolio is usually the most operable one."
+      "Vector indexes and lakehouse tables are mainstream choices now, but they still have to earn their ops and rebuild cost."
     ],
     "examples": [
       {
         "id": "creator-platform",
         "label": "Creator platform",
-        "title": "Separate truth, search, and blobs deliberately",
-        "scenario": "A creator platform needs subscription billing, uploaded media, account search, and analytics.",
-        "decision": "Keep billing and subscription truth relational, store blobs in object storage, project searchable documents into a search system, and cache hot reads separately.",
+        "title": "Separate truth, semantic retrieval, and analytics deliberately",
+        "scenario": "A creator platform needs subscription billing, uploaded media, semantic creator search, and analytics.",
+        "decision": "Keep billing and subscription truth relational, start semantic retrieval in pgvector when joins and ACID adjacency matter, store blobs in object storage, and project replayable analytics into a lakehouse table format such as Iceberg.",
         "why": [
           "Billing and entitlement logic benefit from transactional authority and mature constraints.",
           "Media bytes are large, immutable, and cost sensitive, which suits object storage.",
-          "Search relevance and broad filters belong in a derived system rather than in the transactional path."
+          "Semantic retrieval and analytics stay as deliberate projections instead of quietly polluting the source of truth."
         ],
-        "alternative": "A one-database-for-everything design either mishandles blobs or turns transactional tables into awkward search indexes.",
-        "outcome": "Each store stays aligned with one workload while the source of truth remains unambiguous."
+        "alternative": "A one-database-for-everything design either mishandles blobs, forces awkward retrieval compromises, or turns analytics into bespoke exports nobody trusts.",
+        "outcome": "Each store stays aligned with one workload while the source of truth remains unambiguous and the cost model stays explainable."
       },
       {
         "id": "minimal-portfolio",
@@ -296,7 +296,7 @@ const raw = {
           "bestFor": "Teams whose access patterns are still evolving and whose current bottlenecks are not yet existential.",
           "chooseWhen": [
             "The current source of truth can still meet correctness needs.",
-            "Broad queries or analytics can tolerate asynchronous exports for now.",
+            "Semantic retrieval may still fit in pgvector or a narrow derived index without a separate specialist store.",
             "The team would rather preserve operator simplicity than chase theoretical optimality."
           ],
           "tradeOffs": [
@@ -312,15 +312,15 @@ const raw = {
           "bestFor": "Workloads where the current portfolio cannot meet an important read or retrieval need cleanly.",
           "chooseWhen": [
             "The use case has a clear owner and a clear source of truth.",
-            "The new system solves a recurring product need such as ranked full-text search or cheap blob storage.",
-            "Replay, rebuild, and operational ownership are planned up front."
+            "The new system solves a recurring product need such as filterable vector retrieval or open-table analytics.",
+            "Replay, rebuild, unit economics, and operational ownership are planned up front."
           ],
           "tradeOffs": [
             "Pipelines, lag, and rebuild costs become permanent responsibilities.",
             "The team must keep source of truth and derivative roles explicit.",
             "Migration away later will need overlap and parity validation."
           ],
-          "alternativeOutcome": "Trying to imitate search or blob storage inside the primary transactional engine often creates a worse long-term system than one purposeful derived tool."
+          "alternativeOutcome": "Trying to imitate large-scale vector retrieval or lakehouse projections inside the primary transactional engine often creates a worse long-term system than one purposeful derived tool."
         }
       ]
     },
@@ -335,12 +335,12 @@ const raw = {
         },
         {
           "title": "Match each non-authoritative need to one derived system",
-          "detail": "Only add search, cache, or blob storage when the access pattern clearly benefits.",
+          "detail": "Only add vector, cache, lakehouse, or blob storage when the access pattern and unit economics clearly benefit.",
           "whatIf": "If every feature gets a new datastore, operating complexity will outpace business value."
         },
         {
           "title": "Design the movement path",
-          "detail": "Define outbox, projection, replay, and rebuild rules from the source of truth.",
+          "detail": "Define outbox, projection, replay, embedding refresh, and rebuild rules from the source of truth.",
           "whatIf": "A derived store without replay or rebuild is a future outage waiting to happen."
         },
         {
@@ -351,24 +351,24 @@ const raw = {
       ],
       "metrics": [
         "projection lag",
-        "search freshness",
-        "cache hit ratio",
+        "vector recall or retrieval freshness",
+        "query-engine cost",
         "number of authoritative stores"
       ]
     },
     "mermaid": {
       "title": "Authority and projection portfolio",
-      "caption": "One source-of-truth core feeds a few purposeful derivatives instead of a sprawling storage zoo.",
-      "code": "flowchart LR\n    RelationalPrimary --> Outbox\n    Outbox --> SearchIndex\n    RelationalPrimary --> Cache\n    RelationalPrimary --> Metadata\n    Metadata --> ObjectStore\n    Outbox --> Analytics\n"
+      "caption": "One source-of-truth core feeds purposeful vector, cache, blob, and lakehouse derivatives instead of a sprawling storage zoo.",
+      "code": "flowchart LR\n    RelationalPrimary --> Outbox\n    Outbox --> VectorIndex\n    RelationalPrimary --> Cache\n    RelationalPrimary --> Metadata\n    Metadata --> ObjectStore\n    Outbox --> Lakehouse\n"
     }
   },
   "security-operations-lab/auth-threat-modeling-for-hld": {
     "title": "Auth and threat modeling lab",
     "summary": "Map identity, permission checks, and abuse cases across one high-risk workflow until the control choices become architectural.",
     "takeaways": [
-      "Identity and privilege are different control points with different failure modes.",
+      "Zero trust means identity and authorization must be checked deliberately at every hop.",
       "Threat modeling is strongest when it starts from one valuable workflow rather than from a giant abstract list.",
-      "Abuse resistance and auditability belong in the architecture, not only in policy docs."
+      "Passkeys, workload identity, abuse resistance, and auditability belong in the architecture, not only in policy docs."
     ],
     "examples": [
       {
@@ -376,7 +376,7 @@ const raw = {
         "label": "Admin console",
         "title": "Keep operator access on an explicit privileged path",
         "scenario": "Support agents need temporary access to customer accounts for debugging while tenant admins manage their own billing data.",
-        "decision": "Separate support and tenant principals, require break-glass justification for elevated access, and audit all impersonation flows independently of customer traffic.",
+        "decision": "Separate support and tenant principals, use OIDC for baseline sessions, require passkey-backed step-up plus break-glass justification for elevated access, and audit all impersonation flows independently of customer traffic.",
         "why": [
           "Operator actions have higher blast radius and therefore deserve stronger controls than ordinary customer sessions.",
           "Clear separation makes incident review and customer trust easier to preserve.",
@@ -390,7 +390,7 @@ const raw = {
         "label": "Password reset",
         "title": "Threat-model the identity recovery path explicitly",
         "scenario": "A product focuses heavily on login tokens but has not deeply reviewed password reset or email change flows.",
-        "decision": "Treat password reset as a privileged workflow with replay resistance, enumeration-safe responses, and aggressive abuse limits.",
+        "decision": "Treat password reset as a privileged workflow with replay resistance, enumeration-safe responses, aggressive abuse limits, and a clear passkey or stronger-factor recovery story.",
         "why": [
           "Identity recovery often becomes the easiest path around otherwise solid login design.",
           "Attackers prefer workflows that leak account existence or bypass stronger factors.",
@@ -424,9 +424,9 @@ const raw = {
           "label": "Centralize only coarse controls at the edge",
           "bestFor": "Architectures that need consistent authentication and rate limiting but domain-aware authorization inside services.",
           "chooseWhen": [
-            "You want TLS termination, token validation, and baseline abuse policy shared.",
+            "You want TLS termination, OIDC or token validation, and baseline abuse policy shared.",
             "Permission decisions depend on tenant or resource context known best by application services.",
-            "You need audits to reflect business actions, not only gateway decisions."
+            "You need audits to reflect business actions, not only gateway decisions, while services still present workload identity to each other."
           ],
           "tradeOffs": [
             "Some logic is duplicated conceptually across edge and service tiers.",
@@ -443,17 +443,17 @@ const raw = {
       "steps": [
         {
           "title": "Map actors and privileges",
-          "detail": "Separate tenant admins, support agents, platform operators, and background jobs before designing token or role structure.",
+          "detail": "Separate tenant admins, support agents, platform operators, services, and background jobs before designing token or role structure.",
           "whatIf": "If all identities are flattened, the privilege model will hide the real blast radius of operator flows."
         },
         {
           "title": "Choose one critical workflow",
-          "detail": "Model invite acceptance, password reset, or impersonation end to end and enumerate spoofing, tampering, disclosure, and privilege escalation risks.",
+          "detail": "Model invite acceptance, password reset, or impersonation end to end and enumerate STRIDE-style spoofing, tampering, disclosure, and privilege escalation risks.",
           "whatIf": "A generic survey will miss the workflow attackers actually exploit first."
         },
         {
           "title": "Add architectural controls",
-          "detail": "Place scoped identity, step-up checks, abuse limits, and immutable audit events on the chosen path.",
+          "detail": "Place scoped identity, passkey-backed step-up, workload identity, abuse limits, and immutable audit events on the chosen path.",
           "whatIf": "If the controls remain abstract, the threat model does not improve the actual system."
         },
         {
@@ -464,14 +464,14 @@ const raw = {
       ],
       "metrics": [
         "failed login rate",
-        "break-glass activations",
+        "step-up challenge rate",
         "cross-tenant authz denials",
         "impersonation audit completeness"
       ]
     },
     "mermaid": {
       "title": "Privileged workflow threat map",
-      "caption": "High-risk flows get explicit control points instead of inheriting generic happy-path assumptions.",
+      "caption": "High-risk flows get explicit zero-trust control points instead of inheriting generic happy-path assumptions.",
       "code": "flowchart LR\n    User --> Edge\n    Edge --> AuthN\n    AuthN --> Service\n    Service --> AuthZ\n    AuthZ --> Data\n    Service --> Audit\n    SupportAgent --> BreakGlass\n    BreakGlass --> AuthZ\n"
     }
   },
@@ -480,8 +480,8 @@ const raw = {
     "summary": "Decide what must be encrypted, how secrets rotate, and how tenant boundaries survive through storage and worker paths.",
     "takeaways": [
       "Data classification comes before key hierarchy choices.",
-      "Secret distribution is part of the runtime architecture, not just a provisioning step.",
-      "Tenant isolation fails if caches and workers ignore the same boundaries respected by APIs."
+      "Secret distribution and credential vending are part of the runtime architecture, not just a provisioning step.",
+      "Tenant isolation and residency fail if caches and workers ignore the same boundaries respected by APIs."
     ],
     "examples": [
       {
@@ -489,7 +489,7 @@ const raw = {
         "label": "Sensitive PII",
         "title": "Protect only what needs stronger treatment, but do it end to end",
         "scenario": "A SaaS billing platform stores invoices, payout details, contracts, and profile metadata with different risk levels.",
-        "decision": "Encrypt payout and contract data with stronger scoped controls, keep relational metadata queryable, and separate blob bytes from transactional rows.",
+        "decision": "Encrypt payout and contract data with stronger scoped controls, keep relational metadata queryable, separate blob bytes from transactional rows, and keep sensitive AI or support logs metadata-first.",
         "why": [
           "Not every field needs the same protection or the same operational cost.",
           "Field and object controls should follow who can access or export the data later.",
@@ -503,7 +503,7 @@ const raw = {
         "label": "Tenant-safe cache",
         "title": "Carry tenant boundaries beyond the database",
         "scenario": "An application already filters database rows by tenant but forgets to include tenant context in one cache key.",
-        "decision": "Make tenant context mandatory in cache keys, worker payloads, and search documents, not only in SQL filters.",
+        "decision": "Make tenant and residency context mandatory in cache keys, worker payloads, search documents, and scoped storage credentials, not only in SQL filters.",
         "why": [
           "Cross-tenant leaks often originate in derivative systems rather than in the primary table.",
           "Defense in depth means the isolation boundary exists in multiple layers.",
@@ -521,9 +521,9 @@ const raw = {
           "label": "Shared tables with strong guards",
           "bestFor": "Most SaaS workloads that need efficiency and have mature tenant-aware controls.",
           "chooseWhen": [
-            "Tenant context can be propagated reliably through API, DB, cache, and job paths.",
+            "Tenant and residency context can be propagated reliably through API, DB, cache, and job paths.",
             "Row-level security or equivalent storage-level guardrails are available.",
-            "Operator tooling and audit paths are mature enough to review access safely."
+            "Operator tooling, audit paths, and scoped credential vending are mature enough to review access safely."
           ],
           "tradeOffs": [
             "One bug can still have wider blast radius than in hard-isolated designs.",
@@ -539,7 +539,7 @@ const raw = {
           "chooseWhen": [
             "Contracts or compliance requirements justify added cost and operational overhead.",
             "A small subset of tenants meaningfully changes the risk posture.",
-            "Per-tenant keys, schemas, or clusters improve customer trust enough to matter commercially."
+            "Per-tenant keys, schemas, clusters, or residency boundaries improve customer trust enough to matter commercially."
           ],
           "tradeOffs": [
             "Operations, migrations, and cost all become more complex.",
@@ -561,12 +561,12 @@ const raw = {
         },
         {
           "title": "Pick the secret-distribution path",
-          "detail": "Define how services and workers obtain, refresh, and audit access to signing keys, database credentials, and tenant integration secrets.",
+          "detail": "Define how services and workers obtain, refresh, and audit access to signing keys, database credentials, and scoped storage credentials.",
           "whatIf": "Static long-lived secrets turn one host compromise into a platform-wide incident."
         },
         {
           "title": "Enforce tenant boundaries in derivatives",
-          "detail": "Thread tenant context through cache keys, queue payloads, search documents, and audit records.",
+          "detail": "Thread tenant and residency context through cache keys, queue payloads, search documents, and audit records.",
           "whatIf": "If only the SQL path is tenant aware, a leak can still emerge from derived or cached state."
         },
         {
@@ -577,14 +577,14 @@ const raw = {
       ],
       "metrics": [
         "secret version age",
-        "tenant-scope cache misses",
+        "scoped-credential lease age",
         "decrypt audit events",
         "cross-tenant denial count"
       ]
     },
     "mermaid": {
       "title": "Tenant-aware protection path",
-      "caption": "Encryption and tenancy controls follow data through APIs, storage, secrets, and workers.",
+      "caption": "Encryption, credential vending, and tenancy controls follow data through APIs, storage, secrets, and workers.",
       "code": "flowchart LR\n    Client --> Edge\n    Edge --> API\n    API --> KMS\n    API --> Primary\n    API --> Cache\n    API --> Queue\n    Queue --> Workers\n    Primary --> Audit\n"
     }
   },
@@ -594,7 +594,7 @@ const raw = {
     "takeaways": [
       "Rollout safety, recovery objectives, and degraded UX are one connected architecture story.",
       "Backups and failover only matter if restore and transition paths are tested.",
-      "Graceful degradation is meaningful only when the user-visible fallback is explicit."
+      "OpenTelemetry-style signals, SLO burn, and kill switches turn rollout theory into runtime control."
     ],
     "examples": [
       {
@@ -602,7 +602,7 @@ const raw = {
         "label": "Checkout migration",
         "title": "Use overlap and canary signals for a risky write-path change",
         "scenario": "A checkout service is moving from one order projection model to another while traffic remains live.",
-        "decision": "Deploy new code dark, dual-write where needed, shift a stable tenant cohort first, and compare both performance and business-correctness metrics before wider rollout.",
+        "decision": "Deploy new code dark, dual-write where needed, shift a stable tenant cohort first, and compare OpenTelemetry-fed latency, error, mismatch, and cost signals before wider rollout.",
         "why": [
           "Write-path changes are dangerous because data and code compatibility must overlap.",
           "Stable cohorts make rollback and mismatch investigation far easier than random exposure.",
@@ -616,7 +616,7 @@ const raw = {
         "label": "Core-only mode",
         "title": "Protect the critical journey by shedding enrichments",
         "scenario": "An ecommerce site depends on recommendations, fraud enrichment, and analytics beyond the payment and order core.",
-        "decision": "During dependency distress, keep order acceptance and payment alive while disabling or deferring recommendations and nonessential enrichments.",
+        "decision": "During dependency distress, keep order acceptance and payment alive while kill switches disable or defer recommendations and nonessential enrichments.",
         "why": [
           "Users care more about successful order placement than about optional content during incidents.",
           "Clear shedding order prevents low-value work from consuming scarce capacity first.",
@@ -636,7 +636,7 @@ const raw = {
           "chooseWhen": [
             "Old and new versions can coexist for a limited window.",
             "You can validate both correctness and latency on a stable cohort.",
-            "Rollback or fast disablement is more valuable than raw rollout speed."
+            "Rollback or fast disablement is more valuable than raw rollout speed, especially when SLO burn or cost regressions appear."
           ],
           "tradeOffs": [
             "Temporary duplication adds complexity during the migration window.",
@@ -674,12 +674,12 @@ const raw = {
         },
         {
           "title": "Choose cohort and signals",
-          "detail": "Roll out by tenant or region and watch both domain metrics and system metrics.",
+          "detail": "Roll out by tenant or region and watch OpenTelemetry-style domain metrics, SLO burn, and cost signals.",
           "whatIf": "If exposure is random and signals are generic, subtle correctness bugs can spread quietly."
         },
         {
           "title": "Rank user journeys",
-          "detail": "Mark what stays alive in core-only or read-only mode and what work can defer to queues.",
+          "detail": "Mark what stays alive in core-only or read-only mode and which kill switches defer lower-value work.",
           "whatIf": "Without an agreed shedding order, operators waste time debating while users time out."
         },
         {
@@ -690,9 +690,9 @@ const raw = {
       ],
       "metrics": [
         "dual-write mismatch rate",
-        "degraded-mode activation",
+        "error-budget burn during canary",
         "failover time",
-        "core-checkout success rate"
+        "cost per checkout delta"
       ]
     },
     "mermaid": {
@@ -707,7 +707,7 @@ const raw = {
     "takeaways": [
       "Skew is the real test of a partitioning scheme.",
       "Hot reads and hot writes usually need different mitigation tools.",
-      "Rebalancing is itself a risky operational event that must be paced and observed."
+      "Cells, hot partitions, and locality-aware caching are often as important as the hash function."
     ],
     "examples": [
       {
@@ -715,7 +715,7 @@ const raw = {
         "label": "Celebrity profile",
         "title": "Protect a hot read key without repartitioning first",
         "scenario": "One social account is read millions of times per minute, but writes to the profile are rare.",
-        "decision": "Use multilayer caches and request coalescing first, and only consider dedicated isolation if the heat becomes persistent.",
+        "decision": "Use multilayer caches, locality-aware cache placement, and request coalescing first, then consider dedicated isolation or a hot partition if the heat becomes persistent.",
         "why": [
           "The bottleneck is repeated reads of one object, not distributed write ownership.",
           "Coalescing and caching reduce origin amplification quickly without moving the partition.",
@@ -729,7 +729,7 @@ const raw = {
         "label": "Flash-sale SKU",
         "title": "Serialize hot writes instead of pretending they can stay fully parallel",
         "scenario": "A few inventory SKUs receive intense concurrent reservation attempts for a short window.",
-        "decision": "Queue or serialize the reservation path per SKU and pair it with strict cache and availability messaging on the read side.",
+        "decision": "Queue or serialize the reservation path per SKU, use key salting or dedicated hot partitions only where safe, and pair it with strict cache and availability messaging on the read side.",
         "why": [
           "The hotspot is write contention on the same logical object, not general shard imbalance alone.",
           "Serializing one SKU is cheaper than letting parallel optimistic retries collapse the whole partition.",
@@ -749,7 +749,7 @@ const raw = {
           "chooseWhen": [
             "Many identical reads target the same key concurrently.",
             "The underlying object changes infrequently enough for caching to help.",
-            "Origin load amplification is the main risk."
+            "Origin load amplification is the main risk, especially when traffic has locality that edge or regional caches can exploit."
           ],
           "tradeOffs": [
             "Freshness must still be defined and invalidation handled safely.",
@@ -765,7 +765,7 @@ const raw = {
           "chooseWhen": [
             "Concurrent writes conflict or repeatedly retry on the same owner.",
             "Correctness is more important than maximizing write parallelism for that object.",
-            "A temporary queue or dedicated owner can keep blast radius bounded."
+            "A temporary queue, dedicated owner, or dedicated hot partition can keep blast radius bounded."
           ],
           "tradeOffs": [
             "Latency rises for the hot object.",
@@ -787,7 +787,7 @@ const raw = {
         },
         {
           "title": "Apply the first-line mitigation",
-          "detail": "Use cache and coalescing for reads or queued serialization for writes, depending on the dominant risk.",
+          "detail": "Use cache and coalescing for reads or queued serialization, salting, or dedicated hot partitions for writes, depending on the dominant risk.",
           "whatIf": "A generic answer like shard more can hide the fact that one object still remains singularly hot."
         },
         {
@@ -797,13 +797,13 @@ const raw = {
         },
         {
           "title": "Escalate to isolation or movement only when needed",
-          "detail": "Reserve dedicated shards or rebalancing for sustained hotspots that outgrow the first-line controls.",
+          "detail": "Reserve dedicated shards, cell movement, or rebalancing for sustained hotspots that outgrow the first-line controls.",
           "whatIf": "Moving too early can add control-plane churn without removing the actual workload concentration."
         }
       ],
       "metrics": [
         "top-key request concentration",
-        "shard p95",
+        "shard or cell p95",
         "cache hit ratio on hot set",
         "queue age for serialized writes"
       ]
@@ -818,7 +818,7 @@ const raw = {
     "title": "Consensus, quorums, and leadership lab",
     "summary": "Decide what truly needs coordination, then design leader ownership and caller behavior around failures and stale terms.",
     "takeaways": [
-      "Consensus should be isolated to the smallest state surface that truly needs it.",
+      "Consensus should be isolated to the smallest control-plane state surface that truly needs it.",
       "Quorums buy overlap at a latency and availability cost that must be justified per workflow.",
       "Leader election is incomplete without stale-leader suppression and client semantics."
     ],
@@ -828,7 +828,7 @@ const raw = {
         "label": "Partition metadata",
         "title": "Use leadership for control-plane truth, not for every ordinary read",
         "scenario": "A partitioned data service needs one current owner for partition metadata and failover decisions, but user reads should remain local and fast.",
-        "decision": "Keep consensus around ownership metadata while allowing data-plane reads to stay partition local and cached.",
+        "decision": "Keep consensus around ownership metadata, as an etcd-style control plane would, while allowing data-plane reads to stay partition local and cached.",
         "why": [
           "Metadata correctness is critical because wrong ownership corrupts the whole partition map.",
           "Most user reads do not need to pay consensus cost if ownership is already known.",
@@ -910,7 +910,7 @@ const raw = {
         },
         {
           "title": "Plan membership and warmup",
-          "detail": "Describe how new replicas catch up and when they may participate safely in leadership or quorum.",
+          "detail": "Describe how new replicas catch up and when they may participate safely in leadership or quorum while the partitioned data plane keeps serving.",
           "whatIf": "If membership change is ignored, the design sounds static and under-tested."
         }
       ],
@@ -923,7 +923,7 @@ const raw = {
     },
     "mermaid": {
       "title": "Leader ownership and fenced writes",
-      "caption": "Only the coordination-critical state pays the term and fencing cost.",
+      "caption": "Only the coordination-critical control plane pays the term and fencing cost.",
       "code": "sequenceDiagram\n    participant Client\n    participant Coordinator\n    participant Leader\n    participant Store\n    Client->>Coordinator: Resolve current owner\n    Coordinator-->>Client: leader + term\n    Client->>Leader: Write(term=7)\n    Leader->>Store: Apply with fence=7\n    Store-->>Leader: accepted\n"
     }
   },
@@ -933,7 +933,7 @@ const raw = {
     "takeaways": [
       "Distributed workflows need durable state and retry safety, not only event emission.",
       "Outbox and inbox patterns turn transport retries into business-safe behavior.",
-      "Operator recovery paths are part of the workflow design, not only a future support concern."
+      "Durable execution engines and operator recovery paths are part of the workflow design, not only a future support concern."
     ],
     "examples": [
       {
@@ -941,7 +941,7 @@ const raw = {
         "label": "Order submission",
         "title": "Return accepted on the right boundary",
         "scenario": "An order path validates cart state, reserves inventory, authorizes payment, and later sends email and analytics.",
-        "decision": "Return accepted after the authoritative core steps succeed, then continue recoverable side effects asynchronously with durable workflow state.",
+        "decision": "Return accepted after the authoritative core steps succeed, then continue recoverable side effects asynchronously with durable workflow state, often in a Temporal-style orchestrated workflow.",
         "why": [
           "The user needs confidence that the order exists, not that every downstream side effect is already complete.",
           "Durable workflow state makes retries and operator recovery coherent.",
@@ -975,7 +975,7 @@ const raw = {
           "chooseWhen": [
             "Operators must inspect or intervene in stuck workflows.",
             "Step order and business timing are important.",
-            "One service or engine can own the workflow truth clearly."
+            "One service or durable execution engine can own the workflow truth clearly."
           ],
           "tradeOffs": [
             "The coordinator becomes a critical dependency.",
@@ -1013,7 +1013,7 @@ const raw = {
         },
         {
           "title": "Persist workflow truth",
-          "detail": "Store step state durably so retries, compensations, and operators all reason about the same workflow instance.",
+          "detail": "Store step state durably so retries, compensations, operators, and AI-agent style substeps all reason about the same workflow instance.",
           "whatIf": "If state only lives in transient logs or events, recovery becomes guesswork."
         },
         {
@@ -1036,7 +1036,7 @@ const raw = {
     },
     "mermaid": {
       "title": "Workflow truth and replay safety",
-      "caption": "A durable workflow record governs retries, async effects, and operator recovery.",
+      "caption": "A durable workflow record governs retries, async effects, AI-agent substeps, and operator recovery.",
       "code": "flowchart LR\n    Client --> API\n    API --> WorkflowState\n    WorkflowState --> Inventory\n    WorkflowState --> Payment\n    WorkflowState --> Queue\n    Queue --> Shipment\n    Queue --> Notify\n    WorkflowState --> Reconcile\n"
     }
   }

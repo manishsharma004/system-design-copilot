@@ -25,10 +25,10 @@ const raw = {
         ]
       },
       {
-        "heading": "Query shape discipline beats planner heroics",
+        "heading": "Hybrid retrieval still needs query-shape discipline",
         "bodyParagraphs": [
-          "Database planners are impressive, but they cannot rescue arbitrary product flexibility at scale. Once many optional predicates and sorts coexist, the planner's job becomes a losing optimization problem because the engine no longer has a small set of dominant access paths to exploit.",
-          "Constrain the request shape at the API boundary and the database remains predictable. Leave it unconstrained and eventually someone builds a dashboard query that looks legal to the API but catastrophically expensive to the storage layer. Strong architecture sets those boundaries earlier than incident response would prefer."
+          "Database planners are impressive, but they cannot rescue arbitrary product flexibility at scale. Once many optional predicates, sorts, and semantic-retrieval modes coexist, the planner's job becomes a losing optimization problem because the engine no longer has a small set of dominant access paths to exploit. ANN indexes improve candidate search, but they do not make every hybrid query cheap or exact.",
+          "Constrain the request shape at the API boundary and the database remains predictable. Leave it unconstrained and eventually someone builds a dashboard or RAG query that looks legal to the API but catastrophically expensive to the storage layer. Strong architecture sets those boundaries earlier than incident response would prefer."
         ]
       },
       {
@@ -54,16 +54,16 @@ const raw = {
         "note": "Practical grounding for how relational indexes work and when different structures matter."
       },
       {
-        "title": "Use The Index, Luke!",
-        "url": "https://use-the-index-luke.com/",
-        "source": "Use The Index, Luke!",
-        "note": "Clear explanations of query plans, pagination, and composite-index behavior."
+        "title": "PostgreSQL GIN Indexes",
+        "url": "https://www.postgresql.org/docs/current/gin.html",
+        "source": "PostgreSQL Documentation",
+        "note": "Useful grounding for metadata and lexical filtering patterns that commonly pair with vector retrieval."
       },
       {
-        "title": "Amazon Builders' Library: Using load shedding to avoid overload",
-        "url": "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/",
-        "source": "Amazon Builders' Library",
-        "note": "Useful companion reading on constraining work before the storage layer is overwhelmed."
+        "title": "pgvector",
+        "url": "https://github.com/pgvector/pgvector",
+        "source": "pgvector",
+        "note": "Primary reference for exact and approximate vector search in Postgres, including HNSW and IVFFlat trade-offs."
       }
     ]
   },
@@ -77,10 +77,10 @@ const raw = {
         ]
       },
       {
-        "heading": "Shard keys encode future migrations",
+        "heading": "Cell boundaries encode blast radius as much as shard keys do",
         "bodyParagraphs": [
-          "Choosing a partition key is not just about today's throughput. It decides which records move together, which failures stay local, and how painful the first major rebalancing event will be. A key that aligns poorly with future success cases can lock the system into expensive scatter-gather behavior or repeated hotspot isolation work.",
-          "That is why good designs preserve some routing indirection. The external identifier should stay stable while the underlying placement can evolve. This is not free, but it is often the difference between manageable growth and emergency redesign."
+          "Choosing a partition key is not just about today's throughput. It decides which records move together, which failures stay local, and how painful the first major rebalancing event will be. In modern multi-region systems, that choice often expands into a cell boundary: a self-contained slice of compute and storage that limits operational and compliance blast radius.",
+          "That is why good designs preserve some routing indirection. The external identifier should stay stable while the underlying cell or shard placement can evolve. This is not free, but it is often the difference between manageable growth and emergency redesign."
         ]
       },
       {
@@ -100,16 +100,16 @@ const raw = {
     ],
     "references": [
       {
-        "title": "Designing Data-Intensive Applications",
-        "url": "https://dataintensive.net/",
-        "source": "Martin Kleppmann",
-        "note": "Authoritative background on replication, partitioning, and consistency trade-offs."
+        "title": "What is a cell-based architecture?",
+        "url": "https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/what-is-a-cell-based-architecture.html",
+        "source": "AWS Well-Architected",
+        "note": "Practical reference for self-contained cells, routing, and blast-radius isolation."
       },
       {
         "title": "Spanner: Google's Globally Distributed Database",
         "url": "https://research.google/pubs/pub39966/",
         "source": "Google Research",
-        "note": "Useful reference for globally coordinated consistency and its costs."
+        "note": "Useful reference for globally coordinated consistency and the cost of multi-region write coordination."
       },
       {
         "title": "Jepsen Analyses",
@@ -136,9 +136,9 @@ const raw = {
         ]
       },
       {
-        "heading": "The smallest portfolio compounds fastest",
+        "heading": "Unit economics are part of storage-fit quality",
         "bodyParagraphs": [
-          "Every extra datastore multiplies tools, backups, IAM, testing, and on-call knowledge. The cost curve is nonlinear because data movement paths add failure matrices between systems. That is why strong platform teams often defer a specialist engine until one access pattern becomes impossible to serve gracefully without it.",
+          "Every extra datastore multiplies tools, backups, IAM, testing, and on-call knowledge. The cost curve is nonlinear because data movement paths add failure matrices between systems. Storage selection quality therefore includes more than technical fit: query-engine cost, compaction cost, and full rebuild cost are first-class design inputs.",
           "Specialization remains valuable, but the bar should be real workload pain or clear product leverage. Polyglot persistence is strongest when it expresses necessity, not enthusiasm."
         ]
       },
@@ -152,22 +152,22 @@ const raw = {
     ],
     "references": [
       {
-        "title": "Martin Fowler: Polyglot Persistence",
-        "url": "https://martinfowler.com/bliki/PolyglotPersistence.html",
-        "source": "Martin Fowler",
-        "note": "Classic framing for why different data models coexist in one system."
+        "title": "Apache Iceberg Documentation",
+        "url": "https://iceberg.apache.org/docs/latest/",
+        "source": "Apache Iceberg",
+        "note": "Primary reference for open-table lakehouse patterns, metadata evolution, and replayable analytics projections."
       },
       {
-        "title": "Amazon DynamoDB Design Patterns",
-        "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html",
-        "source": "AWS Documentation",
-        "note": "Helpful reference on access-pattern-driven NoSQL modeling."
+        "title": "pgvector",
+        "url": "https://github.com/pgvector/pgvector",
+        "source": "pgvector",
+        "note": "Useful reference for the mainstream trade-off of keeping vector search inside Postgres with ACID and joins."
       },
       {
-        "title": "Elasticsearch Reference",
-        "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html",
-        "source": "Elastic Documentation",
-        "note": "Useful grounding on what a search engine is actually optimized to do versus a primary OLTP store."
+        "title": "Qdrant Vector Search Overview",
+        "url": "https://qdrant.tech/documentation/overview/vector-search/",
+        "source": "Qdrant Documentation",
+        "note": "Representative specialized vector-store reference for ANN filtering and scale trade-offs beyond pgvector."
       }
     ]
   },
@@ -181,9 +181,9 @@ const raw = {
         ]
       },
       {
-        "heading": "Authorization wants domain context",
+        "heading": "Zero trust pushes authn and authz onto every hop",
         "bodyParagraphs": [
-          "Centralized token validation is useful, but meaningful authorization usually needs resource and tenant context known best by the application domain. A gateway can confirm the caller is who they claim to be and maybe enforce coarse scopes, yet the service often knows whether a given invoice, project, or account actually belongs to that tenant and action.",
+          "Centralized token validation is useful, but meaningful authorization usually needs resource and tenant context known best by the application domain. A gateway can confirm the caller is who they claim to be and maybe enforce coarse scopes, yet the service often knows whether a given invoice, project, or account actually belongs to that tenant and action. Workload identity continues that pattern inside the mesh instead of trusting the network.",
           "This is why strong architectures mix centralized identity mechanisms with locally visible authorization checks. The result is more explainable than a giant edge policy blob and safer than assuming identity proof equals blanket permission."
         ]
       },
@@ -210,16 +210,16 @@ const raw = {
         "note": "Widely used security-control framework that helps anchor auth and authorization design depth."
       },
       {
-        "title": "OWASP Threat Modeling Cheat Sheet",
-        "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html",
-        "source": "OWASP Cheat Sheet Series",
-        "note": "Practical guide for converting abstract threats into concrete design review questions."
+        "title": "Web Authentication: Level 3",
+        "url": "https://www.w3.org/TR/webauthn-3/",
+        "source": "W3C",
+        "note": "Primary reference for passkeys and phishing-resistant authentication on the web."
       },
       {
-        "title": "NIST Digital Identity Guidelines",
-        "url": "https://pages.nist.gov/800-63-3/",
-        "source": "NIST",
-        "note": "Authoritative reference for identity, authentication, and lifecycle controls."
+        "title": "SPIFFE Workload API",
+        "url": "https://spiffe.io/docs/latest/spiffe-specs/spiffe_workload_api/",
+        "source": "SPIFFE",
+        "note": "Vendor-neutral reference for service-to-service workload identity."
       }
     ]
   },
@@ -233,10 +233,10 @@ const raw = {
         ]
       },
       {
-        "heading": "Secrets have renewal behavior",
+        "heading": "Secrets and credentials have renewal behavior",
         "bodyParagraphs": [
-          "The hard part of secret handling is often not storage but renewal. A service fleet that cannot refresh credentials gracefully turns every rotation into a redeploy or outage risk. A platform that cannot partition partner secrets cleanly turns one integration compromise into a multi-tenant event.",
-          "Thinking about renewal early improves design quality. Which process fetches the secret, how does it notice a version change, what happens to open connections, and what audit event proves the access all become explicit instead of emergent."
+          "The hard part of secret handling is often not storage but renewal. A service fleet that cannot refresh credentials gracefully turns every rotation into a redeploy or outage risk. A platform that cannot partition partner secrets or vend scoped storage credentials cleanly turns one integration compromise into a multi-tenant event.",
+          "Thinking about renewal early improves design quality. Which process fetches the secret, how does it notice a version change, what happens to open connections, what prefix or dataset does the credential cover, and what audit event proves the access all become explicit instead of emergent."
         ]
       },
       {
@@ -268,20 +268,20 @@ const raw = {
         "note": "Useful operational guidance on rotation, retrieval, and secret hygiene."
       },
       {
-        "title": "PostgreSQL Row Security Policies",
-        "url": "https://www.postgresql.org/docs/current/ddl-rowsecurity.html",
-        "source": "PostgreSQL Documentation",
-        "note": "Concrete reference for one common database-level tenant-isolation mechanism."
+        "title": "Handling sensitive data",
+        "url": "https://opentelemetry.io/docs/security/handling-sensitive-data/",
+        "source": "OpenTelemetry Documentation",
+        "note": "Useful guidance for metadata-first telemetry and scrubbing PHI or PII from logs, traces, and metrics."
       }
     ]
   },
   "security-operations-lab/safe-change-dr-and-degradation": {
     "insights": [
       {
-        "heading": "Compatibility is the hidden enabler of safe rollout",
+        "heading": "Compatibility and telemetry gates enable safe rollout together",
         "bodyParagraphs": [
-          "Traffic shifting tools are only as good as the compatibility surface beneath them. If schemas, events, or APIs cannot overlap safely, canarying becomes a false comfort because the system still depends on lockstep change underneath.",
-          "Architectures that value safe change therefore bias toward additive contracts and reversible movement. Progressive delivery is most effective when the data model cooperates with it."
+          "Traffic shifting tools are only as good as the compatibility surface beneath them. If schemas, events, or APIs cannot overlap safely, canarying becomes a false comfort because the system still depends on lockstep change underneath. If telemetry cannot show domain correctness, latency, and cost regressions quickly, progressive delivery becomes blind ceremony.",
+          "Architectures that value safe change therefore bias toward additive contracts, reversible movement, and observability that can gate promotion. Progressive delivery is most effective when the data model and telemetry model both cooperate with it."
         ]
       },
       {
@@ -308,22 +308,22 @@ const raw = {
     ],
     "references": [
       {
-        "title": "Google SRE Book: Addressing Cascading Failures",
-        "url": "https://sre.google/sre-book/addressing-cascading-failures/",
-        "source": "Google SRE Book",
-        "note": "Helpful reference for overload, defensive controls, and preserving useful work."
+        "title": "OpenTelemetry Documentation",
+        "url": "https://opentelemetry.io/docs/",
+        "source": "OpenTelemetry",
+        "note": "Primary reference for collecting traces, metrics, and logs that commonly feed rollout and degradation decisions."
       },
       {
-        "title": "AWS Well-Architected Reliability Pillar",
-        "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html",
-        "source": "AWS Documentation",
-        "note": "Broad reference on recovery, change management, and fault isolation."
+        "title": "Alerting on SLOs",
+        "url": "https://sre.google/workbook/alerting-on-slos/",
+        "source": "Google SRE Workbook",
+        "note": "Practical reference for error-budget burn and multi-window alerting used as rollout gates."
       },
       {
         "title": "Feature Toggles",
         "url": "https://martinfowler.com/articles/feature-toggles.html",
         "source": "Martin Fowler",
-        "note": "Useful framework for understanding rollout, ops, and experiment flags as distinct controls."
+        "note": "Useful framework for understanding rollout, ops, and kill-switch style flags as distinct controls."
       }
     ]
   },
@@ -337,10 +337,10 @@ const raw = {
         ]
       },
       {
-        "heading": "Read hotspots and write hotspots are different physics",
+        "heading": "Read hotspots and write hotspots need different containment tools",
         "bodyParagraphs": [
-          "Read hotspots usually amplify repeated work and are therefore susceptible to caching, replication, and coalescing. Write hotspots are about contention on a single authority boundary and often require serialization, batching, or altered product semantics instead.",
-          "Confusing the two leads teams to apply the wrong mitigation. More caches do little for an oversubscribed single-writer record. More shards do little if one object remains the singular point of contention."
+          "Read hotspots usually amplify repeated work and are therefore susceptible to caching, replication, coalescing, and locality-aware serving. Write hotspots are about contention on a single authority boundary and often require serialization, salting, batching, or altered product semantics instead.",
+          "Confusing the two leads teams to apply the wrong mitigation. More caches do little for an oversubscribed single-writer record. More shards do little if one object remains the singular point of contention unless the design can isolate it into a dedicated hot partition or cell."
         ]
       },
       {
@@ -360,22 +360,22 @@ const raw = {
     ],
     "references": [
       {
+        "title": "What is a cell-based architecture?",
+        "url": "https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/what-is-a-cell-based-architecture.html",
+        "source": "AWS Well-Architected",
+        "note": "Useful reference for turning partitioning into bounded regional or tenant failure domains."
+      },
+      {
         "title": "Amazon Dynamo: Highly Available Key-value Store",
         "url": "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf",
         "source": "Amazon",
         "note": "Foundational paper on partitioned ownership, consistent hashing, and failure trade-offs."
       },
       {
-        "title": "The Log: What every software engineer should know about real-time data's unifying abstraction",
-        "url": "https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying",
-        "source": "LinkedIn Engineering",
-        "note": "Helpful for thinking about partitioned streams, ordered ownership, and movement costs."
-      },
-      {
-        "title": "Caching at Scale",
-        "url": "https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/caching/README.md",
-        "source": "System Design Primer",
-        "note": "Good supporting reading on cache behavior and hotspot mitigation patterns."
+        "title": "Qdrant Vector Search Resource Optimization",
+        "url": "https://qdrant.tech/articles/vector-search-resource-optimization/",
+        "source": "Qdrant",
+        "note": "Good modern reference for ANN tuning language such as HNSW parameters, filtering, and performance trade-offs under skew-like workloads."
       }
     ]
   },
@@ -418,10 +418,10 @@ const raw = {
         "note": "Accessible consensus reference with strong grounding in leadership and terms."
       },
       {
-        "title": "ZooKeeper: Wait-free coordination for Internet-scale systems",
-        "url": "https://www.usenix.org/legacy/event/atc10/tech/full_papers/Hunt.pdf",
-        "source": "USENIX",
-        "note": "Classic coordination-system paper useful for control-plane design intuition."
+        "title": "etcd Documentation",
+        "url": "https://etcd.io/docs/",
+        "source": "etcd",
+        "note": "Modern reference for a Raft-backed control plane commonly used for metadata and ownership coordination."
       },
       {
         "title": "Martin Kleppmann on Fencing Tokens",
@@ -464,10 +464,10 @@ const raw = {
     ],
     "references": [
       {
-        "title": "Microservices.io: Saga Pattern",
-        "url": "https://microservices.io/patterns/data/saga.html",
-        "source": "microservices.io",
-        "note": "Clear conceptual reference for orchestrated and choreographed saga patterns."
+        "title": "Temporal Workflow Execution",
+        "url": "https://docs.temporal.io/workflow-execution",
+        "source": "Temporal",
+        "note": "Primary durable-execution reference for long-running workflows, replay, and recovery."
       },
       {
         "title": "Microservices.io: Transactional Outbox",
