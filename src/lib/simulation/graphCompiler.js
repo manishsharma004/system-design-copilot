@@ -1,12 +1,9 @@
+import { buildDefaultNodeByType, getTypeDefaults, resolvePhysics } from './componentCatalog.js'
+
 /** @type {Record<string, { latencyMs: number, capacityRps: number, queueCapacity: number, hitRate?: number }>} */
-const DEFAULT_NODE_BY_TYPE = {
-  edge: { latencyMs: 4, capacityRps: 60000, queueCapacity: 0 },
-  service: { latencyMs: 12, capacityRps: 20000, queueCapacity: 2000 },
-  cache: { latencyMs: 3, capacityRps: 90000, queueCapacity: 40000, hitRate: 0.85 },
-  database: { latencyMs: 18, capacityRps: 7000, queueCapacity: 8000 },
-  queue: { latencyMs: 10, capacityRps: 30000, queueCapacity: 120000 },
-  worker: { latencyMs: 20, capacityRps: 20000, queueCapacity: 20000 }
-}
+const DEFAULT_NODE_BY_TYPE = buildDefaultNodeByType()
+
+export { DEFAULT_NODE_BY_TYPE, getTypeDefaults, resolvePhysics }
 
 const VALUE_PATTERN = /"[^"]*"|'[^']*'|[^\s]+/g
 const ATTRIBUTE_PATTERN = /([A-Za-z][\w-]*)=(".*?"|'.*?'|[^\s]+)/g
@@ -69,7 +66,7 @@ export function compileFlowGraph(diagramText) {
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('//') && !line.startsWith('#'))
 
-  /** @type {{ id: string, type: string, label: string, latencyMs: number, capacityRps: number, queueCapacity: number, hitRate?: number, errorRate: number, extraLatencyMs: number }[]} */
+  /** @type {{ id: string, type: string, physics: string, label: string, latencyMs: number, capacityRps: number, queueCapacity: number, hitRate?: number, errorRate: number, extraLatencyMs: number }[]} */
   const nodes = []
   /** @type {{ from: string, to: string, async: boolean, label: string }[]} */
   const links = []
@@ -99,10 +96,12 @@ export function compileFlowGraph(diagramText) {
         continue
       }
       const type = String(attributes.type ?? 'service')
-      const defaults = DEFAULT_NODE_BY_TYPE[type] ?? DEFAULT_NODE_BY_TYPE.service
+      const defaults = getTypeDefaults(type)
+      const physics = resolvePhysics(type)
       nodes.push({
         id,
         type,
+        physics,
         label: String(attributes.label ?? formatLabel(id)),
         latencyMs: Number(attributes.latencyMs ?? defaults.latencyMs),
         capacityRps: Number(attributes.capacityRps ?? defaults.capacityRps),
@@ -185,7 +184,7 @@ export function compileFlowGraph(diagramText) {
 
   const mermaid = `flowchart LR
 ${nodes.map((node) => `  ${node.id}["${node.label}\\n${node.type}"]`).join('\n')}
-${links.map((link) => `  ${link.from} ${link.async ? '-.->' : '-->'} ${link.to}${link.label ? `|${link.label}|` : ''}`).join('\n')}`
+${links.map((link) => `  ${link.from} ${link.async ? '-.->' : '-->'} ${link.to}${link.label ? `|${link.label}|` : ''}`).join('\n')}`.trim()
 
   return {
     nodes,
@@ -223,7 +222,7 @@ export function serializeFlowGraph(graph) {
   const lines = []
   const sortedNodes = [...(graph.nodes ?? [])].sort((left, right) => left.id.localeCompare(right.id))
   for (const node of sortedNodes) {
-    const defaults = DEFAULT_NODE_BY_TYPE[node.type] ?? DEFAULT_NODE_BY_TYPE.service
+    const defaults = getTypeDefaults(node.type)
     lines.push(`node ${node.id} ${formatNodeAttributes(node.type, defaults, node)}`)
   }
   const sortedLinks = [...(graph.links ?? [])].sort((left, right) => {
@@ -285,7 +284,7 @@ export function autoLayout(graph) {
     incoming.set(link.to, (incoming.get(link.to) ?? 0) + 1)
   }
 
-  const roots = nodes.filter((node) => (incoming.get(node.id) ?? 0) === 0 || node.type === 'edge')
+  const roots = nodes.filter((node) => (incoming.get(node.id) ?? 0) === 0 || resolvePhysics(node.type) === 'edge')
   const queue = [...(roots.length ? roots : [nodes[0]])]
   const depth = new Map()
   const visited = new Set()

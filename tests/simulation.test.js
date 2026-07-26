@@ -2,8 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { allLessons } from '../src/lib/data/courseData.js'
 import { getSimulationLesson } from '../src/lib/data/simulationLessons.js'
+import { COMPONENT_CATALOG, resolvePhysics } from '../src/lib/simulation/componentCatalog.js'
 import { compileFlowGraph, serializeFlowGraph } from '../src/lib/simulation/graphCompiler.js'
 import { runSimulation } from '../src/lib/simulation/engine.js'
+import { inferStagesFromGraph } from '../src/lib/simulation/pathInference.js'
 import { parseSimulationScript } from '../src/lib/simulation/scriptApi.js'
 
 test('every lesson exposes a simulation scenario', () => {
@@ -112,6 +114,94 @@ test('serialized topology remains runnable by the simulation engine', () => {
     diagramText: serialized,
     apiId: simulation.apis[0].id,
     profileId: simulation.workloadProfiles[0].id,
+    scriptText: ''
+  })
+  assert.equal(result.ok, true)
+})
+
+test('component catalog covers core system design building blocks', () => {
+  const ids = new Set(COMPONENT_CATALOG.map((entry) => entry.id))
+  for (const required of [
+    'cdn',
+    'load-balancer',
+    'api-gateway',
+    'cache',
+    'database',
+    'object-storage',
+    'search-index',
+    'queue',
+    'stream',
+    'worker',
+    'auth-service',
+    'rate-limiter'
+  ]) {
+    assert.equal(ids.has(required), true, `missing catalog component ${required}`)
+  }
+  assert.equal(resolvePhysics('cdn'), 'cache')
+  assert.equal(resolvePhysics('load-balancer'), 'service')
+  assert.equal(COMPONENT_CATALOG.every((entry) => entry.short && entry.whenToUse.length && entry.diagram), true)
+})
+
+test('path inference derives cache-miss and async stages from the diagram', () => {
+  const simulation = getSimulationLesson('case-studies/url-shortener')
+  const graph = compileFlowGraph(simulation.starterDiagram)
+  const inferred = inferStagesFromGraph(graph)
+  assert.equal(inferred.stages.some((stage) => stage.nodeId === 'cache' && stage.kind === 'cache'), true)
+  assert.equal(inferred.stages.some((stage) => stage.nodeId === 'primary' && stage.mode === 'cache-miss'), true)
+  assert.equal(inferred.stages.some((stage) => stage.nodeId === 'analytics' && stage.mode === 'async'), true)
+})
+
+test('topology-path API simulates the live diagram after rewiring', () => {
+  const simulation = getSimulationLesson('case-studies/url-shortener')
+  assert.equal(simulation.apis.some((api) => api.id === 'topology-path' && api.deriveFromTopology), true)
+
+  const diagram = `${simulation.starterDiagram}
+node replica type=read-replica label="Read replica" latencyMs=16 capacityRps=12000
+link shortener -> replica`
+  const result = runSimulation({
+    scenario: simulation,
+    diagramText: diagram,
+    apiId: 'topology-path',
+    profileId: 'topology-spike',
+    scriptText: ''
+  })
+  assert.equal(result.ok, true)
+  const topologyResult = /** @type {any} */ (result)
+  assert.equal(topologyResult.nodeMetrics.some((/** @type {any} */ node) => node.id === 'replica'), true)
+})
+
+test('catalog component types compile with physics-aware defaults', () => {
+  const diagram = `
+node entry type=dns label="DNS"
+node lb type=load-balancer label="LB"
+node gw type=api-gateway label="Gateway"
+node cdn type=cdn label="CDN" hitRate=0.9
+node api type=service label="API"
+node redis type=cache label="Redis"
+node db type=database label="Primary"
+node blobs type=object-storage label="Blobs"
+node q type=queue label="Queue"
+node wrk type=worker label="Workers"
+link entry -> cdn
+link cdn -> lb
+link lb -> gw
+link gw -> api
+link api -> redis
+link api -> db
+link api -> blobs
+link api -> q async=true
+link q -> wrk async=true
+`
+  const graph = compileFlowGraph(diagram)
+  assert.equal(graph.errors.length, 0)
+  assert.equal(graph.nodes.find((node) => node.id === 'cdn')?.physics, 'cache')
+  assert.equal(graph.nodes.find((node) => node.id === 'blobs')?.physics, 'database')
+  const simulation = getSimulationLesson('case-studies/url-shortener')
+  const result = runSimulation({
+    scenario: simulation,
+    diagramText: diagram,
+    apiId: 'topology-path',
+    profileId: 'topology-steady',
     scriptText: ''
   })
   assert.equal(result.ok, true)

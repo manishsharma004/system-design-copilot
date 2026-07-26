@@ -1,6 +1,13 @@
+import { resolvePhysics } from './componentCatalog.js'
+
 /** @param {number} value */
 function percent(value) {
   return `${Math.round(value * 100)}%`
+}
+
+/** @param {{ type?: string, physics?: string }} node */
+function physicsOf(node) {
+  return node.physics ?? resolvePhysics(node.type ?? 'service')
 }
 
 /**
@@ -52,7 +59,7 @@ export function diagnoseSimulation(result) {
   }
 
   for (const node of result.nodeMetrics) {
-    if (node.type === 'cache' && node.hitRate !== undefined && node.hitRate < 0.85) {
+    if (physicsOf(node) === 'cache' && node.hitRate !== undefined && node.hitRate < 0.85) {
       findings.push({
         severity: 'medium',
         title: `${node.label} is missing too often`,
@@ -65,7 +72,7 @@ export function diagnoseSimulation(result) {
       })
     }
 
-    if (node.type === 'database' && node.utilization > 0.85) {
+    if (physicsOf(node) === 'database' && node.utilization > 0.85) {
       findings.push({
         severity: 'high',
         title: `${node.label} is becoming the bottleneck`,
@@ -78,7 +85,7 @@ export function diagnoseSimulation(result) {
       })
     }
 
-    if (node.type === 'queue' && (node.utilization > 0.85 || node.queueDepth > 5000)) {
+    if (physicsOf(node) === 'queue' && (node.utilization > 0.85 || node.queueDepth > 5000)) {
       findings.push({
         severity: 'medium',
         title: `${node.label} is building backlog`,
@@ -91,7 +98,7 @@ export function diagnoseSimulation(result) {
       })
     }
 
-    if ((node.type === 'service' || node.type === 'edge' || node.type === 'worker') && node.utilization > 0.88) {
+    if (['service', 'edge', 'worker'].includes(physicsOf(node)) && node.utilization > 0.88) {
       findings.push({
         severity: 'medium',
         title: `${node.label} is running too hot`,

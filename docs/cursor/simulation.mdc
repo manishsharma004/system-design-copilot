@@ -1,19 +1,20 @@
 # Simulation lab
 
-HLD-only interactive lab: edit a topology, run a workload, inspect diagnostics. Shown when `getSimulationLesson(lesson.id)` returns config (authored or generated for every HLD lesson).
+HLD-only interactive lab: architect a topology on a visual canvas, run a workload, inspect diagnostics. Shown when `getSimulationLesson(lesson.id)` returns config (authored or generated for every HLD lesson).
 
 ## Entry points
 
 - UI: `SimulationIDE.svelte` + `TopologyBuilder.svelte`
-- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback (module blueprints include exhaustive HLD labs via `hldExhaustiveLabSimBlueprints.js`)
-- Engine: `src/lib/simulation/` — `graphCompiler.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`
+- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback (module blueprints include exhaustive HLD labs via `hldExhaustiveLabSimBlueprints.js`); every lab also gets a **Topology path** API (`deriveFromTopology`)
+- Catalog: `src/lib/simulation/componentCatalog.js` — full system-design palette (CDN, LB, gateway, DB, queue, stream, …) with primers / Mermaid diagrams
+- Engine: `src/lib/simulation/` — `graphCompiler.js`, `pathInference.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`
 - Session store: `stores/simulation.js` → localStorage `system-design-copilot-simulation-v1`
 
 ## Virtual workspace files
 
 Paths from `SIMULATION_PATHS` in `editor/workspaceCore.js` (typical):
 
-- `src/topology.flow` — topology DSL
+- `src/topology.flow` — topology DSL (`type=` accepts catalog ids)
 - `src/overrides.ts` — script overrides
 - `src/topology.layout.json` — visual layout for `TopologyBuilder`
 
@@ -21,16 +22,26 @@ Persisted via IndexedDB workspace snapshots like other IDEs.
 
 ## Runtime model
 
-1. `compileFlowGraph()` turns DSL (+ layout) into a runnable graph
-2. `runSimulation()` applies workload profiles and optional failure injection
-3. Diagnostics surface bottlenecks / misconfig for the learner
-4. Optional **Check (AI)** via `LlmAssistantPanel` (`flowId: simulation`) reviews topology + last-run findings (`llm.mdc`)
+1. `compileFlowGraph()` turns DSL (+ layout) into a graph; each node gets `physics` from the catalog
+2. **Topology path** APIs call `inferStagesFromGraph()` so the diagram *is* the request path (sync = critical path, cache→miss fallthrough, async = background)
+3. Authored APIs keep fixed `stages` for lesson-specific scenarios (still validated against links)
+4. `runSimulation()` applies workload profiles and optional failure injection
+5. Diagnostics surface bottlenecks; canvas shows utilization badges from the last run
+6. Optional **Check (AI)** via `LlmAssistantPanel` (`flowId: simulation`)
 
 Registry tag: `native-flow` in `browserRuntimes.js` (plain JS, not WASM).
+
+## Visual editor
+
+`TopologyBuilder` is a three-pane architecting surface:
+
+- Left: categorized component catalog (drag or click-to-place) with search
+- Center: canvas (select / connect / pan, async-link toggle, curved edges)
+- Right: inspector — component primers/diagrams, when-to-use, pitfalls, node/link props
 
 ## Agent notes
 
 - Do not show simulation on non-HLD flows unless product intent changes (`intent.mdc` / lesson page guards).
-- Prefer extending `simulationLessons.js` authored entries over one-off UI forks.
+- Prefer extending `componentCatalog.js` and `simulationLessons.js` over one-off UI forks.
 - Orphan: `SimulationLab.svelte` — unused; use `SimulationIDE`.
-- Tests: `tests/simulation.test.js`.
+- Tests: `tests/simulation.test.js` (compiler, inference, catalog, engine).
