@@ -1,12 +1,16 @@
 
 <!doctype html>
-<html lang="en" data-theme="copilot">
+<html lang="en" data-theme="copilot" data-theme-mode="dark">
   <head>
     <meta charset="utf-8" />
     <script>
       try {
         var savedTheme = localStorage.getItem('system-design-copilot-theme-v1');
-        if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+        var lightThemes = 'copilot-light,ocean-light,ember-light,forest-light,paper,dawn,blush,petal,ballet,rose-light,mint,sand,sky';
+        if (savedTheme) {
+          document.documentElement.dataset.theme = savedTheme;
+          document.documentElement.dataset.themeMode = lightThemes.split(',').indexOf(savedTheme) >= 0 ? 'light' : 'dark';
+        }
       } catch (e) {}
     </script>
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
