@@ -10,18 +10,22 @@ import {
 } from '../src/lib/themes.js';
 
 test('theme options include dark and light color schemes', () => {
-  assert.equal(THEME_OPTIONS.length, 12);
-  assert.equal(getThemesByMode('dark').length, 6);
-  assert.equal(getThemesByMode('light').length, 6);
+  assert.equal(THEME_OPTIONS.length, 19);
+  assert.equal(getThemesByMode('dark').length, 9);
+  assert.equal(getThemesByMode('light').length, 10);
   assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'copilot-light'));
   assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'midnight'));
   assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'paper'));
+  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'blush'));
+  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'sakura'));
 });
 
-test('theme groups expose dark and light sections', () => {
-  assert.equal(THEME_GROUPS.length, 2);
+test('theme groups expose dark, light, and bloom sections', () => {
+  assert.equal(THEME_GROUPS.length, 3);
   assert.equal(THEME_GROUPS[0].id, 'dark');
   assert.equal(THEME_GROUPS[1].id, 'light');
+  assert.equal(THEME_GROUPS[2].id, 'bloom');
+  assert.equal(THEME_GROUPS[2].themes.length, 7);
 });
 
 test('normalizeThemeId falls back to default for unknown values', () => {

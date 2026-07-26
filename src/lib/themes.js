@@ -1,6 +1,6 @@
 /** @typedef {'dark' | 'light'} ThemeMode */
 /** @typedef {{ id: string, label: string, swatch: string, themeColor: string, mode: ThemeMode }} ThemeOption */
-/** @typedef {{ id: ThemeMode, label: string, themes: ThemeOption[] }} ThemeGroup */
+/** @typedef {{ id: string, label: string, themes: ThemeOption[] }} ThemeGroup */
 
 /** @type {ThemeGroup[]} */
 export const THEME_GROUPS = [
@@ -26,6 +26,19 @@ export const THEME_GROUPS = [
       { id: 'forest-light', label: 'Forest Light', swatch: '#059669', themeColor: '#ecfdf5', mode: 'light' },
       { id: 'paper', label: 'Paper', swatch: '#4f46e5', themeColor: '#f8fafc', mode: 'light' },
       { id: 'dawn', label: 'Dawn', swatch: '#ea580c', themeColor: '#fff7ed', mode: 'light' }
+    ]
+  },
+  {
+    id: 'bloom',
+    label: 'Bloom',
+    themes: [
+      { id: 'sakura', label: 'Sakura Night', swatch: '#ff8fab', themeColor: '#1a1218', mode: 'dark' },
+      { id: 'lavender', label: 'Lavender Dream', swatch: '#c4b5fd', themeColor: '#15121f', mode: 'dark' },
+      { id: 'mauve', label: 'Mauve Dusk', swatch: '#e879a8', themeColor: '#1c1619', mode: 'dark' },
+      { id: 'blush', label: 'Blush', swatch: '#f43f5e', themeColor: '#fff5f7', mode: 'light' },
+      { id: 'petal', label: 'Lavender Petal', swatch: '#8b5cf6', themeColor: '#faf5ff', mode: 'light' },
+      { id: 'ballet', label: 'Ballet', swatch: '#ec4899', themeColor: '#fff1f2', mode: 'light' },
+      { id: 'rose-light', label: 'Rose Light', swatch: '#db2777', themeColor: '#fdf2f8', mode: 'light' }
     ]
   }
 ];

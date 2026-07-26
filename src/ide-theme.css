@@ -71,7 +71,11 @@
 [data-theme='ember-light'],
 [data-theme='forest-light'],
 [data-theme='paper'],
-[data-theme='dawn'] {
+[data-theme='dawn'],
+[data-theme='blush'],
+[data-theme='petal'],
+[data-theme='ballet'],
+[data-theme='rose-light'] {
   --ide-fg: var(--text);
   --ide-muted: var(--muted);
   --ide-strong-fg: var(--text);
