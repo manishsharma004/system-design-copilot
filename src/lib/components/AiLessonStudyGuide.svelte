@@ -35,9 +35,9 @@
   <section id="topic-lab" class="panel hero-card ai-study-guide">
     <div class="practice-card-header">
       <div>
-        <p class="eyebrow">AI study companion</p>
+        <p class="eyebrow">{lesson?.flowSlug === 'ai-engineer' ? 'AI study companion' : 'Hands-on study companion'}</p>
         <h2>Go beyond the overview with practical examples</h2>
-        <p class="practice-copy">Use the highlights below to study the lesson more deeply, then walk through runnable examples and system-design drills.</p>
+        <p class="practice-copy">Use the highlights below to study the lesson more deeply, then walk through runnable examples and design drills on this page.</p>
       </div>
       <div class="practice-status-group">
         <span class="pill">{codingExercises.length} code example{codingExercises.length === 1 ? '' : 's'}</span>

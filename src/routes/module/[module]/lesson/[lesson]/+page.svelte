@@ -21,8 +21,16 @@
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
   $: isQuestionBankLesson = data.module.flowSlug === 'interview-questions';
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
+  $: lessonExercises = data.lesson.exercises ?? [];
+  $: hasLessonExercises = lessonExercises.length > 0;
+  $: hasCodingExercises = lessonExercises.some(
+    (/** @type {{ type?: string, starterCode?: string }} */ exercise) =>
+      exercise?.type === 'coding' && typeof exercise?.starterCode === 'string' && exercise.starterCode.trim().length > 0
+  );
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
-  $: showTopicLab = Boolean(data.lesson.interactive) || isAiLesson;
+  $: showTopicLab = Boolean(data.lesson.interactive) || isAiLesson || hasLessonExercises;
+  $: showExerciseGuide = isAiLesson || hasLessonExercises;
+  $: showPythonLab = isAiLesson || hasCodingExercises;
   $: showSolutionReveal = solutionLessonIds.has(data.lesson.id);
   $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
   $: lessonSteps = [
@@ -311,8 +319,10 @@
   </aside>
 </section>
 
-{#if isAiLesson}
+{#if showExerciseGuide}
   <AiLessonStudyGuide lesson={data.lesson} />
+{/if}
+{#if showPythonLab}
   <MLPracticeIDE lesson={data.lesson} />
 {/if}
 
