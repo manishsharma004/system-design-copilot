@@ -351,9 +351,9 @@
   .llm-editor-chrome {
     display: grid;
     gap: 0;
-    background: #151821;
-    border-bottom: 1px solid #252a35;
-    color: #cfd3ec;
+    background: var(--ide-tab-bar, var(--bg-soft));
+    border-bottom: 1px solid var(--ide-border, var(--border));
+    color: var(--ide-fg, var(--text));
     min-width: 0;
     max-width: 100%;
   }
@@ -372,7 +372,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #8d95ab;
+    color: var(--ide-muted, var(--muted));
     margin-right: 0.25rem;
   }
 
@@ -380,7 +380,7 @@
     border-radius: 3px;
     border: none;
     background: transparent;
-    color: #9aa3bc;
+    color: var(--ide-muted, var(--muted));
     min-height: 1.85rem;
     padding: 0 0.55rem;
     font-size: 0.72rem;
@@ -389,8 +389,8 @@
   }
 
   .llm-toolbar-btn:hover:not(:disabled) {
-    color: #eef2ff;
-    background: #2a3040;
+    color: var(--ide-strong-fg, var(--text));
+    background: var(--ide-button-hover, var(--bg-soft));
   }
 
   .llm-toolbar-btn:disabled {
@@ -399,21 +399,21 @@
   }
 
   .llm-toolbar-btn-primary {
-    background: rgba(105, 108, 255, 0.18);
-    color: #d7dbff;
+    background: var(--ide-accent-btn-bg, var(--accent-muted));
+    color: var(--ide-accent-btn-fg, var(--accent-strong));
   }
 
   .llm-toolbar-btn-primary:hover:not(:disabled) {
-    background: rgba(105, 108, 255, 0.3);
-    color: #fff;
+    background: var(--ide-accent-btn-hover, var(--accent-hover));
+    color: var(--ide-strong-fg, var(--text));
   }
 
   .llm-editor-settings {
     display: grid;
     gap: 0.55rem;
     padding: 0.65rem 0.75rem 0.75rem;
-    border-top: 1px solid #252a35;
-    background: #12151d;
+    border-top: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-panel, var(--panel));
   }
 
   .llm-settings-grid {
@@ -425,6 +425,7 @@
   .llm-settings-grid label {
     display: grid;
     gap: 0.3rem;
+    color: var(--ide-fg, var(--text));
   }
 
   .llm-settings-grid .llm-full {
@@ -436,9 +437,9 @@
   .llm-settings-grid textarea {
     width: 100%;
     border-radius: 0.4rem;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: #0f1219;
-    color: #e8ecf8;
+    border: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-input-bg, var(--panel));
+    color: var(--ide-input-fg, var(--text));
     padding: 0.4rem 0.55rem;
     font: inherit;
     font-size: 0.85rem;
@@ -449,17 +450,18 @@
     margin: 0;
     font-size: 0.78rem;
     padding: 0 0.75rem 0.65rem;
+    color: var(--ide-muted, var(--muted));
   }
 
   .llm-config-hint {
     padding-top: 0.45rem;
-    border-top: 1px solid #252a35;
+    border-top: 1px solid var(--ide-border, var(--border));
   }
 
   .llm-inline-link {
     border: none;
     background: none;
-    color: #9dbdff;
+    color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 0.12rem;
     cursor: pointer;
@@ -471,16 +473,16 @@
     max-height: 16rem;
     overflow: auto;
     padding: 0.65rem 0.75rem 0.8rem;
-    border-top: 1px solid #252a35;
-    background: #101522;
+    border-top: 1px solid var(--ide-border, var(--border));
+    background: var(--ide-panel, var(--panel));
   }
 
   .llm-editor-feedback.danger {
-    background: rgba(160, 50, 60, 0.12);
+    background: var(--ide-warning-bg);
   }
 
   .llm-editor-feedback:focus {
-    outline: 2px solid rgba(105, 108, 255, 0.65);
+    outline: 2px solid var(--accent-border, var(--accent));
     outline-offset: -2px;
   }
 
@@ -499,7 +501,7 @@
   .llm-feedback-dismiss {
     border: none;
     background: transparent;
-    color: #9aa3bc;
+    color: var(--ide-muted, var(--muted));
     font-size: 1.15rem;
     line-height: 1;
     min-width: 1.75rem;
@@ -510,14 +512,14 @@
   }
 
   .llm-feedback-dismiss:hover {
-    color: #eef2ff;
-    background: #2a3040;
+    color: var(--ide-strong-fg, var(--text));
+    background: var(--ide-button-hover, var(--bg-soft));
   }
 
   .llm-markdown {
     font-size: 0.9rem;
     line-height: 1.65;
-    color: #cfd7ea;
+    color: var(--ide-fg, var(--text));
     overflow-wrap: anywhere;
   }
 
@@ -527,7 +529,7 @@
   .llm-markdown :global(h4) {
     margin: 0.85rem 0 0.4rem;
     line-height: 1.3;
-    color: #f8fbff;
+    color: var(--ide-strong-fg, var(--text));
   }
 
   .llm-markdown :global(h1) { font-size: 1.2rem; }
@@ -552,15 +554,15 @@
     font-size: 0.88em;
     padding: 0.1rem 0.3rem;
     border-radius: 0.3rem;
-    background: rgba(76, 89, 141, 0.35);
-    color: #f2f7ff;
+    background: var(--code-bg, var(--bg-soft));
+    color: var(--code-fg, var(--text));
   }
 
   .llm-markdown :global(pre) {
     padding: 0.7rem 0.8rem;
     border-radius: 0.5rem;
-    background: #0b0e14;
-    border: 1px solid rgba(140, 157, 214, 0.22);
+    background: var(--code-bg, var(--bg-soft));
+    border: 1px solid var(--ide-border, var(--border));
     overflow: auto;
   }
 
@@ -570,7 +572,7 @@
   }
 
   .llm-markdown :global(a) {
-    color: #9dbdff;
+    color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 0.13rem;
   }

@@ -333,3 +333,45 @@
 [data-theme] .ide-workspace .ide-side-panel-header {
   background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
 }
+
+[data-theme] .ide-workspace .ide-preview-content {
+  background: var(--ide-panel, var(--panel));
+}
+
+[data-theme] .practice-preview-panel,
+[data-theme] .practice-preview-panel .practice-preview {
+  color: var(--ide-guide-body, var(--text));
+}
+
+[data-theme] .practice-preview-panel h3,
+[data-theme] .practice-preview-panel h4 {
+  color: var(--ide-guide-heading, var(--accent-strong));
+}
+
+[data-theme] .practice-preview-panel h3 {
+  color: var(--ide-guide-body, var(--text));
+}
+
+[data-theme] .practice-preview-panel p,
+[data-theme] .practice-preview-panel li {
+  color: var(--ide-guide-body, var(--text));
+}
+
+[data-theme] .practice-preview-prompt {
+  color: var(--text) !important;
+}
+
+[data-theme] .editor-frame {
+  border-color: var(--ide-border);
+  background: var(--ide-surface, var(--panel));
+}
+
+[data-theme] .editor-frame .llm-editor-chrome {
+  border-bottom-color: var(--ide-border);
+}
+
+[data-theme] .llm-editor-chrome {
+  background: var(--ide-tab-bar);
+  border-bottom-color: var(--ide-border);
+  color: var(--ide-fg);
+}

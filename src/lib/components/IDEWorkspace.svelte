@@ -1499,7 +1499,7 @@
     display: grid;
     gap: 0.35rem;
     padding: 0.95rem 0.95rem 0.75rem;
-    border-bottom: 1px solid #252a35;
+    border-bottom: 1px solid var(--ide-border, var(--border));
     background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
   }
 
@@ -1507,7 +1507,7 @@
     display: flex;
     align-items: center;
     background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
-    border-bottom: 1px solid #252a35;
+    border-bottom: 1px solid var(--ide-border, var(--border));
     min-height: 35px;
     padding: 0 0.5rem;
     gap: 0;
@@ -1566,7 +1566,7 @@
   }
 
   .ide-preview-content {
-    background: var(--ide-editor, var(--vscode-editor-bg));
+    background: var(--ide-panel, var(--panel));
     padding: 0;
   }
 
