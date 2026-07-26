@@ -1,5 +1,6 @@
 <svelte:options runes={false} />
 <script>
+  import { browser } from '$app/environment';
   import { base } from '$app/paths';
   import '../app.css';
   import { page } from '$app/stores';
@@ -310,5 +311,7 @@
     </main>
   </div>
 
-  <PwaUpdateBanner />
+  {#if browser}
+    <PwaUpdateBanner />
+  {/if}
 </div>
