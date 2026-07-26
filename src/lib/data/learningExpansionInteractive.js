@@ -3005,6 +3005,23 @@ const baseLearningExpansionInteractive = {  'systems-fundamentals-lab/request-li
           ],
           alternativeOutcome:
             'Using a framework first may produce outputs without understanding the math.'
+        },
+        {
+          id: 'sklearn-baseline',
+          label: 'sklearn linear or MLP baseline',
+          bestFor: 'Sanity-checking the task before investing in a from-scratch training loop.',
+          chooseWhen: [
+            'You need a known-good accuracy target for the same features.',
+            'The lesson goal still includes reading NumPy shapes afterward.',
+            'You want to separate data difficulty from implementation bugs.'
+          ],
+          tradeOffs: [
+            'Hides gradient bookkeeping details.',
+            'May use different defaults for regularization and solvers.',
+            'Less useful if the interview expects handwritten backprop.'
+          ],
+          alternativeOutcome:
+            'Skipping a baseline can make a broken NumPy loop look like an impossible dataset.'
         }
       ]
     },

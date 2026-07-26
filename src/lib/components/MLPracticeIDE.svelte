@@ -51,6 +51,9 @@ plt.show()
   let selectedExerciseId = ''
   let editorValue = DEFAULT_CODE
   let runId = 0
+  let showHints = false
+  /** @type {'idle' | 'pass' | 'review'} */
+  let outputCheck = 'idle'
 
   $: codingExercises = (lesson?.exercises ?? []).filter(
     (/** @type {{ type?: string, starterCode?: string }} */ exercise) =>
@@ -58,9 +61,52 @@ plt.show()
   )
   $: if (codingExercises.length && !codingExercises.some((exercise) => exercise.id === selectedExerciseId)) {
     selectedExerciseId = codingExercises[0].id
-    editorValue = codingExercises[0].starterCode
+    editorValue = loadDraft(codingExercises[0].id) ?? codingExercises[0].starterCode
+    showHints = false
+    outputCheck = 'idle'
   }
   $: selectedExercise = codingExercises.find((exercise) => exercise.id === selectedExerciseId) ?? null
+  $: draftKey = lesson?.id && selectedExerciseId ? `ml-practice:${lesson.id}:${selectedExerciseId}` : ''
+
+  /** @param {string} exerciseId */
+  function loadDraft(exerciseId) {
+    if (!browser || !lesson?.id) return null
+    try {
+      return localStorage.getItem(`ml-practice:${lesson.id}:${exerciseId}`)
+    } catch {
+      return null
+    }
+  }
+
+  function persistDraft() {
+    if (!browser || !draftKey) return
+    try {
+      localStorage.setItem(draftKey, editorValue)
+    } catch {
+      // Ignore quota / private-mode failures.
+    }
+  }
+
+  /** Soft check: look for expected-output keywords in stdout after a successful run. */
+  function evaluateOutput(/** @type {string} */ text) {
+    const expected = selectedExercise?.expectedOutput
+    if (!expected || !text) {
+      outputCheck = 'idle'
+      return
+    }
+    const tokens = String(expected)
+      .toLowerCase()
+      .split(/[^a-z0-9.@+-]+/)
+      .filter((token) => token.length >= 4)
+      .slice(0, 6)
+    if (!tokens.length) {
+      outputCheck = 'review'
+      return
+    }
+    const haystack = text.toLowerCase()
+    const hits = tokens.filter((token) => haystack.includes(token)).length
+    outputCheck = hits >= Math.min(2, tokens.length) ? 'pass' : 'review'
+  }
 
   /** @type {'idle' | 'loading-runtime' | 'loading-packages' | 'running' | 'ready' | 'error'} */
   let status = 'idle'
@@ -113,6 +159,7 @@ plt.show()
       stderr = msg.stderr ?? ''
       images = Array.isArray(msg.images) ? msg.images : []
       hasOutput = true
+      evaluateOutput(stdout)
     } else if (msg.type === 'ERROR') {
       status = 'error'
       statusMessage = 'Script raised an exception — see output below.'
@@ -120,16 +167,19 @@ plt.show()
       stderr = msg.message ?? 'Unknown error.'
       images = []
       hasOutput = true
+      outputCheck = 'idle'
     }
   }
 
   function runScript() {
     if (!worker || status === 'loading-runtime' || status === 'loading-packages' || status === 'running') return
+    persistDraft()
     runId += 1
     stdout = ''
     stderr = ''
     images = []
     hasOutput = false
+    outputCheck = 'idle'
     status = 'running'
     statusMessage = 'Starting…'
     worker.postMessage({ id: runId, code: editorValue })
@@ -137,6 +187,7 @@ plt.show()
 
   function handleEditorChange(event) {
     editorValue = event.detail.value
+    persistDraft()
   }
 
   /** @param {string} exerciseId */
@@ -144,23 +195,27 @@ plt.show()
     const exercise = codingExercises.find((item) => item.id === exerciseId)
     if (!exercise?.starterCode) return
     selectedExerciseId = exerciseId
-    editorValue = exercise.starterCode
+    editorValue = loadDraft(exerciseId) ?? exercise.starterCode
     stdout = ''
     stderr = ''
     images = []
     hasOutput = false
+    showHints = false
+    outputCheck = 'idle'
     statusMessage = `Loaded exercise: ${exercise.title}. Edit the TODOs, then run.`
   }
 
   function loadSolution() {
     if (!selectedExercise?.solution) return
     editorValue = selectedExercise.solution
+    persistDraft()
     statusMessage = 'Loaded reference solution. Compare it with your approach, then re-run.'
   }
 
   function resetToStarter() {
     if (selectedExercise?.starterCode) {
       editorValue = selectedExercise.starterCode
+      persistDraft()
       statusMessage = 'Reset to starter code for the selected exercise.'
       return
     }
@@ -216,6 +271,20 @@ plt.show()
 
   {#if codingExercises.length}
     <div class="ml-exercise-picker">
+      <div class="ml-exercise-chip-row" role="list" aria-label="Coding exercises">
+        {#each codingExercises as exercise}
+          <button
+            type="button"
+            class="pill ml-exercise-chip"
+            class:active={exercise.id === selectedExerciseId}
+            role="listitem"
+            onclick={() => loadExercise(exercise.id)}
+          >
+            {exercise.title}
+            <span class="ml-chip-diff">{exercise.difficulty}</span>
+          </button>
+        {/each}
+      </div>
       <label class="ml-exercise-label" for="ml-exercise-select">
         <span class="eyebrow">Lesson exercises</span>
         <select
@@ -233,6 +302,21 @@ plt.show()
         <p class="ml-exercise-copy">{selectedExercise.description}</p>
         {#if selectedExercise.expectedOutput}
           <p class="muted-hint">Expected: {selectedExercise.expectedOutput}</p>
+        {/if}
+        {#if Array.isArray(selectedExercise.hints) && selectedExercise.hints.length}
+          <details class="ml-hints" bind:open={showHints}>
+            <summary>Show hints ({selectedExercise.hints.length})</summary>
+            <ol>
+              {#each selectedExercise.hints as hint}
+                <li>{hint}</li>
+              {/each}
+            </ol>
+          </details>
+        {/if}
+        {#if outputCheck === 'pass'}
+          <p class="ml-check pass">Output looks aligned with the expected result — review details, then try the next exercise.</p>
+        {:else if outputCheck === 'review'}
+          <p class="ml-check review">Script ran, but output may not match the expected markers yet. Compare against the expected note or load the solution.</p>
         {/if}
       {/if}
     </div>
@@ -393,6 +477,69 @@ plt.show()
     margin: 0;
     color: var(--muted);
     line-height: 1.5;
+  }
+
+  .ml-exercise-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .ml-exercise-chip {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .ml-exercise-chip.active {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--text);
+  }
+
+  .ml-chip-diff {
+    margin-left: 0.35rem;
+    opacity: 0.75;
+    font-size: 0.78em;
+  }
+
+  .ml-hints {
+    border-top: 1px solid var(--border);
+    padding-top: 0.55rem;
+  }
+
+  .ml-hints summary {
+    cursor: pointer;
+    color: var(--accent, #696cff);
+    font-size: 0.9rem;
+  }
+
+  .ml-hints ol {
+    margin: 0.55rem 0 0;
+    padding-left: 1.2rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .ml-check {
+    margin: 0;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .ml-check.pass {
+    background: rgba(30, 132, 73, 0.16);
+    border: 1px solid rgba(30, 132, 73, 0.35);
+    color: #96e6b3;
+  }
+
+  .ml-check.review {
+    background: rgba(180, 140, 40, 0.14);
+    border: 1px solid rgba(220, 180, 80, 0.3);
+    color: #f0d48a;
   }
 
   .ml-toolbar-actions {

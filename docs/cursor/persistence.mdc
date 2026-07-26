@@ -17,6 +17,8 @@ Canonical list: `BACKUP_STORAGE_KEYS` in `src/lib/backup.js`.
 
 Question-bank completion flags also use localStorage keys like `question-bank:{key}:completed` (see `QuestionBankIDE.svelte`). Reading answers for Check (AI) use practice-store keys `question-bank-answer:{bankKey}:{itemId}`.
 
+ML Practice IDE drafts use per-exercise keys `ml-practice:{lessonId}:{exerciseId}` (localStorage; not in the backup key list).
+
 Timer state machine helpers: `stores/practiceTimer.js` (nested under practice answers).
 
 ## IndexedDB workspaces

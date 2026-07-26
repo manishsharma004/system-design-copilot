@@ -4,6 +4,8 @@ import { rawDsaPatternsLearningModules } from './dsaPatternsLearningExpansion.js
 import { rawDsaInterviewEssentialsModules } from './dsaInterviewEssentialsExpansion.js';
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
 import { rawAiLearningModules } from './aiLearningExpansion.js';
+import { rawAiAdvancedLearningModules } from './aiLearningExpansionAdvanced.js';
+import { applyAiCoreEnrichment } from './aiCoreLessonEnrichment.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
 import { rawHldLearningModules } from './hldLearningExpansion.js';
 import { rawLldLearningModules } from './lldLearningExpansion.js';
@@ -38,9 +40,9 @@ export const siteOverview = {
     {
       "title": "AI / ML engineer path",
       "flowSlug": "ai-engineer",
-      "summary": "Learn classical ML and deep learning with interactive NumPy/scikit-learn exercises that run entirely in the browser.",
+      "summary": "Learn classical ML, transformers, retrieval, and production ML with exhaustive on-page lessons and interactive NumPy/scikit-learn labs that run entirely in the browser.",
       "startModule": "ml-interactive-lab",
-      "focus": ["Interactive ML labs", "Deep learning from scratch", "LLM & MLOps tracks"]
+      "focus": ["Interactive ML labs", "Transformers & retrieval", "Production ML systems"]
     }
   ],
   "studyTracks": [
@@ -4199,7 +4201,11 @@ const dsaModules = [
   ...rawDsaInterviewEssentialsModules,
   ...rawDsaModules
 ];
-const aiModules = [...rawAiEngineerModules, ...rawAiLearningModules];
+const aiModules = [
+  ...applyAiCoreEnrichment(rawAiEngineerModules),
+  ...rawAiLearningModules,
+  ...rawAiAdvancedLearningModules
+];
 
 const dsaPracticeQuestionHighlightsBySlug = Object.fromEntries(
   rawDsaModules
@@ -4281,17 +4287,17 @@ const flowDefinitions = [
     slug: 'ai-engineer',
     shortTitle: 'AI/ML',
     title: 'AI Engineer learning path',
-    summary: 'Learn machine learning and deep learning with interactive in-browser Python labs, then specialize in LLMs, agents, and MLOps.',
-    description: 'Use this flow to build or level up skills in classical ML, deep learning from scratch, large language models, AI agents, and production ML systems — with runnable NumPy and scikit-learn exercises.',
+    summary: 'Learn machine learning end to end — classical ML, transformers, retrieval, agents, and production systems — with exhaustive lessons and interactive in-browser Python labs.',
+    description: 'Use this flow to build or level up skills in classical ML, deep learning from scratch, transformers and attention, LLM retrieval systems, AI agents, and production ML — with runnable NumPy and scikit-learn exercises on every major topic.',
     audience: 'Best for software engineers transitioning to AI/ML roles, data scientists moving to engineering, and learners who want hands-on ML practice in the browser.',
-    cadence: 'Progress from interactive ML and deep-learning labs through foundations, then specialize in LLMs, agents, or MLOps.',
-    heroGuidance: 'Start with interactive labs, build intuition for training and evaluation, then specialize in LLMs, agents, or production ML systems based on your goals.',
+    cadence: 'Start with interactive ML labs, deepen foundations with enriched core lessons, then specialize through transformers, retrieval, agents, or production labs.',
+    heroGuidance: 'Start with interactive labs, build intuition for training and evaluation, then specialize in transformers, retrieval, agents, or production ML systems based on your goals.',
     focusAreas: [
-      'Interactive ML labs and deep learning from scratch with NumPy',
-      'LLMs, prompt engineering, RAG pipelines, and AI agents',
-      'MLOps, model serving, monitoring, and responsible AI practices'
+      'Interactive ML labs, deep learning from scratch, and transformers/attention labs',
+      'LLM retrieval systems, prompt engineering, RAG evaluation, and AI agents',
+      'Production pipelines, drift monitoring, serving contracts, and responsible AI'
     ],
-    outcome: 'You should be able to implement core ML/DL ideas by hand, design production AI systems, and make informed tradeoffs between quality, cost, latency, and safety.',
+    outcome: 'You should be able to implement core ML/DL ideas by hand, design retrieval and production AI systems, and make informed tradeoffs between quality, cost, latency, and safety.',
     moduleSlugs: aiModules.map((module) => module.slug)
   },
   {

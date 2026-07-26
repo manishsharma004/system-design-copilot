@@ -27,7 +27,7 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 | `PracticeIDE.svelte` | Markdown 3-step mock answers + Check (AI) (HLD/LLD/AI) |
 | `DsaPracticeIDE.svelte` | DSA lesson exercises + curated interview drills, WASM tests, timer, Check (AI) |
 | `QuestionBankIDE.svelte` | Lazy JSON banks + WASM stack + reading answers + Check (AI) |
-| `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js` |
+| `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js`; exercise chips, hints, soft expected-output check, draft persistence |
 | `SimulationIDE.svelte` | Topology editor + run engine + Check (AI) (HLD) |
 | `TopologyBuilder.svelte` | Visual topology; syncs with `.flow` DSL |
 
