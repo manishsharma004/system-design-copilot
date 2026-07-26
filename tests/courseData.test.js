@@ -181,6 +181,31 @@ test('every lesson has interview scaffolding and local diagrams resolve', () => 
   });
 });
 
+test('every lesson includes deeper knowledge and external references', async () => {
+  const { getLessonDeepKnowledge, lessonDeepKnowledgeIndex } = await import('../src/lib/data/lessonDeepKnowledge.js');
+
+  assert.equal(Object.keys(lessonDeepKnowledgeIndex).length, allLessons.length);
+
+  allLessons.forEach((lesson) => {
+    const deepKnowledge = getLessonDeepKnowledge(lesson.id);
+    assert.ok(deepKnowledge, `missing deep knowledge for ${lesson.id}`);
+    assert.ok(deepKnowledge.insights.length >= 2, `too few insights for ${lesson.id}`);
+    assert.ok(deepKnowledge.references.length >= 2, `too few references for ${lesson.id}`);
+
+    deepKnowledge.insights.forEach((insight) => {
+      assert.ok(insight.heading);
+      assert.ok(insight.body);
+    });
+
+    deepKnowledge.references.forEach((reference) => {
+      assert.ok(reference.title);
+      assert.ok(reference.url.startsWith('https://'), `invalid reference URL for ${lesson.id}: ${reference.url}`);
+      assert.ok(reference.source);
+      assert.ok(reference.note);
+    });
+  });
+});
+
 test('curated likely-answer points are included in lesson answer context', () => {
   const dnsLesson = allLessons.find((lesson) => lesson.id === 'edge-and-routing/dns');
   assert.ok(dnsLesson?.likelyAnswerPoints?.length >= 3);

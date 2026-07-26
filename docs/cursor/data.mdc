@@ -32,6 +32,13 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
+## Deep knowledge (`lessonDeepKnowledge.js`)
+
+- `getLessonDeepKnowledge(lessonId)` — curated deeper insights + external references per lesson
+- Flow-specific source files under `deepKnowledge/` (`hldDeepKnowledge.js`, `lldDsaDeepKnowledge.js`, `aiDeepKnowledge.js`, `questionBankDeepKnowledge.js`)
+- Each entry: `insights[]` (`heading`, `body`) and `references[]` (`title`, `url`, `source`, `note`)
+- Loaded in lesson route (`+page.js`) and rendered in the lesson page **Deep dive** section
+
 ## Banks and extras
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`

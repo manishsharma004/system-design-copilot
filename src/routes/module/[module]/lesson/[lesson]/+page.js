@@ -1,6 +1,7 @@
 
 import { error } from '@sveltejs/kit';
 import { allLessons, getLessonBySlug, getModuleBySlug, lessonIndex, modules } from '$lib/data/courseData';
+import { getLessonDeepKnowledge } from '$lib/data/lessonDeepKnowledge';
 import { getInteractiveLesson } from '$lib/data/interactiveLessons';
 import { getSimulationLesson } from '$lib/data/simulationLessons';
 
@@ -26,6 +27,7 @@ export function load({ params }) {
     lesson: {
       ...lesson,
       relatedLessons,
+      deepKnowledge: getLessonDeepKnowledge(lesson.id),
       interactive: getInteractiveLesson(lesson.id),
       simulation: getSimulationLesson(lesson.id)
     },
