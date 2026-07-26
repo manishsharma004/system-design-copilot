@@ -30,7 +30,7 @@
   $: showSimulationLab = data.module.flowSlug === 'high-level-design' && Boolean(data.lesson.simulation);
   $: showTopicLab = Boolean(data.lesson.interactive) || isAiLesson || hasLessonExercises;
   $: showExerciseGuide = isAiLesson || hasLessonExercises;
-  $: showPythonLab = isAiLesson || hasCodingExercises;
+  $: showPythonLab = isAiLesson || (hasCodingExercises && !isDsaLesson);
   $: showSolutionReveal = solutionLessonIds.has(data.lesson.id);
   $: lessonAnswerContext = buildLessonAnswerContext(data.lesson);
   $: lessonSteps = [

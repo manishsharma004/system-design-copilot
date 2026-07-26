@@ -38,8 +38,8 @@ Sidebar UI state: localStorage `system-design-copilot-sidebar-v4` (inline in lay
 Order on `module/…/lesson/…/+page.svelte`:
 
 1. Read body + rail (diagram, checklist, pitfalls, prompts)
-2. AI study guide + `MLPracticeIDE` (ai-engineer) — ML IDE loads lesson coding exercises when present
+2. Study guide when `lesson.exercises` exist (`AiLessonStudyGuide`); `MLPracticeIDE` only for AI (or non-DSA coding exercises)
 3. `LessonExplorer` if `lesson.interactive`
 4. `SimulationIDE` if HLD + simulation config
-5. `QuestionBankIDE` | `DsaPracticeIDE` | `PracticeIDE` by flow
+5. `QuestionBankIDE` | `DsaPracticeIDE` (lesson exercises + interview drills) | `PracticeIDE` by flow
 6. `LessonSolutionPanel` when lesson is in `solutionLessonIds`

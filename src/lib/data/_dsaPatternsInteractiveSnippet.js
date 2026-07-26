@@ -137,6 +137,11 @@ export const dsaPatternsInteractive = {
           title: 'Rebuild query state once',
           detail: 'After materializing corrected values, rebuild the prefix array that powers the next read window.',
           whatIf: 'Trying to patch prefix sums per correction is more complex and easy to get wrong.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['range query count', 'correction interval count', 'array length', 'prefix rebuild time']
@@ -276,6 +281,11 @@ export const dsaPatternsInteractive = {
           title: 'Weave two owned lists',
           detail: 'Alternate nodes from first and reversed second halves while saving both next links before reconnecting.',
           whatIf: 'Advancing after rewiring without saved links can create cycles or skip nodes.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['node count', 'pointer writes', 'extra node allocations', 'edge-case list lengths']
@@ -414,6 +424,11 @@ export const dsaPatternsInteractive = {
           title: 'Prove monotonicity',
           detail: 'If a limit works with at most k groups, any larger limit also works because it only relaxes constraints.',
           whatIf: 'Without monotonicity, discarding half the answer space is unjustified.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['lower bound', 'upper bound', 'predicate calls', 'group count per limit']
@@ -551,6 +566,11 @@ export const dsaPatternsInteractive = {
           title: 'Prove shrink rules',
           detail: 'Removing from the left can reduce over-limit categories or eventually break coverage in a predictable way.',
           whatIf: 'Without a shrink proof, the window may skip valid substrings.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['left moves', 'right moves', 'missing count', 'distinct category count']
@@ -688,6 +708,11 @@ export const dsaPatternsInteractive = {
           title: 'Define tie-breaking',
           detail: 'Include sequence number or creation time so equal priorities produce deterministic ordering.',
           whatIf: 'Unorderable task objects can crash tuple comparison during ties.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['heap size', 'stale entry ratio', 'priority changes', 'pop latency']
@@ -825,6 +850,11 @@ export const dsaPatternsInteractive = {
           title: 'Prune by current best and symmetry',
           detail: 'Skip branches whose current max load already exceeds the best and avoid assigning the same job to equivalent empty workers repeatedly.',
           whatIf: 'Without sound pruning, the factorial-like assignment tree overwhelms the small input.'
+        },
+        {
+          title: 'Narrate the complexity contract',
+          detail: 'Restate time, space, and the edge case that would invalidate the pattern so the interviewer hears a complete finish.',
+          whatIf: 'Stopping after the code works leaves the hardest follow-up unanswered.'
         }
       ],
       metrics: ['job count', 'worker count', 'current best load', 'branches pruned']

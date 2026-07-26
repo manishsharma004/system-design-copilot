@@ -9,7 +9,7 @@ Canonical list: `BACKUP_STORAGE_KEYS` in `src/lib/backup.js`.
 | Key | Store / owner | Contents |
 |-----|---------------|----------|
 | `system-design-copilot-progress-v4` | `stores/progress.js` | `completedLessonIds[]` |
-| `system-design-copilot-practice-v1` | `stores/practice.js` | Per-key drafts `{ answer, savedAt, timer? }` — keys like `{lessonId}/{stepId}` or `dsa-attempt:…` |
+| `system-design-copilot-practice-v1` | `stores/practice.js` | Per-key drafts `{ answer, savedAt, timer? }` — keys like `{lessonId}/{stepId}`, `dsa-practice:…`, `dsa-exercise:…`, or `dsa-attempt:…` |
 | `system-design-copilot-simulation-v1` | `stores/simulation.js` | Per-`lessonId` simulation session |
 | `system-design-copilot-llm-v1` | `stores/llm.js` | Provider, endpoint, model, apiKey, templates, systemPrompt |
 | `system-design-copilot-sidebar-v4` | `+layout.svelte` | Sidebar open/filter UI (not a store) |
