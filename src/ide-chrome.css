@@ -375,3 +375,38 @@
   border-bottom-color: var(--ide-border);
   color: var(--ide-fg);
 }
+
+/* DSA / question-bank / ML practice lab shells */
+[data-theme] .dsa-practice-shell .problem-pane,
+[data-theme] .dsa-practice-shell .workspace-pane,
+[data-theme] .dsa-practice-shell .test-card,
+[data-theme] .dsa-practice-shell .support-card,
+[data-theme] .dsa-practice-shell .attempt-timer-card,
+[data-theme] .bank-shell .problem-pane,
+[data-theme] .bank-shell .workspace-pane,
+[data-theme] .bank-shell .test-card,
+[data-theme] .bank-shell .support-card,
+[data-theme] .bank-shell .bank-sidebar,
+[data-theme] .bank-shell .bank-state,
+[data-theme] .ml-practice-shell .ml-editor-pane,
+[data-theme] .ml-practice-shell .ml-output-pane {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme] .dsa-practice-shell .problem-body,
+[data-theme] .bank-shell .problem-body {
+  color: var(--text);
+}
+
+[data-theme] .dsa-practice-shell .question-chip,
+[data-theme] .dsa-practice-shell .language-pill,
+[data-theme] .dsa-practice-shell .case-pill,
+[data-theme] .bank-shell .language-pill,
+[data-theme] .bank-shell .case-pill,
+[data-theme] .bank-shell .bank-question-link {
+  background: var(--bg-soft);
+  border-color: var(--border);
+  color: var(--text);
+}

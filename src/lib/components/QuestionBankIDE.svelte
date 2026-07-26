@@ -661,22 +661,23 @@
   .problem-note,
   .runtime-note,
   label span {
-    color: rgba(222, 230, 245, 0.78);
+    color: var(--muted);
   }
 
   .pill.ready,
   .pill.runnable,
   .passing {
-    background: rgba(30, 132, 73, 0.18);
-    border-color: rgba(30, 132, 73, 0.35);
-    color: #96e6b3;
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    color: var(--success);
   }
 
   .bank-state {
-    background: rgba(11, 15, 24, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 1.15rem;
     padding: 1.1rem;
+    color: var(--text);
   }
 
   .bank-state.inline {
@@ -700,7 +701,7 @@
     overflow: hidden;
     min-width: 0;
     max-width: 100%;
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    border: 1px solid var(--ide-border, var(--border));
     border-radius: 0.85rem;
   }
 
@@ -711,14 +712,15 @@
   }
 
   .bank-sidebar {
-    background: rgba(11, 15, 24, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 1.15rem;
     display: grid;
     gap: 0.85rem;
     max-height: 46rem;
     overflow: auto;
     padding: 1rem;
+    color: var(--text);
   }
 
   .bank-search {
@@ -730,10 +732,10 @@
 
   .bank-search input,
   textarea {
-    background: rgba(19, 26, 39, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 0.85rem;
-    color: #e6edf7;
+    color: var(--text);
     font: inherit;
     padding: 0.6rem 0.75rem;
   }
@@ -749,7 +751,7 @@
   }
 
   .bank-section.completed .bank-section-header strong {
-    color: #96e6b3;
+    color: var(--success);
   }
 
   .bank-section-header {
@@ -761,7 +763,7 @@
   }
 
   .bank-section-header .count {
-    color: rgba(222, 230, 245, 0.6);
+    color: var(--muted);
     font-size: 0.8rem;
   }
 
@@ -775,10 +777,10 @@
 
   .bank-question-link {
     align-items: center;
-    background: rgba(13, 18, 28, 0.7);
-    border: 1px solid rgba(118, 139, 186, 0.14);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 0.7rem;
-    color: inherit;
+    color: var(--text);
     cursor: pointer;
     display: flex;
     gap: 0.5rem;
@@ -789,21 +791,21 @@
   }
 
   .bank-question-link:hover {
-    border-color: rgba(92, 166, 255, 0.5);
+    border-color: var(--accent);
   }
 
   .bank-question-link.active {
-    border-color: rgba(92, 166, 255, 0.7);
-    box-shadow: 0 0 0 1px rgba(92, 166, 255, 0.18);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-muted);
   }
 
   .bank-question-link.done {
-    background: rgba(30, 132, 73, 0.16);
-    border-color: rgba(30, 132, 73, 0.32);
+    background: color-mix(in srgb, var(--success) 16%, transparent);
+    border-color: color-mix(in srgb, var(--success) 32%, transparent);
   }
 
   .q-index {
-    color: rgba(222, 230, 245, 0.5);
+    color: var(--muted);
     font-size: 0.78rem;
     min-width: 1.4rem;
   }
@@ -813,12 +815,12 @@
   }
 
   .q-flag {
-    color: #5ca6ff;
+    color: var(--accent);
     font-size: 0.75rem;
   }
 
   .q-flag.reading {
-    color: #f5c451;
+    color: var(--warning, var(--accent-strong));
   }
 
   .bank-main {
@@ -830,9 +832,10 @@
   .workspace-pane,
   .test-card,
   .support-card {
-    background: rgba(11, 15, 24, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 1.15rem;
+    color: var(--text);
   }
 
   .problem-pane,
@@ -852,9 +855,9 @@
   }
 
   .complete-toggle.done {
-    background: rgba(30, 132, 73, 0.18);
-    border-color: rgba(30, 132, 73, 0.35);
-    color: #96e6b3;
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    color: var(--success);
   }
 
   .problem-body {
@@ -863,11 +866,22 @@
     max-height: 36rem;
     overflow: auto;
     padding-right: 0.35rem;
+    color: var(--text);
+  }
+
+  .problem-body :global(p),
+  .problem-body :global(li),
+  .problem-body :global(h1),
+  .problem-body :global(h2),
+  .problem-body :global(h3),
+  .problem-body :global(h4),
+  .problem-body :global(strong) {
+    color: inherit;
   }
 
   .problem-body :global(pre) {
-    background: rgba(20, 27, 41, 0.96);
-    border: 1px solid rgba(118, 139, 186, 0.16);
+    background: var(--code-bg, var(--bg-soft));
+    border: 1px solid var(--border);
     border-radius: 0.9rem;
     flex-shrink: 0;
     max-height: none;
@@ -880,7 +894,7 @@
   }
 
   .problem-body :global(code) {
-    color: #a8d8ff;
+    color: var(--code-fg, var(--accent-strong));
   }
 
   .support-card {
@@ -924,18 +938,18 @@
 
   .language-pill,
   .case-pill {
-    background: rgba(13, 18, 28, 0.92);
-    border: 1px solid rgba(118, 139, 186, 0.18);
+    background: var(--ide-button-bg, var(--bg-soft));
+    border: 1px solid var(--ide-border, var(--border));
     border-radius: 1rem;
-    color: inherit;
+    color: var(--text);
     cursor: pointer;
     padding: 0.5rem 0.8rem;
   }
 
   .language-pill.active,
   .case-pill.active {
-    border-color: rgba(92, 166, 255, 0.7);
-    box-shadow: 0 0 0 1px rgba(92, 166, 255, 0.18);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-muted);
   }
 
   .test-lab-grid,
@@ -962,8 +976,10 @@
   }
 
   pre {
-    background: rgba(19, 26, 39, 0.92);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 0.85rem;
+    color: var(--text);
     margin: 0.3rem 0 0;
     max-height: none;
     overflow: auto;
@@ -973,10 +989,11 @@
   }
 
   .result-error {
-    background: rgba(120, 40, 30, 0.16);
-    border: 1px solid rgba(199, 93, 78, 0.25);
+    background: var(--ide-warning-bg);
+    border: 1px solid var(--ide-warning-border);
     border-radius: 0.9rem;
     padding: 0.75rem 0.85rem;
+    color: var(--text);
   }
 
   @media (max-width: 980px) {
