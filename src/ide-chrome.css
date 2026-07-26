@@ -314,5 +314,22 @@
 }
 
 [data-theme] .code-editor-shell .code-editor-status-item {
-  color: inherit;
+  color: var(--vscode-statusBar-fg);
+}
+
+/* Monaco editor surface must follow theme tokens (scoped Svelte styles previously forced dark). */
+[data-theme] .monaco-editor,
+[data-theme] .monaco-editor .margin,
+[data-theme] .monaco-editor .monaco-editor-background,
+[data-theme] .monaco-editor .inputarea.ime-input {
+  background-color: var(--ide-editor, var(--vscode-editor-bg)) !important;
+}
+
+[data-theme] .ide-workspace .ide-editor-pane :global(.code-editor-shell),
+[data-theme] .ide-workspace .ide-editor-pane :global(.monaco-host) {
+  background: var(--ide-editor, var(--vscode-editor-bg));
+}
+
+[data-theme] .ide-workspace .ide-side-panel-header {
+  background: var(--ide-tab-bar, var(--vscode-sideBar-bg));
 }

@@ -3,7 +3,7 @@
   // @ts-nocheck
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { getMonaco, getMonacoThemeId } from '$lib/editor/monaco'
+  import { getMonaco, applyMonacoTheme, getMonacoThemeId } from '$lib/editor/monaco'
   import { theme } from '$lib/stores/theme.js'
 
   export let code = ''
@@ -47,6 +47,7 @@
         renderWhitespace: 'selection'
       })
       ready = true
+      applyMonacoTheme(monaco, get(theme))
     })()
 
     return () => {
@@ -57,7 +58,7 @@
   })
 
   $: if (monaco && editor) {
-    monaco.editor.setTheme(getMonacoThemeId($theme))
+    applyMonacoTheme(monaco, $theme)
   }
 
   $: if (model) {
