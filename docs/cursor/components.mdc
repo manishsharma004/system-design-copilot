@@ -29,7 +29,8 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 | `QuestionBankIDE.svelte` | Lazy JSON banks + WASM stack + reading answers + Check (AI) |
 | `MLPracticeIDE.svelte` | AI ML scripts via `static/ml-py-worker.js`; exercise chips, hints, soft expected-output check, draft persistence |
 | `SimulationIDE.svelte` | HLD architecture lab + run engine + Check (AI) |
-| `TopologyBuilder.svelte` | Visual system-design canvas; catalog + inspector + `.flow` sync |
+| `TopologyBuilder.svelte` | Visual system-design canvas; SVG icon catalog + hover info + `.flow` sync |
+| `ArchitectureIcon.svelte` | Diagram-style SVG symbols for HLD components (`componentIcons.js`) |
 
 ## App chrome / assistant
 

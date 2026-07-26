@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { allLessons } from '../src/lib/data/courseData.js'
 import { getSimulationLesson } from '../src/lib/data/simulationLessons.js'
 import { COMPONENT_CATALOG, resolvePhysics } from '../src/lib/simulation/componentCatalog.js'
+import { getIconDef, resolveIconId } from '../src/lib/simulation/componentIcons.js'
 import { compileFlowGraph, serializeFlowGraph } from '../src/lib/simulation/graphCompiler.js'
 import { runSimulation } from '../src/lib/simulation/engine.js'
 import { inferStagesFromGraph } from '../src/lib/simulation/pathInference.js'
@@ -140,6 +141,10 @@ test('component catalog covers core system design building blocks', () => {
   assert.equal(resolvePhysics('cdn'), 'cache')
   assert.equal(resolvePhysics('load-balancer'), 'service')
   assert.equal(COMPONENT_CATALOG.every((entry) => entry.short && entry.whenToUse.length && entry.diagram), true)
+  assert.equal(
+    COMPONENT_CATALOG.every((entry) => getIconDef(entry.icon).paths.length > 0 && resolveIconId(entry.id)),
+    true
+  )
 })
 
 test('path inference derives cache-miss and async stages from the diagram', () => {

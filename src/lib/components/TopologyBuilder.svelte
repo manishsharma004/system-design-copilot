@@ -2,7 +2,7 @@
 <script>
   import { onMount } from 'svelte'
   import { base } from '$app/paths'
-  import MermaidDiagram from '$lib/components/MermaidDiagram.svelte'
+  import ArchitectureIcon from '$lib/components/ArchitectureIcon.svelte'
   import { codiconSvg } from '$lib/editor/codicons'
   import {
     COMPONENT_CATEGORIES,
@@ -29,8 +29,10 @@
   /** @type {((detail: { diagramText: string, layoutJson: string }) => void) | null} */
   export let onDiagramChange = null
 
-  const NODE_WIDTH = 168
-  const NODE_HEIGHT = 64
+  /** Diagram-style nodes: icon on top, label underneath (like HLD reference diagrams). */
+  const NODE_WIDTH = 120
+  const NODE_HEIGHT = 104
+  const ICON_SIZE = 44
 
   /** @type {'select' | 'connect' | 'pan'} */
   let mode = 'select'
@@ -58,6 +60,10 @@
   let hoveredType = ''
   let dragPaletteType = ''
   let connectAsync = false
+  /** @type {string} */
+  let hoveredNodeId = ''
+  /** @type {{ x: number, y: number } | null} */
+  let hoverTooltipPos = null
 
   $: compiled = compileFlowGraph(diagramText || '')
   $: parsedLayout = parseLayoutJson(layoutJson)
@@ -78,6 +84,12 @@
     ? getComponent(selectedNode.type) ?? syntheticComponent(selectedNode.type)
     : pendingNodeType || hoveredType
       ? getComponent(pendingNodeType || hoveredType)
+      : null
+  $: hoveredNode = nodes.find((node) => node.id === hoveredNodeId) ?? null
+  $: hoverInfo = hoveredNode
+    ? getComponent(hoveredNode.type) ?? syntheticComponent(hoveredNode.type)
+    : hoveredType
+      ? getComponent(hoveredType)
       : null
   $: modeHint = mode === 'connect'
     ? connectSourceId
@@ -110,7 +122,8 @@
       defaults,
       color: style.fill,
       accent: style.accent,
-      icon: style.icon
+      icon: style.icon,
+      diagram: { kind: 'svg', caption: `${getTypeLabel(type)} architecture symbol.` }
     }
   }
 
@@ -229,6 +242,25 @@
     const nodeLayout = layout[nodeId] ?? { x: 0, y: 0 }
     dragOffsetX = point.x - (nodeLayout.x ?? 0)
     dragOffsetY = point.y - (nodeLayout.y ?? 0)
+  }
+
+  /** @param {string} nodeId @param {MouseEvent} event */
+  function handleNodeHover(nodeId, event) {
+    hoveredNodeId = nodeId
+    const rect = canvasEl?.getBoundingClientRect()
+    if (!rect) {
+      hoverTooltipPos = null
+      return
+    }
+    hoverTooltipPos = {
+      x: Math.min(rect.width - 240, Math.max(8, event.clientX - rect.left + 12)),
+      y: Math.min(rect.height - 120, Math.max(8, event.clientY - rect.top + 12))
+    }
+  }
+
+  function clearNodeHover() {
+    hoveredNodeId = ''
+    hoverTooltipPos = null
   }
 
   /** @param {string} from @param {string} to @param {boolean} isAsync */
@@ -499,13 +531,16 @@
           class:active={pendingNodeType === component.id}
           style={`--chip-accent:${component.accent}; --chip-fill:${component.color}`}
           draggable="true"
+          title={`${component.label}: ${component.short}`}
           ondragstart={(event) => handlePaletteDragStart(event, component.id)}
           ondragend={() => (dragPaletteType = '')}
           onmouseenter={() => (hoveredType = component.id)}
           onmouseleave={() => (hoveredType = '')}
           onclick={() => armNodeType(component.id)}
         >
-          <span class="topology-palette-icon">{component.icon}</span>
+          <span class="topology-palette-icon" aria-hidden="true">
+            <ArchitectureIcon type={component.icon} color={component.accent} size={28} title={component.label} />
+          </span>
           <span class="topology-palette-copy">
             <span class="topology-palette-label">{component.label}</span>
             <span class="topology-palette-short">{component.short}</span>
@@ -581,9 +616,9 @@
           {@const to = layout[link.to]}
           {#if from && to}
             {@const x1 = (from.x ?? 0) + NODE_WIDTH}
-            {@const y1 = (from.y ?? 0) + NODE_HEIGHT / 2}
+            {@const y1 = (from.y ?? 0) + 40}
             {@const x2 = to.x ?? 0}
-            {@const y2 = (to.y ?? 0) + NODE_HEIGHT / 2}
+            {@const y2 = (to.y ?? 0) + 40}
             {@const mx = (x1 + x2) / 2}
             {@const my = (y1 + y2) / 2}
             <path
@@ -612,14 +647,28 @@
             class:warm={utilClass(node) === 'warm'}
             transform={`translate(${pos.x}, ${pos.y})`}
             onpointerdown={(event) => handleNodePointerDown(node.id, event)}
+            onpointerenter={(event) => handleNodeHover(node.id, event)}
+            onpointerleave={clearNodeHover}
+            onpointermove={(event) => handleNodeHover(node.id, event)}
           >
-            <rect width={NODE_WIDTH} height={NODE_HEIGHT} rx="8" style={`fill:${style.fill}; stroke:${style.accent}`} />
-            <rect class="topology-node-accent" x="0" y="0" width="4" height={NODE_HEIGHT} rx="2" style={`fill:${style.accent}`} />
-            <text x="14" y="18" class="topology-node-icon" style={`fill:${style.accent}`}>{style.icon}</text>
-            <text x="14" y="38" class="topology-node-label">{node.label}</text>
-            <text x="14" y="54" class="topology-node-type">{getTypeLabel(node.type)}</text>
+            <title>{`${node.label} — ${getTypeLabel(node.type)}`}</title>
+            <rect class="topology-node-plate" width={NODE_WIDTH} height={NODE_HEIGHT} rx="10" style={`fill:${style.fill}; stroke:${style.accent}`} />
+            <rect
+              class="topology-node-icon-well"
+              x="12"
+              y="8"
+              width={NODE_WIDTH - 24}
+              height="52"
+              rx="8"
+              style={`fill:rgba(0,0,0,0.22); stroke:${style.accent}`}
+            />
+            <g transform={`translate(${(NODE_WIDTH - ICON_SIZE) / 2}, 12)`}>
+              <ArchitectureIcon type={style.icon} color={style.accent} size={ICON_SIZE} nested title={getTypeLabel(node.type)} />
+            </g>
+            <text x={NODE_WIDTH / 2} y="78" text-anchor="middle" class="topology-node-label">{node.label}</text>
+            <text x={NODE_WIDTH / 2} y="94" text-anchor="middle" class="topology-node-type">{getTypeLabel(node.type)}</text>
             {#if metric}
-              <g transform={`translate(${NODE_WIDTH - 46}, 8)`}>
+              <g transform={`translate(${NODE_WIDTH - 44}, 4)`}>
                 <rect class="topology-util-badge" width="40" height="16" rx="8" />
                 <text class="topology-util-text" x="20" y="12" text-anchor="middle">{formatUtil(metric.utilization)}</text>
               </g>
@@ -627,6 +676,34 @@
           </g>
         {/each}
       </svg>
+
+      {#if hoverInfo && hoverTooltipPos && (hoveredNodeId || hoveredType)}
+        <div
+          class="topology-hover-card"
+          style={`left:${hoverTooltipPos.x}px; top:${hoverTooltipPos.y}px; --hover-accent:${hoverInfo.accent}`}
+          role="tooltip"
+        >
+          <div class="topology-hover-card-head">
+            <ArchitectureIcon type={hoverInfo.icon} color={hoverInfo.accent} size={36} title={hoverInfo.label} />
+            <div>
+              <strong>{hoverInfo.label}</strong>
+              <p>{hoverInfo.short}</p>
+            </div>
+          </div>
+          <p class="topology-hover-meta">
+            {hoverInfo.defaults.latencyMs} ms · {hoverInfo.defaults.capacityRps.toLocaleString()} rps
+            {#if hoverInfo.defaults.hitRate !== undefined}
+              · hit {(hoverInfo.defaults.hitRate * 100).toFixed(0)}%
+            {/if}
+          </p>
+          {#if hoverInfo.whenToUse?.[0]}
+            <p class="topology-hover-tip"><span>Use</span> {hoverInfo.whenToUse[0]}</p>
+          {/if}
+          {#if hoverInfo.pitfalls?.[0]}
+            <p class="topology-hover-tip warn"><span>Watch</span> {hoverInfo.pitfalls[0]}</p>
+          {/if}
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -664,10 +741,17 @@
       {:else if selectedNode}
         <div class="topology-inspector-body">
           <p class="eyebrow">Node</p>
-          <h3>{selectedNode.label}</h3>
-          {#if inspectorComponent}
-            <p class="topology-inspector-short">{inspectorComponent.short}</p>
-          {/if}
+          <div class="topology-inspector-hero">
+            <div class="topology-inspector-glyph" style={`--chip-accent:${getTypeStyle(selectedNode.type).accent}; --chip-fill:${getTypeStyle(selectedNode.type).fill}`}>
+              <ArchitectureIcon type={getTypeStyle(selectedNode.type).icon} color={getTypeStyle(selectedNode.type).accent} size={48} title={selectedNode.label} />
+            </div>
+            <div>
+              <h3>{selectedNode.label}</h3>
+              {#if inspectorComponent}
+                <p class="topology-inspector-short">{inspectorComponent.short}</p>
+              {/if}
+            </div>
+          </div>
           <div class="topology-properties-grid">
             <label>
               <span>Label</span>
@@ -715,26 +799,25 @@
       {:else if inspectorComponent}
         <div class="topology-inspector-body">
           <p class="eyebrow">Component</p>
-          <h3>{inspectorComponent.label}</h3>
-          <p class="topology-inspector-short">{inspectorComponent.short}</p>
+          <div class="topology-inspector-hero">
+            <div class="topology-inspector-glyph" style={`--chip-accent:${inspectorComponent.accent}; --chip-fill:${inspectorComponent.color}`}>
+              <ArchitectureIcon type={inspectorComponent.icon} color={inspectorComponent.accent} size={56} title={inspectorComponent.label} />
+            </div>
+            <div>
+              <h3>{inspectorComponent.label}</h3>
+              <p class="topology-inspector-short">{inspectorComponent.short}</p>
+            </div>
+          </div>
           {#if inspectorComponent.diagram?.kind === 'primer'}
+            {@const primer = /** @type {{ kind: 'primer', src: string, alt: string, caption?: string }} */ (inspectorComponent.diagram)}
             <figure class="topology-diagram">
-              <img src={`${base}${inspectorComponent.diagram.src}`} alt={inspectorComponent.diagram.alt} loading="lazy" />
-              {#if inspectorComponent.diagram.caption}
-                <figcaption>{inspectorComponent.diagram.caption}</figcaption>
+              <img src={`${base}${primer.src}`} alt={primer.alt} loading="lazy" />
+              {#if primer.caption}
+                <figcaption>{primer.caption}</figcaption>
               {/if}
             </figure>
-          {:else if inspectorComponent.diagram?.kind === 'mermaid'}
-            <div class="topology-diagram mermaid">
-              <MermaidDiagram
-                variant="extension"
-                diagram={{
-                  title: inspectorComponent.label,
-                  caption: inspectorComponent.diagram.caption,
-                  code: inspectorComponent.diagram.code
-                }}
-              />
-            </div>
+          {:else if inspectorComponent.diagram?.caption}
+            <p class="topology-diagram-caption">{inspectorComponent.diagram.caption}</p>
           {/if}
           <div class="topology-facts">
             <div>
@@ -887,14 +970,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.1rem;
-    height: 1.5rem;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.25);
-    color: var(--chip-accent, #696cff);
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid color-mix(in srgb, var(--chip-accent, #696cff) 45%, transparent);
   }
 
   .topology-palette-copy {
@@ -1033,16 +1113,21 @@
     transform-origin: 0 0;
   }
 
-  .topology-node rect {
-    stroke-width: 1.5;
+  .topology-node-plate {
+    stroke-width: 1.6;
   }
 
-  .topology-node.selected rect {
-    stroke-width: 2.5;
-    filter: drop-shadow(0 0 6px rgba(0, 122, 204, 0.45));
+  .topology-node-icon-well {
+    stroke-width: 1;
+    opacity: 0.95;
   }
 
-  .topology-node.connect-source rect {
+  .topology-node.selected .topology-node-plate {
+    stroke-width: 2.6;
+    filter: drop-shadow(0 0 8px rgba(0, 122, 204, 0.45));
+  }
+
+  .topology-node.connect-source .topology-node-plate {
     stroke: #73c991 !important;
   }
 
@@ -1058,21 +1143,84 @@
     fill: rgba(52, 211, 153, 0.85);
   }
 
-  .topology-node-icon {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-
   .topology-node-label {
     fill: var(--ide-topology-label, #f3f4f6);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 650;
   }
 
   .topology-node-type {
     fill: var(--ide-topology-type, #9ca3af);
     font-size: 9px;
+  }
+
+  .topology-hover-card {
+    position: absolute;
+    z-index: 5;
+    width: min(16.5rem, calc(100% - 1rem));
+    pointer-events: none;
+    border: 1px solid color-mix(in srgb, var(--hover-accent, #696cff) 55%, #2b2b2b);
+    border-radius: 8px;
+    background: rgba(24, 24, 28, 0.96);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    padding: 0.55rem 0.65rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .topology-hover-card-head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+    align-items: start;
+  }
+
+  .topology-hover-card-head strong {
+    display: block;
+    font-size: 0.8rem;
+  }
+
+  .topology-hover-card-head p,
+  .topology-hover-meta,
+  .topology-hover-tip {
+    margin: 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+    color: var(--vscode-descriptionForeground, #9ca3af);
+  }
+
+  .topology-hover-tip span {
+    color: var(--hover-accent, #696cff);
+    font-weight: 700;
+    margin-right: 0.25rem;
+  }
+
+  .topology-hover-tip.warn span {
+    color: #fbbf24;
+  }
+
+  .topology-inspector-hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.55rem;
+    align-items: start;
+  }
+
+  .topology-inspector-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.2rem;
+    height: 4.2rem;
+    border-radius: 10px;
+    background: var(--chip-fill, #2b2c40);
+    border: 1px solid color-mix(in srgb, var(--chip-accent, #696cff) 50%, transparent);
+  }
+
+  .topology-diagram-caption {
+    margin: 0;
+    font-size: 0.68rem;
+    color: var(--vscode-descriptionForeground, #858585);
   }
 
   .topology-util-text {

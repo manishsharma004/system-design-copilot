@@ -5,8 +5,13 @@ HLD-only interactive lab: architect a topology on a visual canvas, run a workloa
 ## Entry points
 
 - UI: `SimulationIDE.svelte` + `TopologyBuilder.svelte`
+<<<<<<< HEAD
 - Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback (module blueprints include exhaustive HLD labs via `hldExhaustiveLabSimBlueprints.js`); every lab also gets a **Topology path** API (`deriveFromTopology`)
 - Catalog: `src/lib/simulation/componentCatalog.js` — full system-design palette (CDN, LB, gateway, DB, queue, stream, …) with primers / Mermaid diagrams
+=======
+- Data: `src/lib/data/simulationLessons.js` — authored labs + `buildGeneratedSimulationLesson()` fallback; every lab also gets a **Topology path** API (`deriveFromTopology`)
+- Catalog: `src/lib/simulation/componentCatalog.js` + SVG icons in `componentIcons.js` — full system-design palette (CDN, LB, gateway, DB, queue, stream, …) with diagram-style symbols and primers
+>>>>>>> 84849ff7 (Use diagram-style SVG icons for HLD simulation components)
 - Engine: `src/lib/simulation/` — `graphCompiler.js`, `pathInference.js`, `engine.js`, `scriptApi.js`, `diagnostics.js`
 - Session store: `stores/simulation.js` → localStorage `system-design-copilot-simulation-v1`
 
@@ -37,9 +42,10 @@ Registry tag: `native-flow` in `browserRuntimes.js` (plain JS, not WASM).
 
 `TopologyBuilder` is a three-pane architecting surface:
 
-- Left: categorized component catalog (drag or click-to-place) with search
-- Center: canvas (select / connect / pan, async-link toggle, curved edges, auto-fit)
-- Right: inspector — component primers/diagrams, when-to-use, pitfalls, node/link props
+- Left: categorized component catalog (drag or click-to-place) with SVG architecture icons
+- Center: canvas with diagram-style nodes (icon + label), hover info cards, async links, auto-fit
+- Right: inspector — large icon, primer stills where available, when-to-use / pitfalls, node/link props
+- Prefer SVG architecture symbols over Mermaid for in-editor HLD chrome (`ArchitectureIcon.svelte`)
 
 ## Agent notes
 
