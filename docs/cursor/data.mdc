@@ -17,7 +17,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 |------|------|
 | `courseData.js` | Core HLD + LLD lessons |
 | `hldLearningExpansion.js` | HLD labs: systems fundamentals, reliability/observability with full on-page sections, code examples, and exercises |
-| `lldLearningExpansion.js` | LLD labs: design patterns, project labs |
+| `lldLearningExpansion.js` | LLD labs: design patterns + project labs with full OOP examples and exercises |
 | `dsaCourseData.js` | DSA interview practice modules |
 | `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding exercises |
 | `aiEngineerCourseData.js` | AI modules; many lessons include runnable `exercises[]` |
