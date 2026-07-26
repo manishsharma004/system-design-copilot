@@ -5,7 +5,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 ## Assembly (`courseData.js`)
 
 - `siteOverview` — marketing copy, study tracks, study loop, reading list
-- `rawModules` — HLD; LLD modules inline in same file
+- `rawModules` / `rawLowLevelModules` — base HLD and LLD modules; merged with learning expansion modules before flow assembly
 - `flowDefinitions` → `courseFlows`, `modules`, `allLessons`, indexes
 - Helpers: `getFlowBySlug`, `getModuleBySlug`, `getLessonBySlug`, `getModuleProgress`, `getLessonPracticeSteps`, `getResumeLesson`
 
@@ -24,12 +24,12 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 ## Modules by flow
 
-- **HLD (9):** foundations, edge-and-routing, application-architecture, data-storage, performance-and-resilience, security-and-operations, distributed-systems, product-patterns, case-studies
-- **LLD (4):** lld-foundations, lld-modeling, lld-extensibility, lld-machine-coding
+- **HLD (11):** 9 base HLD modules plus systems-fundamentals-lab, reliability-observability-lab
+- **LLD (6):** 4 base LLD modules plus lld-design-patterns-lab, lld-project-labs
 - **Standalone HLD learning expansion (2):** systems-fundamentals-lab, reliability-observability-lab
 - **Standalone LLD learning expansion (2):** lld-design-patterns-lab, lld-project-labs
-- **DSA (4):** dsa-foundations, dsa-core-patterns, dsa-company-rounds, dsa-mock-loops
-- **AI (8):** ml-foundations, deep-learning, llms-and-nlp, prompt-engineering-and-rag, ai-agents, mlops-and-deployment, ai-safety-and-ethics, data-engineering-for-ml
+- **DSA (5):** 4 base DSA modules plus dsa-concepts-lab
+- **AI (10):** 8 base AI modules plus ml-interactive-lab, deep-learning-from-scratch
 - **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
 
 ## Lesson shape (typical)
@@ -41,7 +41,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 ## Deep knowledge (`lessonDeepKnowledge.js`)
 
 - `getLessonDeepKnowledge(lessonId)` — curated deeper insights + external references per lesson
-- Flow-specific source files under `deepKnowledge/` (`hldDeepKnowledge.js`, `lldDsaDeepKnowledge.js`, `aiDeepKnowledge.js`, `questionBankDeepKnowledge.js`)
+- Flow-specific source files under `deepKnowledge/` (`hldDeepKnowledge.js`, `lldDsaDeepKnowledge.js`, `aiDeepKnowledge.js`, `learningExpansionDeepKnowledge.js`, `questionBankDeepKnowledge.js`)
 - Each entry: `insights[]` (`heading`, `body`) and `references[]` (`title`, `url`, `source`, `note`)
 - Loaded in lesson route (`+page.js`) and rendered in the lesson page **Deep dive** section
 

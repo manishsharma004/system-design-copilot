@@ -1,6 +1,10 @@
 import { rawDsaModules } from './dsaCourseData.js';
+import { rawDsaLearningModules } from './dsaLearningExpansion.js';
 import { rawAiEngineerModules } from './aiEngineerCourseData.js';
+import { rawAiLearningModules } from './aiLearningExpansion.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
+import { rawHldLearningModules } from './hldLearningExpansion.js';
+import { rawLldLearningModules } from './lldLearningExpansion.js';
 
 export const siteOverview = {
   "title": "System Design Copilot",
@@ -4155,6 +4159,26 @@ const rawLowLevelModules = [
   }
 ];
 
+const hldModules = [...rawModules, ...rawHldLearningModules];
+const lldModules = [...rawLowLevelModules, ...rawLldLearningModules];
+const dsaModules = [...rawDsaModules, ...rawDsaLearningModules];
+const aiModules = [...rawAiEngineerModules, ...rawAiLearningModules];
+
+const dsaPracticeQuestionHighlightsBySlug = Object.fromEntries(
+  rawDsaModules
+    .flatMap((module) => module.lessons)
+    .map((lesson) => [lesson.slug, lesson.questionHighlights ?? []])
+);
+
+const dsaExpansionPracticeSourceBySlug = {
+  'complexity-and-algorithmic-thinking': 'arrays-hashmaps-and-two-pointers',
+  'hash-tables-and-memory-layout': 'arrays-hashmaps-and-two-pointers',
+  'trees-graphs-mental-models': 'trees-heaps-and-intro-dp',
+  'sorting-and-divide-and-conquer': 'linked-lists-binary-search-and-ordering',
+  'shortest-paths-and-union-find': 'graphs-greedy-and-harder-dp',
+  'dynamic-programming-cookbook': 'graphs-greedy-and-harder-dp'
+};
+
 const flowDefinitions = [
   {
     slug: 'high-level-design',
@@ -4171,7 +4195,7 @@ const flowDefinitions = [
       'Product-shaped case studies that rehearse full interview narratives'
     ],
     outcome: 'You should be able to drive a whiteboard-style conversation from user needs to deep trade-off discussion without drifting into generic component lists.',
-    moduleSlugs: rawModules.map((module) => module.slug)
+    moduleSlugs: hldModules.map((module) => module.slug)
   },
   {
     slug: 'low-level-design',
@@ -4188,7 +4212,7 @@ const flowDefinitions = [
       'Machine-coding execution, testing seams, concurrency, and scale follow-ups'
     ],
     outcome: 'You should be able to produce a clean class design quickly, justify pattern choices, and extend the design under interviewer follow-ups without rewriting everything.',
-    moduleSlugs: rawLowLevelModules.map((module) => module.slug)
+    moduleSlugs: lldModules.map((module) => module.slug)
   },
   {
     slug: 'data-structures-and-algorithms',
@@ -4205,7 +4229,7 @@ const flowDefinitions = [
       'Company-specific practice sets built from Amazon, Google, Microsoft, Meta, and Apple question banks'
     ],
     outcome: 'You should be able to identify common coding patterns quickly, explain trade-offs clearly, and complete structured mock rounds with less drift and fewer implementation mistakes.',
-    moduleSlugs: rawDsaModules.map((module) => module.slug)
+    moduleSlugs: dsaModules.map((module) => module.slug)
   },
   {
     slug: 'ai-engineer',
@@ -4222,7 +4246,7 @@ const flowDefinitions = [
       'MLOps, model serving, monitoring, and responsible AI practices'
     ],
     outcome: 'You should be able to design, build, deploy, and monitor AI-powered applications from prototype through production, making informed tradeoffs between model quality, cost, latency, and safety.',
-    moduleSlugs: rawAiEngineerModules.map((module) => module.slug)
+    moduleSlugs: aiModules.map((module) => module.slug)
   },
   {
     slug: 'interview-questions',
@@ -4249,6 +4273,15 @@ function normalizeModule(module, flowSlug) {
     flowSlug,
     lessons: module.lessons.map((lesson, index) => ({
       ...lesson,
+      ...(flowSlug === 'data-structures-and-algorithms' && !lesson.questionHighlights
+        ? {
+            practiceMode: 'coding',
+            runtimeTarget: 'browser-wasm',
+            questionHighlights:
+              dsaPracticeQuestionHighlightsBySlug[dsaExpansionPracticeSourceBySlug[lesson.slug]] ??
+              dsaPracticeQuestionHighlightsBySlug['arrays-hashmaps-and-two-pointers']
+          }
+        : {}),
       order: lesson.order ?? index + 1,
       id: lesson.id ?? `${module.slug}/${lesson.slug}`,
       moduleSlug: module.slug,
@@ -4258,10 +4291,10 @@ function normalizeModule(module, flowSlug) {
 }
 
 export const modules = [
-  ...rawModules.map((module) => normalizeModule(module, 'high-level-design')),
-  ...rawLowLevelModules.map((module) => normalizeModule(module, 'low-level-design')),
-  ...rawDsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms')),
-  ...rawAiEngineerModules.map((module) => normalizeModule(module, 'ai-engineer')),
+  ...hldModules.map((module) => normalizeModule(module, 'high-level-design')),
+  ...lldModules.map((module) => normalizeModule(module, 'low-level-design')),
+  ...dsaModules.map((module) => normalizeModule(module, 'data-structures-and-algorithms')),
+  ...aiModules.map((module) => normalizeModule(module, 'ai-engineer')),
   ...rawQuestionBankModules.map((module) => normalizeModule(module, 'interview-questions'))
 ];
 
