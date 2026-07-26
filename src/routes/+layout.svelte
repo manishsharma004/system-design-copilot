@@ -9,6 +9,7 @@
   import { getVisibleSidebarModules } from '$lib/sidebar';
   import { progress } from '$lib/stores/progress';
   import PwaUpdateBanner from '$lib/components/PwaUpdateBanner.svelte';
+  import ThemePicker from '$lib/components/ThemePicker.svelte';
   import { derived } from 'svelte/store';
   import { onMount } from 'svelte';
   import { pwaInfo } from 'virtual:pwa-info';
@@ -198,6 +199,7 @@
         <strong>{siteOverview.title}</strong>
       </a>
       <div class="app-header-actions">
+        <ThemePicker />
         <span class="pill topbar-progress" title="Lesson completion progress">{progressLabel}</span>
         <button class="nav-toggle sidebar-toggle" type="button" aria-expanded={sidebarVisible} onclick={toggleNavigation}>
           {#if isDesktop}
