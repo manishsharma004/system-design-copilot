@@ -15,9 +15,11 @@
 .page pre {
   display: block;
   max-height: none;
-  min-height: 0;
+  min-height: min-content;
   height: auto;
-  overflow: auto;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: visible;
   white-space: pre-wrap;
   word-break: break-word;
 }
