@@ -22,6 +22,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `dsaCourseData.js` | DSA interview practice modules with study-bridge sections linking back to labs |
 | `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding/design exercises |
 | `dsaPatternsLearningExpansion.js` | DSA core pattern + search labs (arrays, linked lists, binary search, windows, heaps, backtracking) |
+| `dsaInterviewEssentialsExpansion.js` | Companion DSA essentials lab content for tries, monotonic stacks/deques, bits, string hashing, and LRU design |
 | `aiEngineerCourseData.js` | AI modules; many lessons include runnable `exercises[]` |
 | `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs with full on-page teaching sections, code examples, and exercises |
 | `learningExpansionInteractive.js` | On-page interactive labs for all 39 HLD, LLD, DSA, and AI learning-expansion lessons; merged into `interactiveLessons.js` |
@@ -58,7 +59,12 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
+<<<<<<< HEAD
 - `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js` for all 39 expansion lessons
+=======
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js` for all 30 expansion lessons
+- `_dsaEssentialsInteractiveSnippet.js` and `_dsaEssentialsDeepKnowledgeSnippet.js` — companion interactive/deep-dive records keyed by `dsa-interview-essentials-lab/{lesson}`
+>>>>>>> 4c62ae2c (Add DSA interview essentials companion content)
 - Expansion lessons include on-page teaching sections, code examples, exercises, interactive topic labs, and deep-dive essays (not reference-only), including `learningExpansionInteractive.js`
 - `simulationLessons.js` — authored + generated HLD sims; module blueprints include the three exhaustive HLD lab modules
 - `scripts/hld_lab_content.py` + `scripts/build_hld_exhaustive_labs.py` — author/regenerate exhaustive HLD lab payloads
