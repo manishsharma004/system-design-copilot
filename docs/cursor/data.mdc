@@ -14,6 +14,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | File | Flow |
 |------|------|
 | `courseData.js` | HLD + LLD lessons |
+| `hldLearningExpansion.js` | Standalone HLD learning expansion modules (`rawHldLearningModules`) |
+| `lldLearningExpansion.js` | Standalone LLD learning expansion modules (`rawLldLearningModules`) |
 | `dsaCourseData.js` | DSA modules; highlights from embedded/company JSON |
 | `aiEngineerCourseData.js` | AI modules; lessons may include `exercises[]` |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
@@ -22,6 +24,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 - **HLD (9):** foundations, edge-and-routing, application-architecture, data-storage, performance-and-resilience, security-and-operations, distributed-systems, product-patterns, case-studies
 - **LLD (4):** lld-foundations, lld-modeling, lld-extensibility, lld-machine-coding
+- **Standalone HLD learning expansion (2):** systems-fundamentals-lab, reliability-observability-lab
+- **Standalone LLD learning expansion (2):** lld-design-patterns-lab, lld-project-labs
 - **DSA (4):** dsa-foundations, dsa-core-patterns, dsa-company-rounds, dsa-mock-loops
 - **AI (8):** ml-foundations, deep-learning, llms-and-nlp, prompt-engineering-and-rag, ai-agents, mlops-and-deployment, ai-safety-and-ethics, data-engineering-for-ml
 - **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
