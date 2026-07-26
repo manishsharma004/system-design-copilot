@@ -5,13 +5,22 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 ## Markdown Practice IDE (HLD / LLD / AI)
 
 - Component: `PracticeIDE.svelte` → `IDEWorkspace` + Monaco markdown
-- Steps: `getLessonPracticeSteps(lesson)` in `courseData.js` (opening / design / review)
-- HLD learning labs (`systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`) use lab-oriented structures that pull design-exercise prompts and `likelyAnswerPoints` into guardrails
-- AI lessons use ML-oriented structures
+- Steps: `getLessonPracticeSteps(lesson)` in `courseData.js`
+  - HLD case studies: architecture-shaped opening / design / review
+  - HLD learning labs (`systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`): lab-oriented structures that pull design-exercise prompts and `likelyAnswerPoints` into guardrails
+  - LLD: 5-10 min framing → working happy-path object model & APIs → evaluator review (`buildLldPracticeTemplate` with Python class sketch + demo-driver prompt)
+  - AI: ML-oriented concept / implementation / evaluation structures
 - Per-phase mock timer: 25 / 35 / 45 min targets (`practicePhaseLimits.js`); persisted via `practiceAnswers.startAttempt` on step keys
 - Workspace id: `practice:{lesson.id}` (IndexedDB)
 - Drafts: `practiceAnswers` store (`persistence.mdc`)
 - Optional coach: `LlmAssistantPanel` in IDEWorkspace `editor-chrome` — **Check (AI)** + **Configure model** above Monaco (`llm.mdc`)
+
+## LLD coding + design drills
+
+- Every LLD lesson includes `exercises[]` (coding + design); surfaced via `AiLessonStudyGuide.svelte`
+- Current LLD bar emphasizes a runnable happy path before elegance, then thin seams, edge cases, and follow-up extensibility
+- Coding starters run in `MLPracticeIDE.svelte` (Pyodide) when `type: 'coding'` and `starterCode` are present
+- Interactive topic labs for all LLD lessons via `lldInteractiveLabs.js` → `LessonExplorer.svelte`
 
 ## DSA Practice IDE
 

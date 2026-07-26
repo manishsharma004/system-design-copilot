@@ -1,6 +1,7 @@
 import { learningExpansionInteractive } from './learningExpansionInteractive.js';
 import { aiInteractiveExtras } from './aiInteractiveExtras.js';
 import { mergeInteractiveCurrency } from './aiInteractiveCurrency2026.js';
+import { lldInteractiveLabs } from './lldInteractiveLabs.js';
 
 /** @type {Record<string, any>} */
 export const interactiveLessons = mergeInteractiveCurrency({
@@ -1878,7 +1879,8 @@ export const interactiveLessons = mergeInteractiveCurrency({
     }
   },
   ...learningExpansionInteractive,
-  ...aiInteractiveExtras
+  ...aiInteractiveExtras,
+  ...lldInteractiveLabs
 });
 
 /** @param {string} lessonId */

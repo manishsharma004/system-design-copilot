@@ -244,12 +244,12 @@ if __name__ == "__main__":
     {
       heading: 'Singleton: constrain shared resources carefully',
       body: paragraphs(
-        'Singleton restricts a class to one instance in a process. It can fit a true process-wide resource such as a registry, metrics sink, or expensive client whose lifecycle is owned by application startup. The risk is that Singleton turns dependency access into invisible global state.',
-        'A production-minded design separates uniqueness from access. The object may be unique, but callers can still receive it explicitly through dependency injection. That makes tests able to pass fakes, makes lifecycle visible, and avoids request-specific or tenant-specific state leaking through a process-wide object.'
+        'Singleton restricts a class to one instance in a process. It can fit a true process-wide resource such as a registry, metrics sink, or expensive client whose lifecycle is owned by application startup. The risk is that Singleton turns dependency access into invisible global state, so in most current codebases it is a last resort rather than a default pattern.',
+        'A production-minded design separates uniqueness from access. The object may be unique, but callers can still receive it explicitly through process-scoped dependency injection or a composition root. That makes tests able to pass fakes, makes lifecycle visible, and avoids request-specific or tenant-specific state leaking through a process-wide object.'
       ),
       bullets: [
         'Use Singleton sparingly for true process-wide invariants.',
-        'Prefer dependency injection for shared clients and configuration snapshots.',
+        'Prefer process-scoped dependency injection for shared clients and configuration snapshots.',
         'Define test reset and shutdown behavior if a singleton mutates state.',
         'Never store request-specific data in a singleton.'
       ],
@@ -1187,7 +1187,7 @@ const parkingLotLesson = {
       heading: 'Requirements: prove the core workflow first',
       body: paragraphs(
         'Start with the visible flow: a vehicle enters, receives a ticket, occupies a compatible spot, pays based on duration and policy, and exits after validation. Add constraints such as floors, spot types, gates, out-of-service spots, lost tickets, and concurrent entry.',
-        'Good requirements prevent over-modeling. Reservations, monthly passes, EV charging, dynamic pricing, and plate recognition are valuable follow-ups, but the initial system should prove enter, pay, and exit with no double assignment.'
+        'Good requirements prevent over-modeling. Reservations, monthly passes, EV charging, dynamic pricing, and plate recognition are valuable follow-ups, but the initial system should prove enter, pay, and exit with no double assignment. In current interviews, it is worth calling out that concurrent gate entry and lost-ticket or retry handling are expected follow-up questions, not version-one blockers.'
       ),
       bullets: [
         'Functional requirements: enter, assign spot, issue ticket, calculate fee, pay, release spot.',
@@ -1634,7 +1634,7 @@ const elevatorLesson = {
       heading: 'Requirements: separate passenger actions from system decisions',
       body: paragraphs(
         'Passengers make hall calls from a floor and choose destinations inside a car. The system assigns cars, moves them, opens doors at stops, and handles maintenance or emergency modes. The core version should support multiple cars, multiple floors, up/down hall requests, and car-panel destination requests.',
-        'Do not begin with perfect real-world scheduling. First prove a car can accept stops, move one tick at a time, stop at requested floors, and that a dispatcher can assign a hall call to a reasonable car. Then discuss zoning, destination control, capacity, and peak traffic.'
+        'Do not begin with perfect real-world scheduling. First prove a car can accept stops, move one tick at a time, stop at requested floors, and that a dispatcher can assign a hall call to a reasonable car. Then discuss zoning, destination control, capacity, and peak traffic. In current rounds, it is also useful to mention follow-ups such as concurrent button presses, overloaded cars, and scheduler extensions without front-loading them into version one.'
       ),
       bullets: [
         'Functional requirements: hall call, car request, dispatch, move, open/close doors, maintenance mode.',

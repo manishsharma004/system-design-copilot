@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allLessons, courseFlows, getFlowBySlug, getLessonBySlug, getLessonPracticeSteps, getModulesByFlow, modules, siteOverview } from '../courseData.js';
 import { getInteractiveLesson } from '../src/lib/data/interactiveLessons.js';
+import { lldAdvancedInteractive, lldCoreInteractive, lldInteractiveLabs } from '../src/lib/data/lldInteractiveLabs.js';
 import { buildLessonAnswerContext, getLikelyAnswerPoints } from '../src/lib/interviewAnswers.js';
 import { loadLessonSolution } from '../src/lib/data/solutionLoader.js';
 
@@ -90,7 +91,7 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
   assert.match(aiFlow.title, /AI Engineer/i);
   assert.match(questionBankFlow.title, /question bank/i);
   assert.ok(highLevelFlow.modules.length >= 14);
-  assert.ok(lowLevelFlow.modules.length >= 6);
+  assert.ok(lowLevelFlow.modules.length >= 9);
   assert.ok(dsaFlow.modules.length >= 6);
   assert.ok(aiFlow.modules.length >= 10);
   assert.ok(questionBankFlow.modules.length >= 4);
@@ -115,7 +116,12 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
     'Strategy, factory, and builder patterns in interviews',
     'Concurrency follow-ups and bridging into scale',
     'Creational patterns in practice',
-    'Parking lot design lab'
+    'Parking lot design lab',
+    'SOLID principles in practice',
+    'LRU cache design lab',
+    'Rate limiter design lab',
+    'Chess and board-game design lab',
+    'Movie booking and Splitwise design lab'
   ].forEach((title) => assert.ok(lowLevelLessonTitles.has(title), `missing LLD lesson: ${title}`));
 
   const dsaLessonTitles = new Set(getModulesByFlow('data-structures-and-algorithms').flatMap((module) => module.lessons.map((lesson) => lesson.title)));
@@ -272,6 +278,9 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'distributed-systems-lab',
     'lld-design-patterns-lab',
     'lld-project-labs',
+    'lld-solid-principles-lab',
+    'lld-machine-coding-classics',
+    'lld-hot-path-labs',
     'dsa-concepts-lab',
     'dsa-algorithms-lab',
     'dsa-patterns-lab',
@@ -285,7 +294,7 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'llmops-eval-lab'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 54);
+  assert.equal(expansionLessons.length, 62);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
@@ -300,6 +309,52 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     assert.ok(interactive.decisionGuide?.options?.length >= 2, `missing decision guide for ${lesson.id}`);
     assert.ok(interactive.caseStudy?.steps?.length >= 4, `missing case study for ${lesson.id}`);
     assert.ok(interactive.mermaid?.code, `missing mermaid diagram for ${lesson.id}`);
+  });
+});
+
+test('LLD interactive labs cover 12 core and 8 advanced lesson ids with full structure', () => {
+  const coreIds = [
+    'lld-foundations/lld-problem-framing',
+    'lld-foundations/responsibilities-and-interfaces',
+    'lld-foundations/validation-errors-and-state',
+    'lld-modeling/entities-value-objects-and-aggregates',
+    'lld-modeling/composition-vs-inheritance',
+    'lld-modeling/workflow-and-state-modeling',
+    'lld-extensibility/strategy-factory-and-builder',
+    'lld-extensibility/observer-dependency-inversion-and-events',
+    'lld-extensibility/repositories-caching-and-persistence-seams',
+    'lld-machine-coding/machine-coding-skeleton-and-iteration',
+    'lld-machine-coding/testing-seams-and-refactoring',
+    'lld-machine-coding/concurrency-followups-and-scale-bridges'
+  ];
+  const advancedIds = [
+    'lld-solid-principles-lab/solid-principles-in-practice',
+    'lld-solid-principles-lab/cohesion-coupling-and-grasp',
+    'lld-solid-principles-lab/dependency-injection-and-testability',
+    'lld-machine-coding-classics/chess-or-game-system-lab',
+    'lld-machine-coding-classics/atm-or-vending-machine-lab',
+    'lld-machine-coding-classics/movie-ticket-or-splitwise-lab',
+    'lld-hot-path-labs/lru-cache-design-lab',
+    'lld-hot-path-labs/rate-limiter-design-lab'
+  ];
+  const allIds = [...coreIds, ...advancedIds];
+
+  assert.equal(Object.keys(lldCoreInteractive).length, coreIds.length);
+  assert.deepEqual(new Set(Object.keys(lldCoreInteractive)), new Set(coreIds));
+  assert.equal(Object.keys(lldAdvancedInteractive).length, advancedIds.length);
+  assert.deepEqual(new Set(Object.keys(lldAdvancedInteractive)), new Set(advancedIds));
+  assert.equal(Object.keys(lldInteractiveLabs).length, 20);
+
+  allIds.forEach((lessonId) => {
+    const interactive = lldInteractiveLabs[lessonId];
+    assert.ok(interactive, `missing LLD interactive lab for ${lessonId}`);
+    assert.equal(getInteractiveLesson(lessonId), interactive);
+    assert.equal(interactive.takeaways?.length, 3, `expected three takeaways for ${lessonId}`);
+    assert.ok(interactive.examples?.length >= 2, `missing examples for ${lessonId}`);
+    assert.ok(interactive.decisionGuide?.options?.length >= 2, `missing decision guide options for ${lessonId}`);
+    assert.ok(interactive.caseStudy?.steps?.length >= 4, `missing case-study steps for ${lessonId}`);
+    assert.ok((interactive.caseStudy?.metrics?.length ?? 0) >= 3, `missing case-study metrics for ${lessonId}`);
+    assert.match(interactive.mermaid?.code ?? '', /flowchart (LR|TD)/, `missing valid mermaid flowchart for ${lessonId}`);
   });
 });
 
@@ -574,6 +629,37 @@ test('HLD learning lab practice steps use design exercises and likely answers', 
     steps[0].guardrails.some((item) => /access patterns|invariants|indexes/i.test(item)),
     'expected curated likelyAnswerPoints in opening guardrails'
   );
+});
+
+test('LLD lessons ship rich study material, coding drills, topic labs, and LLD practice steps', async () => {
+  const { getInteractiveLesson } = await import('../src/lib/data/interactiveLessons.js');
+  const lldLessons = getModulesByFlow('low-level-design').flatMap((module) => module.lessons);
+  assert.ok(lldLessons.length >= 26);
+
+  lldLessons.forEach((lesson) => {
+    assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
+    const bodyChars = lesson.sections.reduce((sum, section) => sum + (section.body?.length ?? 0), 0);
+    assert.ok(bodyChars >= 2500, `thin lesson body for ${lesson.id}`);
+    assert.ok(lesson.sections.filter((section) => section.codeExample).length >= 2, `missing code examples for ${lesson.id}`);
+    assert.ok((lesson.exercises ?? []).length >= 2, `missing exercises for ${lesson.id}`);
+    assert.ok((lesson.exercises ?? []).some((exercise) => exercise.type === 'coding'), `missing coding exercise for ${lesson.id}`);
+    assert.ok((lesson.exercises ?? []).some((exercise) => exercise.type === 'design'), `missing design exercise for ${lesson.id}`);
+
+    const interactive = getInteractiveLesson(lesson.id);
+    assert.ok(interactive, `missing interactive lab for ${lesson.id}`);
+    assert.ok(interactive.examples?.length >= 2, `missing interactive examples for ${lesson.id}`);
+    assert.ok(interactive.decisionGuide?.options?.length >= 2, `missing decision guide for ${lesson.id}`);
+    assert.ok(interactive.caseStudy?.steps?.length >= 4, `missing case study for ${lesson.id}`);
+    assert.ok(interactive.mermaid?.code, `missing mermaid diagram for ${lesson.id}`);
+
+    const steps = getLessonPracticeSteps(lesson);
+    assert.equal(steps[0].title, 'Frame the LLD prompt');
+    assert.ok(steps[0].structure.includes('Version-one scope'));
+    assert.equal(steps[1].title, 'Object model and APIs');
+    assert.ok(steps[1].structure.includes('Core classes and responsibilities'));
+    assert.equal(steps[2].title, 'Tests, concurrency, and follow-ups');
+    assert.match(steps[2].template, /Class sketch or core API/);
+  });
 });
 
 test('AI engineer interactive lessons cover every AI lesson', () => {

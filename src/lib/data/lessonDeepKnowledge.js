@@ -3,6 +3,7 @@ import { aiAdvancedDeepKnowledge } from './deepKnowledge/aiAdvancedDeepKnowledge
 import { aiIndustryDeepKnowledge2026 } from './deepKnowledge/aiIndustryDeepKnowledge2026.js';
 import { hldDeepKnowledge } from './deepKnowledge/hldDeepKnowledge.js';
 import { learningExpansionDeepKnowledge } from './deepKnowledge/learningExpansionDeepKnowledge.js';
+import { lldAdvancedDeepKnowledge } from './deepKnowledge/lldAdvancedDeepKnowledge.js';
 import { lldDsaDeepKnowledge } from './deepKnowledge/lldDsaDeepKnowledge.js';
 import { questionBankDeepKnowledge } from './deepKnowledge/questionBankDeepKnowledge.js';
 
@@ -30,6 +31,7 @@ import { questionBankDeepKnowledge } from './deepKnowledge/questionBankDeepKnowl
 export const lessonDeepKnowledgeIndex = {
   ...hldDeepKnowledge,
   ...lldDsaDeepKnowledge,
+  ...lldAdvancedDeepKnowledge,
   ...aiDeepKnowledge,
   ...learningExpansionDeepKnowledge,
   ...aiAdvancedDeepKnowledge,

@@ -13,15 +13,15 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | Flow | Who |
 |------|-----|
 | High-level design (HLD) | Engineers learning distributed systems; backend / platform interviews |
-| Low-level design (LLD) | Engineers leveling up OO design; machine-coding rounds |
+| Low-level design (LLD) | Engineers leveling up OO design / SOLID; machine-coding rounds where a running happy path, clear seams, and classic prompts still dominate |
 | DSA + interview questions | Learners building algorithmic intuition; coding-round candidates |
 | AI engineer | Engineers learning ML/DL plus 2026 AI-engineer skills (RAG, agents, LLMOps eval, serving/governance) with exhaustive lessons and runnable labs |
 
 ## Core value props (shipped)
 
 - **Five learning tracks** with guided modules and lessons (`src/lib/data/courseData.js`)
-- **Learning expansion labs** for HLD (fundamentals, reliability, data storage, security/ops, distributed systems — including 2026-era vector/lakehouse, zero-trust, cell, and durable-workflow patterns), LLD, DSA concepts/patterns/essentials/algorithms, and interactive ML/DL
-- **Structured answers**: frame → estimate → sketch → defend (Practice IDE steps)
+- **Learning expansion labs** for HLD (fundamentals, reliability, data storage, security/ops, distributed systems — including 2026-era vector/lakehouse, zero-trust, cell, and durable-workflow patterns), LLD (patterns, projects, SOLID, hot-path cache/rate-limit labs, machine-coding classics), DSA concepts/patterns/essentials/algorithms, and interactive ML/DL
+- **Structured answers**: HLD frame → estimate → sketch → defend; LLD 5-10 min framing → working happy-path object model → evaluator-style review (runs, clean OOP, edges, concurrency, extensibility)
 - **Topic labs**: decision guides, Mermaid, worked examples (`interactiveLessons.js`)
 - **Simulation lab** (HLD): visual architecture canvas, component catalog with diagrams, topology-driven workload engine
 - **Runnable coding**: DSA study exercises + interview drills / question bank via WASM; ML scripts via Pyodide worker with lesson exercise picker
@@ -43,7 +43,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
-Scale today: **5 flows · 47 modules · 164 lessons**.
+Scale today: **5 flows · 50 modules · 172 lessons**.
 
 ## Attribution
 
