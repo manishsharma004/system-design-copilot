@@ -23,6 +23,26 @@ export const markdownCompletions = [
 
 export const flowGraphCompletions = [
   {
+    label: 'Node: edge',
+    documentation: 'Client or edge entry for the request path.',
+    insertText: 'node ${1:edge} type=edge label="${2:Edge entry}" latencyMs=${3:4} capacityRps=${4:60000}'
+  },
+  {
+    label: 'Node: load-balancer',
+    documentation: 'Distribute traffic across instances.',
+    insertText: 'node ${1:lb} type=load-balancer label="${2:Load balancer}" latencyMs=${3:3} capacityRps=${4:80000}'
+  },
+  {
+    label: 'Node: api-gateway',
+    documentation: 'Thin edge for auth, routing, and rate limits.',
+    insertText: 'node ${1:gateway} type=api-gateway label="${2:API gateway}" latencyMs=${3:6} capacityRps=${4:45000}'
+  },
+  {
+    label: 'Node: cdn',
+    documentation: 'Edge cache for static and cacheable responses.',
+    insertText: 'node ${1:cdn} type=cdn label="${2:CDN}" latencyMs=${3:2} capacityRps=${4:150000} hitRate=${5:0.92}'
+  },
+  {
     label: 'Node: service',
     documentation: 'Add a service node with capacity and latency defaults.',
     insertText: 'node ${1:service_name} type=service label="${2:Service}" latencyMs=${3:12} capacityRps=${4:20000} queueCapacity=${5:2000}'
@@ -36,6 +56,26 @@ export const flowGraphCompletions = [
     label: 'Node: database',
     documentation: 'Add a database node.',
     insertText: 'node ${1:database_name} type=database label="${2:Primary DB}" latencyMs=${3:18} capacityRps=${4:7000} queueCapacity=${5:8000}'
+  },
+  {
+    label: 'Node: object-storage',
+    documentation: 'Blob / object store for media and large artifacts.',
+    insertText: 'node ${1:blobs} type=object-storage label="${2:Object storage}" latencyMs=${3:40} capacityRps=${4:25000}'
+  },
+  {
+    label: 'Node: queue',
+    documentation: 'Async message queue.',
+    insertText: 'node ${1:queue} type=queue label="${2:Queue}" latencyMs=${3:10} capacityRps=${4:30000} queueCapacity=${5:120000}'
+  },
+  {
+    label: 'Node: stream',
+    documentation: 'Ordered event stream for fan-out and replay.',
+    insertText: 'node ${1:stream} type=stream label="${2:Event stream}" latencyMs=${3:8} capacityRps=${4:40000}'
+  },
+  {
+    label: 'Node: worker',
+    documentation: 'Background worker / consumer.',
+    insertText: 'node ${1:workers} type=worker label="${2:Workers}" latencyMs=${3:20} capacityRps=${4:20000}'
   },
   {
     label: 'Link',

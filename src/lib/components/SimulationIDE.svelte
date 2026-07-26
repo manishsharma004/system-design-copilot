@@ -116,8 +116,15 @@
   $: if (simulation && hydratedLessonId !== lesson.id) {
     hydratedLessonId = lesson.id
     workspaceReady = false
-    activeApiId = session?.activeApiId ?? simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
-    activeProfileId = session?.activeProfileId ?? simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
+    activeApiId = session?.activeApiId
+      ?? simulation.apis?.find((/** @type {any} */ entry) => entry.id === 'topology-path')?.id
+      ?? simulation.workloadProfiles?.[0]?.endpointId
+      ?? simulation.apis?.[0]?.id
+      ?? ''
+    activeProfileId = session?.activeProfileId
+      ?? simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id
+      ?? simulation.workloadProfiles?.[0]?.id
+      ?? ''
     diagramText = session?.diagramText ?? simulation.starterDiagram
     scriptText = session?.scriptText ?? simulation.scriptTemplate
     layoutJson = '{}'
@@ -265,8 +272,13 @@
 
   async function resetSession() {
     if (!simulation) return
-    activeApiId = simulation.workloadProfiles?.[0]?.endpointId ?? simulation.apis?.[0]?.id ?? ''
-    activeProfileId = simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id ?? simulation.workloadProfiles?.[0]?.id ?? ''
+    activeApiId = simulation.apis?.find((/** @type {any} */ entry) => entry.id === 'topology-path')?.id
+      ?? simulation.workloadProfiles?.[0]?.endpointId
+      ?? simulation.apis?.[0]?.id
+      ?? ''
+    activeProfileId = simulation.workloadProfiles?.find((/** @type {any} */ entry) => entry.endpointId === activeApiId)?.id
+      ?? simulation.workloadProfiles?.[0]?.id
+      ?? ''
     diagramText = simulation.starterDiagram
     scriptText = simulation.scriptTemplate
     layoutJson = '{}'
@@ -369,6 +381,10 @@
         <p class="eyebrow">Simulation lab</p>
         <h2>{simulation.title}</h2>
         <p class="practice-copy">{simulation.summary}</p>
+        <p class="practice-copy simulation-architect-hint">
+          Architect on the canvas with the full component catalog. Prefer the
+          <strong>Topology path</strong> API so the diagram you draw is the system you simulate.
+        </p>
       </div>
       <div class="simulation-ide-controls">
         <div class="simulation-ide-config">
@@ -432,9 +448,10 @@
       }}
       snippetActions={editorSnippetActions}
       {commandActions}
-      sidePanelEyebrow="TOPOLOGY"
-      sidePanelTitle="Interactive diagram"
-      sidePanelDescription="Edit visually or in topology.flow."
+      sidePanelEyebrow="ARCHITECTURE"
+      sidePanelTitle="System design canvas"
+      sidePanelDescription="Drag components, wire the critical path, inspect each hop — then Run on Topology path."
+      initialSidePanelWidth={720}
       previewContent="topology"
       resultsContent={resultsText}
       on:workspacehydrated={handleWorkspaceHydrated}
@@ -455,6 +472,7 @@
           diagramText={diagramText || simulation.starterDiagram}
           layoutJson={layoutJson}
           compileErrors={compilePreview?.errors ?? []}
+          nodeMetrics={latestRun?.ok ? latestRun.nodeMetrics ?? [] : []}
           onDiagramChange={handleTopologyBuilderChange}
         />
       </div>
@@ -517,6 +535,12 @@
     gap: 1rem;
     justify-content: space-between;
     align-items: start;
+  }
+
+  .simulation-architect-hint {
+    margin-top: 0.35rem;
+    max-width: 42rem;
+    opacity: 0.9;
   }
 
   .simulation-ide-controls {

@@ -31,6 +31,8 @@
   export let sidePanelEyebrow = 'PREVIEW'
   export let sidePanelTitle = 'Preview'
   export let sidePanelDescription = ''
+  /** Initial width in px for the side preview panel (e.g. architecture canvas). */
+  export let initialSidePanelWidth = 360
   /** @type {any} */
   export let previewContent = null
   /** @type {any} */
@@ -45,7 +47,7 @@
   let activeSidebarView = 'explorer'
   let bottomPanelCollapsed = false
   let explorerWidth = 272
-  let sidePanelWidth = 360
+  let sidePanelWidth = initialSidePanelWidth
   let bottomPanelHeight = 220
   let workspaceEl
   let mainEl

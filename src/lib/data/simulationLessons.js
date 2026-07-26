@@ -1,6 +1,58 @@
 import { lessonIndex } from './courseData.js'
 import { hldExhaustiveLabSimBlueprints } from './hldExhaustiveLabSimBlueprints.js'
 
+const TOPOLOGY_PATH_API = {
+  id: 'topology-path',
+  label: 'Topology path (from diagram)',
+  summary:
+    'Simulate the architecture you drew. Sync links are the critical path; caches miss through to databases; async links run in the background.',
+  timeoutMs: 300,
+  retries: 1,
+  payloadKb: 1,
+  deriveFromTopology: true,
+  stages: [],
+  focusMetrics: ['path p95', 'hottest hop', 'async backlog', 'error rate']
+}
+
+const TOPOLOGY_PATH_PROFILES = [
+  {
+    id: 'topology-steady',
+    label: 'Steady design load',
+    endpointId: 'topology-path',
+    description: 'Moderate traffic to validate the architecture you assembled on the canvas.',
+    workload: { rpm: 360000, concurrency: 1400, retries: 0 }
+  },
+  {
+    id: 'topology-spike',
+    label: 'Launch / spike load',
+    endpointId: 'topology-path',
+    description: 'Hot-path spike to reveal which hop saturates first in your design.',
+    workload: { rpm: 1200000, concurrency: 5200, retries: 1 }
+  },
+  {
+    id: 'topology-writey',
+    label: 'Write-heavy burst',
+    endpointId: 'topology-path',
+    description: 'Heavier payloads and retries — useful when your diagram emphasizes persistence.',
+    workload: { rpm: 220000, concurrency: 1100, retries: 2, payloadKb: 3 }
+  }
+]
+
+/** @param {any} simulation */
+function withTopologyPathApi(simulation) {
+  if (!simulation) return simulation
+  const apis = simulation.apis ?? []
+  const profiles = simulation.workloadProfiles ?? []
+  if (apis.some((/** @type {any} */ api) => api.id === 'topology-path')) {
+    return simulation
+  }
+  return {
+    ...simulation,
+    apis: [TOPOLOGY_PATH_API, ...apis],
+    workloadProfiles: [...TOPOLOGY_PATH_PROFILES, ...profiles]
+  }
+}
+
 /** @type {Record<string, any>} */
 const authoredSimulationLessons = {
   'case-studies/url-shortener': {
@@ -768,11 +820,11 @@ function buildGeneratedSimulationLesson(lesson) {
 /** @param {string} lessonId */
 export function getSimulationLesson(lessonId) {
   if (authoredSimulationLessons[lessonId]) {
-    return authoredSimulationLessons[lessonId]
+    return withTopologyPathApi(authoredSimulationLessons[lessonId])
   }
 
   if (generatedSimulationCache.has(lessonId)) {
-    return generatedSimulationCache.get(lessonId) ?? null
+    return withTopologyPathApi(generatedSimulationCache.get(lessonId) ?? null)
   }
 
   const lesson = lessonIndex[lessonId]
@@ -782,5 +834,5 @@ export function getSimulationLesson(lessonId) {
 
   const generated = buildGeneratedSimulationLesson(lesson)
   generatedSimulationCache.set(lessonId, generated)
-  return generated
+  return withTopologyPathApi(generated)
 }

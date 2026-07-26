@@ -23,7 +23,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 - **Learning expansion labs** for HLD (fundamentals, reliability, data storage, security/ops, distributed systems — including 2026-era vector/lakehouse, zero-trust, cell, and durable-workflow patterns), LLD, DSA concepts/patterns/essentials/algorithms, and interactive ML/DL
 - **Structured answers**: frame → estimate → sketch → defend (Practice IDE steps)
 - **Topic labs**: decision guides, Mermaid, worked examples (`interactiveLessons.js`)
-- **Simulation lab** (HLD): topology DSL + workload engine
+- **Simulation lab** (HLD): visual architecture canvas, component catalog with diagrams, topology-driven workload engine
 - **Runnable coding**: DSA study exercises + interview drills / question bank via WASM; ML scripts via Pyodide worker with lesson exercise picker
 - **Reveal-on-demand** sample answers and enhanced case-study solutions
 - **Local progress** + export/import backup; optional user-keyed LLM coach with **Check (AI)** on practice, DSA, question bank, and simulation

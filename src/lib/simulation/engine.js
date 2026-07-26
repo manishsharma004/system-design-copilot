@@ -1,5 +1,7 @@
+import { resolvePhysics } from './componentCatalog.js'
 import { diagnoseSimulation } from './diagnostics.js'
 import { compileFlowGraph } from './graphCompiler.js'
+import { inferStagesFromGraph } from './pathInference.js'
 import { parseSimulationScript } from './scriptApi.js'
 
 /** @param {number} value */
@@ -13,6 +15,28 @@ function round(value) {
 }
 
 /**
+ * @param {any} node
+ */
+function nodePhysics(node) {
+  return node?.physics ?? resolvePhysics(node?.type ?? 'service')
+}
+
+/**
+ * @param {ReturnType<typeof compileFlowGraph>} graph
+ * @param {any} api
+ */
+function resolveApiForGraph(graph, api) {
+  if (!api) return null
+  if (!api.deriveFromTopology) return api
+  const inferred = inferStagesFromGraph(graph)
+  return {
+    ...api,
+    stages: inferred.stages,
+    inferenceWarnings: inferred.warnings
+  }
+}
+
+/**
  * @param {ReturnType<typeof compileFlowGraph>} graph
  * @param {any} api
  */
@@ -21,7 +45,12 @@ function validateApiAgainstGraph(graph, api) {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]))
   const linkKeys = new Set(graph.links.map((link) => `${link.from}->${link.to}`))
 
-  for (const stage of api?.stages ?? []) {
+  if (!api?.stages?.length) {
+    errors.push('No request path stages available — add connected components to the diagram')
+    return errors
+  }
+
+  for (const stage of api.stages ?? []) {
     if (!nodesById.has(stage.nodeId)) {
       errors.push(`API stage "${stage.nodeId}" does not exist in the current diagram`)
     }
@@ -45,6 +74,7 @@ function buildRuntimeNodes(nodes, nodeOverrides, failureOverrides) {
     return {
       ...node,
       ...override,
+      physics: nodePhysics(node),
       hitRate: override.hitRate === undefined ? node.hitRate : Number(override.hitRate),
       errorRate: Number(node.errorRate ?? 0) + Number(failure.errorRate ?? 0),
       extraLatencyMs: Number(node.extraLatencyMs ?? 0) + Number(failure.extraLatencyMs ?? 0),
@@ -97,8 +127,9 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
     const droppedRps = round(Math.max(0, stageRps - capacityRps))
     const overloadError = clamp01(utilization > 1 ? (utilization - 1) / utilization : 0)
     const stageErrorRate = clamp01(Number(node.errorRate ?? 0) + overloadError * 0.85)
+    const isCache = stage.kind === 'cache' || nodePhysics(node) === 'cache'
 
-    if (stage.kind === 'cache' || node.type === 'cache') {
+    if (isCache) {
       const hitRate = clamp01(Number(node.failureHitRate ?? stage.hitRate ?? node.hitRate ?? 0.8))
       latestCache = {
         hitRate,
@@ -120,6 +151,7 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
       id: node.id,
       label: node.label,
       type: node.type,
+      physics: nodePhysics(node),
       requestsRps: 0,
       capacityRps,
       utilization: 0,
@@ -136,7 +168,7 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
     current.errorRate = round(Math.max(current.errorRate, stageErrorRate))
     current.queueDepth = round(Math.max(current.queueDepth, queueDepth))
     current.droppedRps = round(current.droppedRps + droppedRps)
-    if (stage.kind === 'cache' || node.type === 'cache') {
+    if (isCache) {
       current.hitRate = round(latestCache.hitRate)
     }
     nodeAccumulator.set(node.id, current)
@@ -169,9 +201,11 @@ function calculatePass(nodesById, api, workload, requestAmplification) {
 export function runSimulation(input) {
   const graph = compileFlowGraph(input.diagramText)
   const script = parseSimulationScript(input.scriptText)
-  const api = input.scenario.apis.find((/** @type {any} */ entry) => entry.id === input.apiId) ?? null
+  const rawApi = input.scenario.apis.find((/** @type {any} */ entry) => entry.id === input.apiId) ?? null
+  const api = resolveApiForGraph(graph, rawApi)
   const profile = input.scenario.workloadProfiles.find((/** @type {any} */ entry) => entry.id === input.profileId) ?? null
   const errors = [...graph.errors, ...script.errors]
+  const warnings = [...graph.warnings, ...(api?.inferenceWarnings ?? [])]
 
   if (!api) {
     errors.push(`Unknown API "${input.apiId}"`)
@@ -207,7 +241,7 @@ export function runSimulation(input) {
     return {
       ok: false,
       errors,
-      warnings: graph.warnings,
+      warnings,
       mermaid: graph.mermaid,
       graph,
       api,
@@ -228,7 +262,7 @@ export function runSimulation(input) {
 
   return {
     ok: true,
-    warnings: graph.warnings,
+    warnings,
     errors: [],
     mermaid: graph.mermaid,
     api,

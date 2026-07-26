@@ -25,7 +25,7 @@ src/
     dsa/            Practice parsing + WASM runners + bank builder
     editor/         Monaco, virtual FS, IndexedDB workspaces
     stores/         progress, practice, simulation, llm, practiceTimer
-    simulation/     Graph compiler, engine, script API, diagnostics
+    simulation/     Component catalog, path inference, graph compiler, engine, diagnostics
     llm/            Provider presets + request builders
     backup.js       Export/import all local state
     browserRuntimes.js  Runtime registry
