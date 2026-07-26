@@ -1,4 +1,5 @@
 import { aiDeepKnowledge } from './deepKnowledge/aiDeepKnowledge.js';
+import { aiAdvancedDeepKnowledge } from './deepKnowledge/aiAdvancedDeepKnowledge.js';
 import { hldDeepKnowledge } from './deepKnowledge/hldDeepKnowledge.js';
 import { learningExpansionDeepKnowledge } from './deepKnowledge/learningExpansionDeepKnowledge.js';
 import { lldDsaDeepKnowledge } from './deepKnowledge/lldDsaDeepKnowledge.js';
@@ -30,6 +31,7 @@ export const lessonDeepKnowledgeIndex = {
   ...lldDsaDeepKnowledge,
   ...aiDeepKnowledge,
   ...learningExpansionDeepKnowledge,
+  ...aiAdvancedDeepKnowledge,
   ...questionBankDeepKnowledge
 };
 

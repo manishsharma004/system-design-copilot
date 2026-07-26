@@ -149,7 +149,10 @@ test('course flows separate high-level, low-level, DSA, AI engineer, and questio
     'Feature engineering playground',
     'Perceptron and MLP with NumPy',
     'Backpropagation by hand',
-    'CNN building blocks with NumPy'
+    'CNN building blocks with NumPy',
+    'Scaled dot-product attention from scratch',
+    'Tokenization workshop',
+    'Drift and monitoring lab'
   ].forEach((title) => assert.ok(aiLessonTitles.has(title), `missing AI learning lesson: ${title}`));
 });
 
@@ -191,13 +194,18 @@ test('DSA practice lessons bridge back to study labs', () => {
 });
 
 test('AI learning expansion lessons expose runnable coding exercises', () => {
+  const expansionModuleSlugs = [
+    'ml-interactive-lab',
+    'deep-learning-from-scratch',
+    'transformers-attention-lab',
+    'llm-retrieval-lab',
+    'ml-production-lab'
+  ];
   const interactiveLessons = getModulesByFlow('ai-engineer')
     .flatMap((module) => module.lessons)
-    .filter((lesson) =>
-      ['ml-interactive-lab', 'deep-learning-from-scratch'].includes(lesson.moduleSlug)
-    );
+    .filter((lesson) => expansionModuleSlugs.includes(lesson.moduleSlug));
 
-  assert.equal(interactiveLessons.length, 6);
+  assert.equal(interactiveLessons.length, 15);
   interactiveLessons.forEach((lesson) => {
     const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
     assert.ok(codingExercises.length >= 2, `missing coding exercises for ${lesson.id}`);
@@ -206,6 +214,47 @@ test('AI learning expansion lessons expose runnable coding exercises', () => {
       assert.ok(exercise.starterCode?.includes('TODO') || exercise.starterCode?.length > 40);
       assert.ok(exercise.solution?.length > 40);
       assert.ok(Array.isArray(exercise.hints));
+      assert.doesNotMatch(
+        `${exercise.starterCode}\n${exercise.solution}`,
+        /(?:import|from)\s+(torch|tiktoken|transformers|openai)\b/i,
+        `non-Pyodide import in ${exercise.id}`
+      );
+    });
+  });
+});
+
+test('AI core lessons are exhaustive and Pyodide-safe', () => {
+  const coreModuleSlugs = new Set([
+    'ml-foundations',
+    'deep-learning',
+    'llms-and-nlp',
+    'prompt-engineering-and-rag',
+    'ai-agents',
+    'mlops-and-deployment',
+    'ai-safety-and-ethics',
+    'data-engineering-for-ml'
+  ]);
+  const coreLessons = getModulesByFlow('ai-engineer')
+    .flatMap((module) => module.lessons)
+    .filter((lesson) => coreModuleSlugs.has(lesson.moduleSlug));
+
+  assert.equal(coreLessons.length, 23);
+  coreLessons.forEach((lesson) => {
+    assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
+    const bodyChars = lesson.sections.reduce((sum, section) => sum + (section.body?.length ?? 0), 0);
+    assert.ok(bodyChars >= 2500, `thin lesson body for ${lesson.id}`);
+    assert.ok(lesson.sections.filter((section) => section.codeExample).length >= 2, `missing code examples for ${lesson.id}`);
+    const codingExercises = (lesson.exercises ?? []).filter((exercise) => exercise.type === 'coding');
+    assert.ok(codingExercises.length >= 2, `missing coding exercises for ${lesson.id}`);
+    codingExercises.forEach((exercise) => {
+      assert.ok(exercise.starterCode?.includes('TODO') || exercise.starterCode?.length > 40);
+      assert.ok(exercise.solution?.length > 40);
+      assert.ok(Array.isArray(exercise.hints));
+      assert.doesNotMatch(
+        `${exercise.starterCode}\n${exercise.solution}`,
+        /(?:import|from)\s+(torch|tiktoken|transformers|openai)\b/i,
+        `non-Pyodide import in ${exercise.id}`
+      );
     });
   });
 });
@@ -226,10 +275,13 @@ test('learning expansion lessons ship on-page teaching material, exercises, and 
     'dsa-search-lab',
     'dsa-interview-essentials-lab',
     'ml-interactive-lab',
-    'deep-learning-from-scratch'
+    'deep-learning-from-scratch',
+    'transformers-attention-lab',
+    'llm-retrieval-lab',
+    'ml-production-lab'
   ]);
   const expansionLessons = allLessons.filter((lesson) => expansionModuleSlugs.has(lesson.moduleSlug));
-  assert.equal(expansionLessons.length, 42);
+  assert.equal(expansionLessons.length, 51);
 
   expansionLessons.forEach((lesson) => {
     assert.ok(lesson.sections.length >= 5, `too few sections for ${lesson.id}`);
@@ -497,19 +549,13 @@ test('HLD learning lab practice steps use design exercises and likely answers', 
   );
 });
 
-test('AI engineer interactive lessons cover every AI module', () => {
-  [
-    'ml-foundations/model-evaluation',
-    'deep-learning/neural-network-fundamentals',
-    'llms-and-nlp/llm-fundamentals',
-    'prompt-engineering-and-rag/rag-systems',
-    'ai-agents/agent-fundamentals',
-    'mlops-and-deployment/model-serving',
-    'ai-safety-and-ethics/bias-and-fairness',
-    'data-engineering-for-ml/data-pipelines-at-scale'
-  ].forEach((lessonId) => {
-    const interactive = getInteractiveLesson(lessonId);
-    assert.ok(interactive, `missing AI interactive lesson for ${lessonId}`);
+test('AI engineer interactive lessons cover every AI lesson', () => {
+  const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
+  assert.ok(aiLessons.length >= 38);
+
+  aiLessons.forEach((lesson) => {
+    const interactive = getInteractiveLesson(lesson.id);
+    assert.ok(interactive, `missing AI interactive lesson for ${lesson.id}`);
     assert.ok(interactive.takeaways.length >= 3);
     assert.ok(interactive.examples.length >= 2);
     assert.ok(interactive.decisionGuide.options.length >= 3);

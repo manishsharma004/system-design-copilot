@@ -1,4 +1,5 @@
 import { learningExpansionInteractive } from './learningExpansionInteractive.js';
+import { aiInteractiveExtras } from './aiInteractiveExtras.js';
 
 /** @type {Record<string, any>} */
 export const interactiveLessons = {
@@ -1875,7 +1876,8 @@ export const interactiveLessons = {
       `
     }
   },
-  ...learningExpansionInteractive
+  ...learningExpansionInteractive,
+  ...aiInteractiveExtras
 };
 
 /** @param {string} lessonId */

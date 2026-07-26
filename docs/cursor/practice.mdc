@@ -39,8 +39,10 @@ Lesson practice panes are flow-specific. Wiring: `module/…/lesson/…/+page.sv
 
 - Component: `MLPracticeIDE.svelte`
 - Runs NumPy / pandas / matplotlib / scikit-learn in `static/ml-py-worker.js`
-- When `lesson.exercises` includes coding items with `starterCode`, shows an exercise picker, loads starter into the editor, and supports Reset starter / Load solution
-- Shown with the study guide on AI lessons and on HLD/LLD expansion labs that ship coding exercises
+- When `lesson.exercises` includes coding items with `starterCode`, shows exercise chips + picker, loads starter into the editor, and supports Reset starter / Load solution
+- Revealable per-exercise hints; soft output check against `expectedOutput` keywords after a successful run
+- Drafts persist in `localStorage` under `ml-practice:{lessonId}:{exerciseId}`
+- Shown with the study guide on AI lessons and on HLD/LLD expansion labs that ship coding exercises; every AI lesson ships ≥2 Pyodide-safe coding exercises
 
 ## Heuristics and solutions
 
