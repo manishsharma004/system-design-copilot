@@ -1,24 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_THEME_ID, getThemeOption, normalizeThemeId, THEME_OPTIONS } from '../src/lib/themes.js';
+import {
+  DEFAULT_THEME_ID,
+  getThemeOption,
+  getThemesByMode,
+  normalizeThemeId,
+  THEME_GROUPS,
+  THEME_OPTIONS
+} from '../src/lib/themes.js';
 
-test('theme options include four color schemes', () => {
-  assert.equal(THEME_OPTIONS.length, 4);
-  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'copilot'));
-  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'ocean'));
-  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'ember'));
-  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'forest'));
+test('theme options include dark and light color schemes', () => {
+  assert.equal(THEME_OPTIONS.length, 12);
+  assert.equal(getThemesByMode('dark').length, 6);
+  assert.equal(getThemesByMode('light').length, 6);
+  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'copilot-light'));
+  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'midnight'));
+  assert.ok(THEME_OPTIONS.some((theme) => theme.id === 'paper'));
+});
+
+test('theme groups expose dark and light sections', () => {
+  assert.equal(THEME_GROUPS.length, 2);
+  assert.equal(THEME_GROUPS[0].id, 'dark');
+  assert.equal(THEME_GROUPS[1].id, 'light');
 });
 
 test('normalizeThemeId falls back to default for unknown values', () => {
-  assert.equal(normalizeThemeId('ocean'), 'ocean');
+  assert.equal(normalizeThemeId('ocean-light'), 'ocean-light');
   assert.equal(normalizeThemeId('invalid'), DEFAULT_THEME_ID);
   assert.equal(normalizeThemeId(null), DEFAULT_THEME_ID);
 });
 
 test('getThemeOption returns metadata for each theme', () => {
-  const ocean = getThemeOption('ocean');
-  assert.equal(ocean.label, 'Ocean');
-  assert.equal(ocean.swatch, '#22d3ee');
+  const oceanLight = getThemeOption('ocean-light');
+  assert.equal(oceanLight.label, 'Ocean Light');
+  assert.equal(oceanLight.mode, 'light');
   assert.equal(getThemeOption('missing').id, DEFAULT_THEME_ID);
 });

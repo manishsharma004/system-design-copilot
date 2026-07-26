@@ -1,39 +1,43 @@
 <svelte:options runes={false} />
 <script>
-  import { THEME_OPTIONS } from '$lib/themes.js';
+  import { THEME_GROUPS, getThemeOption } from '$lib/themes.js';
   import { theme } from '$lib/stores/theme.js';
 
-  /** @param {string} themeId */
-  function selectTheme(themeId) {
-    theme.set(themeId);
+  $: activeTheme = getThemeOption($theme);
+
+  /** @param {Event} event */
+  function handleChange(event) {
+    const target = /** @type {HTMLSelectElement} */ (event.currentTarget);
+    theme.set(target.value);
   }
 </script>
 
-<div class="theme-picker" role="group" aria-label="Color theme">
-  <span class="theme-picker-label">Theme</span>
-  <div class="theme-picker-swatches">
-    {#each THEME_OPTIONS as option}
-      <button
-        type="button"
-        class="theme-swatch"
-        class:active={$theme === option.id}
-        title="{option.label} theme"
-        aria-label="{option.label} theme"
-        aria-pressed={$theme === option.id}
-        style="--swatch-color: {option.swatch}"
-        onclick={() => selectTheme(option.id)}
-      >
-        <span class="theme-swatch-dot" aria-hidden="true"></span>
-      </button>
+<div class="theme-picker">
+  <label class="theme-picker-label" for="theme-select">Theme</label>
+  <span class="theme-picker-swatch" style="--swatch-color: {activeTheme.swatch}" aria-hidden="true"></span>
+  <select
+    id="theme-select"
+    class="theme-picker-select"
+    value={$theme}
+    aria-label="Color theme"
+    onchange={handleChange}
+  >
+    {#each THEME_GROUPS as group}
+      <optgroup label={group.label}>
+        {#each group.themes as option}
+          <option value={option.id}>{option.label}</option>
+        {/each}
+      </optgroup>
     {/each}
-  </div>
+  </select>
 </div>
 
 <style>
   .theme-picker {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    min-width: 0;
   }
 
   .theme-picker-label {
@@ -45,50 +49,41 @@
     display: none;
   }
 
-  .theme-picker-swatches {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem;
-    border-radius: 0.45rem;
-    border: 1px solid var(--border);
-    background: var(--surface);
-  }
-
-  .theme-swatch {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.55rem;
-    height: 1.55rem;
-    padding: 0;
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background: transparent;
-    cursor: pointer;
-    transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
-  }
-
-  .theme-swatch:hover {
-    transform: scale(1.08);
-  }
-
-  .theme-swatch.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-subtle);
-  }
-
-  .theme-swatch-dot {
+  .theme-picker-swatch {
     width: 0.85rem;
     height: 0.85rem;
     border-radius: 999px;
     background: var(--swatch-color);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+  }
+
+  .theme-picker-select {
+    max-width: 8.5rem;
+    min-height: 34px;
+    padding: 0.3rem 1.6rem 0.3rem 0.45rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b8fa7' d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E") no-repeat right 0.45rem center;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .theme-picker-select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   @media (min-width: 900px) {
     .theme-picker-label {
       display: inline;
+    }
+
+    .theme-picker-select {
+      max-width: 9.5rem;
     }
   }
 </style>
