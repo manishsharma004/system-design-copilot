@@ -155,13 +155,13 @@ def _indexing_and_query_path_design():
             section(
                 "Primary keys and composite indexes encode the read contract",
                 T(
-                    "Primary keys describe authority and uniqueness, but secondary indexes describe how the system is actually consumed. Composite keys must follow equality filters first, then range filters or sort columns, because the leftmost key order determines how much of the tree the engine must walk. A tenant-scoped workload usually wants tenant_id near the front so one large customer does not cause cross-tenant scans on every query.",
-                    "The strongest production-minded answers talk about what the index costs on writes as well as what it saves on reads. Every extra secondary index adds write amplification, storage, vacuum or compaction work, and longer failover catch-up. The design task is not to index every possible filter. It is to build a small set of indexes that make the top customer journeys fast while keeping write throughput and operational maintenance understandable.",
+                    "Primary keys describe authority and uniqueness, but secondary indexes describe how the system is actually consumed. Composite B-tree keys still follow the same rule in 2026: equality filters first, then range filters or sort columns, because the leftmost key order determines how much of the tree the engine must walk. A tenant-scoped workload usually wants tenant_id near the front so one large customer does not cause cross-tenant scans on every query. When the request path is semantic rather than exact-match, the same discipline applies in a different form: choose whether metadata filters narrow the candidate set first, then pick the ANN structure that fits the recall and latency budget.",
+                    "The strongest production-minded answers talk about what the index costs on writes as well as what it saves on reads. Every extra secondary index adds write amplification, storage, vacuum or compaction work, and longer failover catch-up. Vector indexes do not remove that trade-off; they add their own knobs. HNSW often buys lower latency and stronger recall at the cost of heavier memory and update work, while IVF-style layouts can be cheaper to build but may need more tuning and can lose recall under tight latency budgets. Common production answers now mention pgvector for relational adjacency and GIN or other metadata indexes for hybrid filtering, but they still defend the long-term write and storage bill.",
                 ),
                 [
                     "Order composite indexes so the most selective equality predicates and ownership boundaries come first.",
                     "Prefer a small number of intentionally reused composite indexes over many one-off indexes per endpoint.",
-                    "Account for write amplification, backfill time, and replica catch-up when proposing new indexes.",
+                    "Account for write amplification, ANN maintenance cost, backfill time, and replica catch-up when proposing new indexes.",
                 ],
                 code(
                     "Composite index for a tenant-scoped recent-orders query",
@@ -225,48 +225,60 @@ def _indexing_and_query_path_design():
                 ),
             ),
             section(
-                "Guard the planner from accidental fan-out and broad filter combinations",
+                "Guard the planner and retrieval layer from accidental fan-out",
                 T(
-                    "A mature query path design constrains what the application is allowed to ask for. Product teams often want dynamic filtering and sorting, but letting every route combine every filter with every sort produces a combinatorial explosion that no practical indexing plan can cover. If the application only exposes supported predicates and sort orders, storage remains predictable and on-call engineers are not surprised by a single dashboard query consuming half the IOPS budget.",
-                    "This is where service design and storage design meet. Good APIs encode safe query shapes with explicit sort enums, cursor tokens, and bounded filters. Unsafe queries can be rejected, routed to asynchronous export jobs, or served from search and analytics systems that were designed for exploratory access. The goal is not to deny product flexibility. It is to separate the sub-second serving path from the slower but more expressive investigative path.",
+                    "A mature query path design constrains what the application is allowed to ask for, whether the path is B-tree-backed, full-text, or ANN-backed. Product teams often want dynamic filtering, flexible sorting, and now semantic retrieval on the same endpoint, but letting one request combine arbitrary metadata filters, deep pagination, hybrid ranking, and cross-tenant exploration produces a combinatorial explosion that no practical indexing plan can cover. If the application only exposes supported predicates, bounded candidate sizes, and approved ranking modes, storage remains predictable and on-call engineers are not surprised by one exploratory prompt consuming half the IOPS budget.",
+                    "This is where service design and storage design meet. Good APIs encode safe query shapes with explicit sort enums, cursor tokens, hybrid-search flags, and bounded filters. Semantic or RAG endpoints should still state whether lexical filters run first, whether metadata is indexed with GIN or equivalent structures, whether pgvector is sufficient, and what recall target justifies HNSW versus IVF-style indexes. Unsafe exploratory queries can be rejected, routed to asynchronous evaluation, or served from search and analytics systems that were designed for broad access. The goal is not to deny product flexibility. It is to separate the sub-second serving path from the slower but more expressive investigative path.",
                 ),
                 [
-                    "Whitelist allowed filter and sort combinations on hot endpoints instead of letting arbitrary SQL-like requests through.",
+                    "Whitelist allowed filter, sort, and retrieval-mode combinations on hot endpoints instead of letting arbitrary SQL-like or semantic requests through.",
+                    "Set explicit ANN candidate limits and recall goals so semantic retrieval remains a designed serving path rather than an unbounded experiment.",
                     "Send broad exploratory queries to exports, search indexes, or warehouses rather than stretching the OLTP path beyond its purpose.",
-                    "Treat query-builder guardrails as performance controls, not just API cosmetics.",
                 ],
                 code(
-                    "Application-side query shape guardrail",
-                    "javascript",
+                    "Hybrid metadata and vector indexing with pgvector",
+                    "sql",
                     lines(
-                        "const SORTS = {",
-                        "  RECENT: ['created_at', 'DESC'],",
-                        "  OLDEST: ['created_at', 'ASC'],",
-                        "  HIGHEST_TOTAL: ['total_cents', 'DESC']",
-                        "};",
+                        "CREATE EXTENSION IF NOT EXISTS vector;",
                         "",
-                        "function buildOrderQuery({ tenantId, status, sort = 'RECENT' }) {",
-                        "  if (!tenantId || !status) throw new Error('tenantId and status are required');",
-                        "  if (!SORTS[sort]) throw new Error('unsupported sort');",
-                        "  if (sort === 'HIGHEST_TOTAL' && status !== 'paid') {",
-                        "    throw new Error('high-total sort is only supported for paid orders');",
-                        "  }",
-                        "  return {",
-                        "    where: { tenant_id: tenantId, status },",
-                        "    orderBy: SORTS[sort]",
-                        "  };",
-                        "}",
+                        "CREATE TABLE knowledge_chunks (",
+                        "  chunk_id BIGSERIAL PRIMARY KEY,",
+                        "  tenant_id BIGINT NOT NULL,",
+                        "  doc_id BIGINT NOT NULL,",
+                        "  metadata JSONB NOT NULL,",
+                        "  searchable tsvector NOT NULL,",
+                        "  embedding vector(1536) NOT NULL",
+                        ");",
+                        "",
+                        "CREATE INDEX idx_chunks_tenant_doc",
+                        "  ON knowledge_chunks (tenant_id, doc_id);",
+                        "",
+                        "CREATE INDEX idx_chunks_searchable",
+                        "  ON knowledge_chunks USING GIN (searchable);",
+                        "",
+                        "CREATE INDEX idx_chunks_embedding_hnsw",
+                        "  ON knowledge_chunks USING hnsw (embedding vector_cosine_ops);",
+                        "",
+                        "-- HNSW usually buys lower latency and higher recall than IVFFlat,",
+                        "-- but it costs more memory and update work on active collections.",
+                        "",
+                        "SELECT chunk_id",
+                        "FROM knowledge_chunks",
+                        "WHERE tenant_id = $1",
+                        "  AND metadata @> '{\"doc_type\":\"policy\"}'",
+                        "ORDER BY embedding <=> $2",
+                        "LIMIT 20;",
                     ),
                 ),
             ),
             section(
                 "Index rollouts are operational changes, not only DDL statements",
                 T(
-                    "Adding an index to a live high-cardinality table can be one of the most expensive safe-looking changes a team makes. Even online builds consume CPU, I/O, and replication bandwidth. A new index can increase write latency, expand storage enough to trigger maintenance churn, or extend recovery time after failover because replicas must catch up more bytes. Production teams therefore stage index changes with measured rollout criteria instead of treating them as routine migrations.",
-                    "The safest rollout path ties the new index to a read-migration plan. Build the index, watch build progress and replica lag, shadow the new query plan or route a small read cohort to the new access path, and only then remove the old path or old index. If the new plan improves p95 but hurts write latency or bloat, that trade-off should be visible before the change becomes permanent. Good HLD answers say which metrics prove the rollout is safe.",
+                    "Adding an index to a live high-cardinality table can be one of the most expensive safe-looking changes a team makes. Even online builds consume CPU, I/O, and replication bandwidth. A new index can increase write latency, expand storage enough to trigger maintenance churn, or extend recovery time after failover because replicas must catch up more bytes. Vector indexes amplify the same concern because ANN graph builds or centroid training can be expensive and rebuild windows matter when embeddings are refreshed in bulk. Production teams therefore stage index changes with measured rollout criteria instead of treating them as routine migrations.",
+                    "The safest rollout path ties the new index to a read-migration plan. Build the index, watch build progress and replica lag, shadow the new query plan or route a small read cohort to the new access path, and only then remove the old path or old index. If the new plan improves p95 but hurts write latency, recall, or storage growth, that trade-off should be visible before the change becomes permanent. Good HLD answers say which metrics prove the rollout is safe.",
                 ),
                 [
-                    "Track index build progress, replica lag, write latency, and storage growth during large index changes.",
+                    "Track index build progress, replica lag, write latency, storage growth, and any recall regression during large index changes.",
                     "Roll reads onto the new index gradually when possible instead of coupling index creation and query-plan dependence in one deploy.",
                     "Delete obsolete indexes after observation windows so write paths do not carry historical baggage forever.",
                 ],
@@ -311,7 +323,7 @@ def _indexing_and_query_path_design():
             "Choose one primary key and a small number of composite indexes that directly support those shapes.",
             "Explain whether any query should use a covering or partial index and why.",
             "Constrain unsupported filter and sort combinations at the API layer.",
-            "Describe the write-amplification and storage cost of every proposed secondary index.",
+            "Describe the write-amplification and storage cost of every proposed secondary index, including ANN indexes used for semantic retrieval.",
             "State how you would roll out and validate a new index on a live high-cardinality table.",
         ],
         pitfalls=[
@@ -329,9 +341,9 @@ def _indexing_and_query_path_design():
         ],
         likely_answer_points=[
             "A strong answer starts from the exact request path, then chooses a composite index whose left-to-right key order matches equality filters first and ordering or range filters second.",
-            "You should mention that each extra index costs write throughput, storage, and recovery bandwidth, so the goal is a minimal intentional set rather than universal indexing.",
-            "If product needs broad exploratory filtering, route that workload to search, exports, or analytics instead of forcing the OLTP path to support every query shape synchronously.",
-            "Production maturity shows up in the rollout plan: online build, replica lag monitoring, shadow or canary reads, and cleanup of superseded indexes after confidence grows.",
+            "You should mention that each extra index costs write throughput, storage, and recovery bandwidth, so the goal is a minimal intentional set rather than universal indexing. That same reasoning now applies to ANN structures such as HNSW or IVF in semantic paths.",
+            "If product needs broad exploratory filtering or hybrid semantic retrieval, route that workload to search, vector-aware projections, or analytics instead of forcing the OLTP path to support every query shape synchronously.",
+            "Production maturity shows up in the rollout plan: online build, replica lag monitoring, shadow or canary reads, recall-versus-latency checks for semantic search, and cleanup of superseded indexes after confidence grows.",
         ],
         exercises=[
             design_exercise(
@@ -421,7 +433,7 @@ def _replication_sharding_and_consistency():
                 "Begin with the correctness contract before naming topology",
                 T(
                     "The right replication and sharding design depends on what the product must not get wrong. An inventory reservation flow, a bank balance read, and a social-feed view are all data-serving problems, but their tolerance for stale reads and lost writes is radically different. If the system cannot state what read-after-write, monotonic, or cross-entity guarantees the user journey needs, any discussion of leaders, replicas, or shards becomes architecture theater.",
-                    "That is why strong design reviews start with a matrix of flows instead of with infrastructure defaults. Reads that can lag by a few seconds might go to replicas or regional followers. Reads that immediately confirm a write may need primary reads, session stickiness, or a token that proves the write has propagated. Sharding decisions then follow from throughput and ownership boundaries, not from a vague desire to look distributed.",
+                    "That is why strong design reviews start with a matrix of flows instead of with infrastructure defaults. Reads that can lag by a few seconds might go to replicas or regional followers. Reads that immediately confirm a write may need primary reads, session stickiness, or a token that proves the write has propagated. In 2026 you also have to add residency and write-affinity rules to that matrix: which tenant or jurisdiction must keep writes in-region, which user journeys may cross region boundaries, and which flows need a self-contained cell so one regional or software failure does not become a global incident.",
                 ),
                 [
                     "Write down which user actions require fresh reads and which can tolerate bounded staleness.",
@@ -430,15 +442,15 @@ def _replication_sharding_and_consistency():
                 ],
             ),
             section(
-                "Replica topology changes what a read can honestly promise",
+                "Replica topology and regional write affinity change what a read can honestly promise",
                 T(
-                    "Leader-follower replication keeps one authoritative write owner, which simplifies conflict handling but introduces replica lag and failover nuance. Asynchronous followers are cheap for read scale and region-local reads, yet they cannot promise immediate freshness after a write unless the client is explicitly routed to the leader or to a follower that has caught up past a known log position. Synchronous replication improves durability but spends more latency and coordination budget on every write.",
-                    "The production question is not whether replicas are good. It is which requests can safely consume follower state. A catalog page can probably read slightly stale availability counts; a just-changed password or revoked admin role usually cannot. Mature systems encode that distinction in routing rules, session semantics, or per-request consistency flags so engineers do not accidentally confirm a critical write from a lagging node.",
+                    "Leader-follower replication keeps one authoritative write owner, which simplifies conflict handling but introduces replica lag and failover nuance. Asynchronous followers are cheap for read scale and region-local reads, yet they cannot promise immediate freshness after a write unless the client is explicitly routed to the leader or to a follower that has caught up past a known log position. Synchronous replication improves durability but spends more latency and coordination budget on every write. Multi-region systems now often add write affinity as a first-class rule: a tenant or account has a home region or home cell where authoritative writes land, even if global reads or projections fan out elsewhere.",
+                    "The production question is not whether replicas are good. It is which requests can safely consume follower state and which requests must stay inside a residency or write-affinity boundary. A catalog page can probably read slightly stale availability counts; a just-changed password or revoked admin role usually cannot. Mature systems encode that distinction in routing rules, session semantics, per-request consistency flags, and regional routing policies so engineers do not accidentally confirm a critical write from a lagging or non-compliant location.",
                 ),
                 [
                     "Use follower reads only where the product can tolerate the replica freshness window.",
                     "Plan a read-after-write strategy such as primary reads, session stickiness, or log-position tokens for sensitive flows.",
-                    "Expect synchronous durability gains to cost extra coordination latency on the write path.",
+                    "Expect synchronous durability gains and cross-region write policies to cost extra coordination latency on the write path.",
                 ],
                 code(
                     "Route fresh reads away from lagging replicas",
@@ -461,33 +473,36 @@ def _replication_sharding_and_consistency():
                 ),
             ),
             section(
-                "Shard keys are product decisions with long half-lives",
+                "Shard keys and cell boundaries are product decisions with long half-lives",
                 T(
-                    "Sharding should follow the dominant ownership or locality dimension of the workload. User-owned data often shards well by user or tenant. Marketplace data may shard by merchant or region. Time-based keys can look attractive for recent-write workloads but frequently create hot partitions unless they are bucketed or combined with another spreading dimension. Once a shard key is embedded in routing, background jobs, and client caches, changing it becomes expensive.",
-                    "The best designs therefore ask two uncomfortable questions early. First, will the key distribute both reads and writes under the worst product success case, not merely under today's average? Second, does the key keep the most important multi-record operations local enough to avoid constant scatter-gather queries or cross-shard transactions? If the answer to either question is weak, the team should reconsider the key before the system scales into a corner.",
+                    "Sharding should follow the dominant ownership or locality dimension of the workload. User-owned data often shards well by user or tenant. Marketplace data may shard by merchant or region. Modern cell-based systems go one step further and make the cell self-contained: each cell owns its compute, storage, and failure domain for a subset of tenants or geography, with a thin router deciding where the request belongs. Time-based keys can look attractive for recent-write workloads but frequently create hot partitions unless they are bucketed or combined with another spreading dimension. Once a shard key or cell mapping is embedded in routing, background jobs, and client caches, changing it becomes expensive.",
+                    "The best designs therefore ask two uncomfortable questions early. First, will the key distribute both reads and writes under the worst product success case, not merely under today's average? Second, does the key keep the most important multi-record operations local enough to avoid constant scatter-gather queries or cross-shard transactions while still respecting residency? If the answer to either question is weak, the team should reconsider the key before the system scales into a corner. Good interview answers explicitly connect shard choice to blast radius, compliance routing, and cell migration cost.",
                 ),
                 [
-                    "Choose a shard key that spreads load and preserves locality for the most important workflow.",
+                    "Choose a shard key and cell boundary that spread load, preserve locality, and align with failure or residency boundaries for the most important workflow.",
                     "Model celebrity tenants, flash sales, and bursty regions explicitly instead of assuming even distribution.",
-                    "Assume that re-sharding later is possible but costly, so invest in key choice early.",
+                    "Assume that re-sharding or moving tenants between cells later is possible but costly, so invest in key choice early.",
                 ],
                 code(
-                    "Bucket writes by tenant and hour to soften temporal hotspots",
+                    "Route a tenant write to its home cell",
                     "javascript",
                     lines(
-                        "function shardForWrite({ tenantId, createdAtIso, shardCount }) {",
-                        "  const hourBucket = createdAtIso.slice(0, 13); // YYYY-MM-DDTHH",
-                        "  const spreadKey = `${tenantId}:${hourBucket}`;",
-                        "  let hash = 0;",
-                        "  for (const ch of spreadKey) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;",
-                        "  return hash % shardCount;",
+                        "const tenantDirectory = {",
+                        "  'merchant-42': { cell: 'eu-cell-a', residencyRegion: 'eu-west-1' },",
+                        "  'merchant-77': { cell: 'us-cell-c', residencyRegion: 'us-east-1' }",
+                        "};",
+                        "",
+                        "function routeWrite({ tenantId, callerRegion }) {",
+                        "  const assignment = tenantDirectory[tenantId];",
+                        "  if (!assignment) throw new Error('unknown tenant');",
+                        "  return {",
+                        "    cell: assignment.cell,",
+                        "    region: assignment.residencyRegion,",
+                        "    crossRegionHop: callerRegion !== assignment.residencyRegion",
+                        "  };",
                         "}",
                         "",
-                        "console.log(shardForWrite({",
-                        "  tenantId: 'merchant-42',",
-                        "  createdAtIso: '2026-07-26T14:00:00Z',",
-                        "  shardCount: 16",
-                        "}));",
+                        "console.log(routeWrite({ tenantId: 'merchant-42', callerRegion: 'eu-west-1' }));",
                     ),
                 ),
             ),
@@ -522,13 +537,13 @@ def _replication_sharding_and_consistency():
             section(
                 "Failover and repair are often harder than steady-state serving",
                 T(
-                    "A design that looks elegant when every node is healthy can behave badly during promotion, catch-up, and repair. If a leader fails under heavy write load, survivors may be both serving traffic and replaying logs. If a hot shard is moved, caches churn and retry storms appear. If a replica is promoted while still behind, the system may meet an uptime target but lose user trust because the newest confirmed writes disappeared. These are not edge cases; they are the moments users remember.",
-                    "That is why resilient teams design for degraded transitions, not just for normal topology. Promotion rules should include lag guardrails. Catch-up traffic may need throttling. Clients need a clear way to discover the new primary or new routing map. Operators need metrics for replica lag, shard skew, rebalance progress, and repair backlog. The best HLD answers therefore name repair behavior and incident safeguards, not merely replication diagrams.",
+                    "A design that looks elegant when every node is healthy can behave badly during promotion, catch-up, and repair. If a leader fails under heavy write load, survivors may be both serving traffic and replaying logs. If a hot shard is moved, caches churn and retry storms appear. If a replica is promoted while still behind, the system may meet an uptime target but lose user trust because the newest confirmed writes disappeared. In cell-based systems the same lesson applies one level higher: fail in-cell first if possible, and only escalate to cross-cell evacuation when the local blast radius boundary is truly compromised. These are not edge cases; they are the moments users remember.",
+                    "That is why resilient teams design for degraded transitions, not just for normal topology. Promotion rules should include lag guardrails. Catch-up traffic may need throttling. Clients need a clear way to discover the new primary or new routing map. Operators need metrics for replica lag, shard skew, rebalance progress, repair backlog, and any residency-policy violations triggered during failover. The best HLD answers therefore name repair behavior and incident safeguards, not merely replication diagrams.",
                 ),
                 [
                     "Guard failover with freshness thresholds so a stale follower is not promoted into user-visible data loss.",
                     "Throttle catch-up and rebalance work so repair traffic does not collapse the remaining healthy nodes.",
-                    "Make routing-map and primary-discovery behavior explicit for both clients and operators.",
+                    "Make routing-map, cell-router, and primary-discovery behavior explicit for both clients and operators.",
                 ],
                 code(
                     "Promotion guard based on follower lag",
@@ -559,14 +574,15 @@ def _replication_sharding_and_consistency():
         checklist=[
             "Define which flows require immediate freshness, which require durability, and which can tolerate lag.",
             "Choose a replica topology and say exactly which requests are allowed to read from followers.",
-            "Pick and justify a shard key using both load distribution and workflow locality.",
+            "Pick and justify a shard key and, if relevant, a cell boundary using load distribution, workflow locality, and residency rules.",
             "Describe at least one read-after-write or monotonic-read mitigation for sensitive flows.",
             "Explain failover guardrails, client discovery of the new primary, and catch-up behavior after promotion.",
-            "Track shard skew, replica lag, retry amplification, and repair backlog as first-class operating signals.",
+            "Track shard skew, replica lag, retry amplification, repair backlog, and cross-region routing exceptions as first-class operating signals.",
         ],
         pitfalls=[
             "Saying eventual consistency is fine without naming which user experience becomes stale and for how long.",
             "Choosing a shard key that mirrors traffic bursts and creates predictable hotspots.",
+            "Ignoring data-residency or write-affinity constraints until the topology is already globally coupled.",
             "Promoting a lagging replica in the name of uptime while hiding effective data loss from the design discussion.",
             "Assuming follower reads are free even when product workflows need immediate confirmation of the latest write.",
             "Ignoring the operational cost of rebalancing, catch-up traffic, and cache churn during topology changes.",
@@ -580,8 +596,8 @@ def _replication_sharding_and_consistency():
         likely_answer_points=[
             "Good topology design starts by classifying user journeys by freshness and durability needs instead of by assuming every read can use replicas.",
             "Leader-follower replication is often the simplest write-ownership model, but it requires an explicit read-after-write strategy for sensitive flows.",
-            "A shard key should be judged by distribution under skew and by whether it keeps the most important multi-record operations local enough to avoid constant scatter-gather work.",
-            "Operational maturity shows up in failover and repair: promotion lag thresholds, catch-up throttling, routing discovery, and metrics for skew and replica freshness.",
+            "A shard key or cell boundary should be judged by distribution under skew, by whether it keeps the most important multi-record operations local enough to avoid constant scatter-gather work, and by whether it honors data residency cleanly.",
+            "Operational maturity shows up in failover and repair: promotion lag thresholds, catch-up throttling, cell-local isolation, routing discovery, and metrics for skew and replica freshness.",
         ],
         exercises=[
             design_exercise(
@@ -673,13 +689,13 @@ def _polyglot_storage_selection():
             section(
                 "Match engines to access patterns, not to labels",
                 T(
-                    "Relational stores remain strong defaults for multi-row invariants, constrained updates, and operational maturity. Document stores fit aggregates whose fields evolve frequently but are usually read and written as a unit. Search indexes fit ranked retrieval and text filtering. Object storage fits immutable large blobs. Key-value caches fit ephemeral hot reads. Each tool is attractive when the access path aligns with its strengths and dangerous when used to imitate another engine badly.",
-                    "Strong interviews do not only say that NoSQL scales. They specify what scales and at what semantic cost. A document store may scale tenant metadata well but still struggle with cross-document transactions. A search engine makes relevance queries easy but is a poor legal source of truth. Object storage is cheap for media but terrible for row-level transactional updates. Selection quality comes from matching the engine to the workload and explicitly naming the edges where it should not be stretched.",
+                    "Relational stores remain strong defaults for multi-row invariants, constrained updates, and operational maturity. Document stores fit aggregates whose fields evolve frequently but are usually read and written as a unit. Search indexes fit ranked retrieval and text filtering. Vector stores are now mainstream choices for semantic retrieval, especially when dense or hybrid search must scale beyond what a transactional store can comfortably absorb. Object storage fits immutable large blobs. Lakehouse tables on open formats such as Apache Iceberg, with Delta Lake and Hudi as peers, have become the standard projection layer for analytical fact sets, replayable event history, and cross-engine SQL rather than a vague dump CSV somewhere later pattern.",
+                    "Strong interviews do not only say that NoSQL scales. They specify what scales and at what semantic cost. A document store may scale tenant metadata well but still struggle with cross-document transactions. A search engine makes relevance queries easy but is a poor legal source of truth. pgvector can be excellent when embeddings benefit from ACID adjacency, relational joins, and simpler ops, but specialized systems such as Qdrant, Weaviate, or Pinecone can win when vector scale, filtering behavior, or dedicated retrieval tooling dominate. Lakehouse choices should also be defended economically: storage layout, query-engine cost, compaction or maintenance work, and full rebuild cost all matter as much as raw flexibility.",
                 ),
                 [
-                    "Choose engines by read/write shape, query flexibility, object size, and correctness needs.",
+                    "Choose engines by read or write shape, query flexibility, object size, correctness needs, and unit economics.",
                     "Explain the semantic trade-off of every non-relational choice, not only the throughput benefit.",
-                    "Keep the team's operating burden in view when adding a new storage technology.",
+                    "Keep the team's operating burden and rebuild cost in view when adding a new storage technology.",
                 ],
                 code(
                     "Relational truth with object-storage pointers",
@@ -702,8 +718,8 @@ def _polyglot_storage_selection():
             section(
                 "Derived stores need explicit movement, ownership, and replay rules",
                 T(
-                    "Adding a search index or analytics store is not just a provisioning action. It creates a data movement contract. The design must say how changes leave the source system, how they are transformed, how consumers replay missed events, and how operators rebuild the derivative after code or schema changes. Without those answers, every indexing lag spike or pipeline outage turns into manual patchwork and inconsistent customer state.",
-                    "The outbox pattern is often the cleanest explanation because it ties source-of-truth writes and downstream publication together without pretending a distributed two-phase commit exists. From there, consumers can project records into search, cache warmers, or warehouses idempotently. This framing also keeps incident boundaries clear: if search is behind, the order table is still truth; if cache is cold, the relational read path still works; if analytics is delayed, revenue accounting is not corrupted.",
+                    "Adding a vector index, search tier, or lakehouse projection is not just a provisioning action. It creates a data movement contract. The design must say how changes leave the source system, how they are transformed, how consumers replay missed events, and how operators rebuild the derivative after code or schema changes. Without those answers, every embedding lag spike, indexing outage, or analytics schema evolution turns into manual patchwork and inconsistent customer state.",
+                    "The outbox pattern is often the cleanest explanation because it ties source-of-truth writes and downstream publication together without pretending a distributed two-phase commit exists. From there, consumers can project records into search, vector collections, cache warmers, or lakehouse tables idempotently. This framing also keeps incident boundaries clear: if vector retrieval is behind, the order table is still truth; if cache is cold, the relational read path still works; if lakehouse refresh is delayed, operational decisioning may lag but the transactional system of record is not corrupted.",
                 ),
                 [
                     "Describe exactly how changes leave the source system and become projections elsewhere.",
@@ -711,7 +727,7 @@ def _polyglot_storage_selection():
                     "Use idempotent consumers so projection retries do not create duplicate or contradictory derived state.",
                 ],
                 code(
-                    "Outbox-driven projection into search",
+                    "Outbox-driven projection into vector and lakehouse consumers",
                     "javascript",
                     lines(
                         "async function publishOrderProjection(tx, order) {",
@@ -722,7 +738,8 @@ def _polyglot_storage_selection():
                         "    payload: JSON.stringify({",
                         "      orderId: order.order_id,",
                         "      merchantId: order.merchant_id,",
-                        "      searchableText: order.customer_name + ' ' + order.city",
+                        "      searchableText: order.customer_name + ' ' + order.city,",
+                        "      embeddingText: `${order.customer_name} ${order.city} ${order.notes}`",
                         "    })",
                         "  });",
                         "}",
@@ -732,8 +749,8 @@ def _polyglot_storage_selection():
             section(
                 "Minimize the portfolio because each datastore multiplies operations",
                 T(
-                    "A datastore is not only a benchmark profile. It is backups, IAM, dashboards, patching, failover drills, schema evolution, local development, and on-call muscle memory. The difference between two engines and five engines is not linear because every cross-store movement path adds another matrix of failure cases. Polyglot storage is a powerful strategy only when the number of systems stays intentionally small and each one carries obvious product value.",
-                    "That is why senior engineers often ask whether an existing system can be stretched slightly before introducing a new one. Sometimes the answer is yes: a relational store plus a cache may handle the next phase. Sometimes the answer is no: full-text ranking or cheap blob storage genuinely needs a dedicated tool. The point is not to avoid specialization forever. It is to avoid premature specialization that outpaces the team's ability to operate, migrate, and debug the resulting portfolio.",
+                    "A datastore is not only a benchmark profile. It is backups, IAM, dashboards, patching, failover drills, schema evolution, local development, and on-call muscle memory. The difference between two engines and five engines is not linear because every cross-store movement path adds another matrix of failure cases. Polyglot storage is a powerful strategy only when the number of systems stays intentionally small, each one carries obvious product value, and the unit economics are still attractive at production scale.",
+                    "That is why senior engineers often ask whether an existing system can be stretched slightly before introducing a new one. Sometimes the answer is yes: a relational store plus a cache and pgvector may handle the next phase. Sometimes the answer is no: large-scale semantic retrieval, filterable ANN, or open-table analytics genuinely needs a dedicated tool. The point is not to avoid specialization forever. It is to avoid premature specialization that outpaces the team's ability to operate, migrate, debug, and pay for the resulting portfolio.",
                 ),
                 [
                     "Count operational surface area as part of the storage decision, not as an afterthought.",
@@ -744,28 +761,28 @@ def _polyglot_storage_selection():
             section(
                 "Migrations between storage systems need overlap and observability",
                 T(
-                    "Once a system uses multiple stores, the next hard problem is changing one without breaking the others. Migrating search schemas, moving media metadata to a new relational shape, or retiring a document store requires overlap periods where old and new paths both exist. During that window, teams need counters for dual-write success, projection lag, backfill completeness, and correctness sampling between old and new query results.",
-                    "This is where storage selection and change safety intersect. The cheaper engine is not cheaper if migration away from it later becomes practically impossible. Good selection therefore includes exit thinking: can we dual-write temporarily, replay history, validate parity, and cut traffic over by cohort? Designs that ignore exit cost often end up with a permanent shadow datastore that survives only because everyone is afraid to remove it.",
+                    "Once a system uses multiple stores, the next hard problem is changing one without breaking the others. Migrating search schemas, moving media metadata to a new relational shape, swapping vector backends, or retiring an analytics projection requires overlap periods where old and new paths both exist. During that window, teams need counters for dual-write success, projection lag, backfill completeness, query-engine cost, and correctness sampling between old and new query results.",
+                    "This is where storage selection and change safety intersect. The cheaper engine is not cheaper if migration away from it later becomes practically impossible or if a full embedding or lakehouse rebuild takes weeks. Good selection therefore includes exit thinking: can we dual-write temporarily, replay history, validate parity, estimate rebuild cost, and cut traffic over by cohort? Designs that ignore exit cost often end up with a permanent shadow datastore that survives only because everyone is afraid to remove it.",
                 ),
                 [
                     "Include migration and exit cost when evaluating a new datastore, not only steady-state fit.",
                     "Use overlap windows, backfills, and parity checks when moving authority or read traffic between stores.",
-                    "Track lag and correctness on the projection path so cutovers are evidence based.",
+                    "Track lag, correctness, and unit cost on the projection path so cutovers are evidence based.",
                 ],
                 code(
                     "Storage-choice scorecard",
                     "python",
                     lines(
                         "candidates = {",
-                        "    'relational': {'correctness': 5, 'query_flex': 4, 'ops_cost': 3},",
-                        "    'document': {'correctness': 3, 'query_flex': 3, 'ops_cost': 3},",
-                        "    'search': {'correctness': 1, 'query_flex': 5, 'ops_cost': 4},",
+                        "    'relational': {'correctness': 5, 'query_flex': 4, 'ops_cost': 3, 'rebuild_cost': 2},",
+                        "    'vector_index': {'correctness': 2, 'query_flex': 4, 'ops_cost': 4, 'rebuild_cost': 4},",
+                        "    'lakehouse': {'correctness': 3, 'query_flex': 5, 'ops_cost': 4, 'rebuild_cost': 3},",
                         "}",
                         "",
                         "def weighted_score(scores, weights):",
                         "    return sum(scores[k] * weights[k] for k in weights)",
                         "",
-                        "weights = {'correctness': 0.5, 'query_flex': 0.3, 'ops_cost': -0.2}",
+                        "weights = {'correctness': 0.45, 'query_flex': 0.25, 'ops_cost': -0.15, 'rebuild_cost': -0.15}",
                         "for name, scores in candidates.items():",
                         "    print(name, round(weighted_score(scores, weights), 2))",
                     ),
@@ -774,8 +791,8 @@ def _polyglot_storage_selection():
             section(
                 "Interview framing: explain the portfolio as a small map of authority and derivation",
                 T(
-                    "When answering a storage-selection question, do not list technologies first. Start with domains. For example: orders and payments live in a relational primary because money and inventory invariants matter; product media lives in object storage with relational metadata pointers; search is a derived index built from outbox events; Redis caches hot reads but is disposable. That narrative is easy to defend because each tool has one clear reason to exist.",
-                    "Then show restraint. Mention what you are explicitly not adding yet and why. Maybe you are postponing a graph store because relationship depth is shallow. Maybe you are keeping analytics in batch exports until data freshness becomes a product feature. That kind of disciplined scope is exactly what turns polyglot persistence from a buzzword into a practical senior design answer.",
+                    "When answering a storage-selection question, do not list technologies first. Start with domains. For example: orders and payments live in a relational primary because money and inventory invariants matter; product media lives in object storage with relational metadata pointers; semantic retrieval starts in pgvector because the embeddings need ACID adjacency and joins, but may move to a specialized vector store if recall, filterability, or scale demand it; lakehouse tables hold replayable analytical projections; Redis caches hot reads but is disposable. That narrative is easy to defend because each tool has one clear reason to exist.",
+                    "Then show restraint. Mention what you are explicitly not adding yet and why. Maybe you are postponing a dedicated vector database because pgvector is still within latency and cost targets. Maybe you are keeping analytics in one Iceberg-backed lakehouse instead of separate warehouse plus files plus bespoke ETL. That kind of disciplined scope is exactly what turns polyglot persistence from a buzzword into a practical senior design answer.",
                 ),
                 [
                     "Describe the system as authority plus derivatives, not as a shopping list of databases.",
@@ -786,17 +803,19 @@ def _polyglot_storage_selection():
                     "Simple storage selector",
                     "python",
                     lines(
-                        "def choose_storage(needs_transactions, needs_full_text, large_blobs):",
+                        "def choose_storage(needs_transactions, needs_semantic_search, large_blobs, needs_analytics_projection):",
                         "    plan = []",
                         "    if needs_transactions:",
                         "        plan.append('relational-primary')",
-                        "    if needs_full_text:",
-                        "        plan.append('search-index-derived')",
+                        "    if needs_semantic_search:",
+                        "        plan.append('vector_index')",
                         "    if large_blobs:",
                         "        plan.append('object-storage')",
+                        "    if needs_analytics_projection:",
+                        "        plan.append('lakehouse')",
                         "    return plan",
                         "",
-                        "print(choose_storage(True, True, True))",
+                        "print(choose_storage(True, True, True, True))",
                     ),
                 ),
             ),
@@ -807,7 +826,7 @@ def _polyglot_storage_selection():
             "Explain how data moves from the source of truth into caches, search, or analytics.",
             "Keep the datastore portfolio intentionally small and count operational burden as part of the trade-off.",
             "Plan replay, rebuild, and parity validation for every derived store.",
-            "Include migration and eventual retirement cost in the selection conversation.",
+            "Include migration, rebuild, and eventual retirement cost in the selection conversation.",
         ],
         pitfalls=[
             "Using a search index or cache as if it were the legal source of truth for mutable business data.",
@@ -824,8 +843,8 @@ def _polyglot_storage_selection():
         ],
         likely_answer_points=[
             "Choose the authoritative store by business invariant first, then add derived systems only where a clear workload advantage justifies them.",
-            "Search, cache, and analytics systems should usually be described as projections with replay and rebuild paths rather than as peers to the transactional source of truth.",
-            "A strong answer shows restraint: it names the minimum viable portfolio and explicitly says which specialized systems are being deferred for now.",
+            "Search, vector, cache, and analytics systems should usually be described as projections with replay and rebuild paths rather than as peers to the transactional source of truth.",
+            "A strong answer shows restraint: it names the minimum viable portfolio, explains when pgvector is enough versus when a specialized vector store earns its cost, and treats Iceberg-class lakehouse tables as the analytical default rather than a pile of exports.",
             "Migration and exit cost matter because the hardest storage decision is often not adoption but safe removal or replacement after the system evolves.",
         ],
         exercises=[
@@ -833,15 +852,17 @@ def _polyglot_storage_selection():
                 "creator-platform-storage-portfolio",
                 "Design a storage portfolio for a creator platform",
                 "intermediate",
-                "Design the storage mix for a creator platform with subscriptions, media uploads, creator search, payout history, and periodic analytics dashboards.",
+                "Design the storage mix for a creator platform with subscriptions, media uploads, semantic creator search, payout history, and periodic analytics dashboards.",
                 [
                     "Which domains need a strict source of truth and which can be projected asynchronously?",
-                    "How would you move updates from the authoritative store into search and analytics systems?",
+                    "When would pgvector inside the relational store be enough for search, and when would a specialized vector store earn its cost?",
+                    "How would you move updates from the authoritative store into vector and analytics systems?",
                     "Where would you draw the line between acceptable staleness and unacceptable divergence?",
                     "Which datastore would you deliberately avoid in the first version even if it looks attractive on paper?",
                 ],
                 [
                     "Name authority boundaries first.",
+                    "Discuss vector and analytics projections as deliberate derivatives.",
                     "Separate media bytes from transactional metadata.",
                     "Keep the operating portfolio smaller than the feature list suggests.",
                 ],
@@ -852,32 +873,35 @@ def _polyglot_storage_selection():
                 "beginner",
                 "Complete the Python function so it chooses a small portfolio based on invariants and access-pattern flags.",
                 lines(
-                    "def plan_storage(needs_transactions, needs_search, stores_large_blobs, needs_hot_cache):",
+                    "def plan_storage(needs_transactions, needs_vector_search, stores_large_blobs, needs_lakehouse, needs_hot_cache):",
                     "    plan = []",
                     "    # TODO: append 'relational-primary' when transactions are needed.",
-                    "    # TODO: append 'search-derived' when full-text search is needed.",
+                    "    # TODO: append 'vector_index' when semantic or vector search is needed.",
                     "    # TODO: append 'object-storage' when large blobs are needed.",
+                    "    # TODO: append 'lakehouse' when replayable analytics projections are needed.",
                     "    # TODO: append 'cache' when a hot cache is needed.",
                     "    return plan",
                     "",
-                    "print(plan_storage(True, True, True, True))",
+                    "print(plan_storage(True, True, True, True, True))",
                 ),
                 lines(
-                    "def plan_storage(needs_transactions, needs_search, stores_large_blobs, needs_hot_cache):",
+                    "def plan_storage(needs_transactions, needs_vector_search, stores_large_blobs, needs_lakehouse, needs_hot_cache):",
                     "    plan = []",
                     "    if needs_transactions:",
                     "        plan.append('relational-primary')",
-                    "    if needs_search:",
-                    "        plan.append('search-derived')",
+                    "    if needs_vector_search:",
+                    "        plan.append('vector_index')",
                     "    if stores_large_blobs:",
                     "        plan.append('object-storage')",
+                    "    if needs_lakehouse:",
+                    "        plan.append('lakehouse')",
                     "    if needs_hot_cache:",
                     "        plan.append('cache')",
                     "    return plan",
                     "",
-                    "print(plan_storage(True, True, True, True))",
+                    "print(plan_storage(True, True, True, True, True))",
                 ),
-                "The function should return ['relational-primary', 'search-derived', 'object-storage', 'cache'].",
+                "The function should return ['relational-primary', 'vector_index', 'object-storage', 'lakehouse', 'cache'].",
             ),
         ],
         related=[
@@ -898,10 +922,10 @@ def _auth_threat_modeling_for_hld():
         why_it_matters="Security depth in HLD is rarely about naming JWTs or OAuth alone. Strong answers show how identity, authorization, and threat thinking alter service boundaries, storage decisions, and operating controls across the critical path.",
         sections=[
             section(
-                "Threat modeling starts by naming assets, actors, and trust boundaries",
+                "Zero trust starts by naming assets, actors, and trust boundaries",
                 T(
-                    "A useful HLD threat model is not a giant spreadsheet of hypothetical disasters. It is a map of who can act, what they are trying to access, and where trust changes across the system. External clients, partner systems, support agents, background workers, and platform operators usually need different identities and different guardrails. The moment you draw those roles on the architecture, you can ask more realistic questions about token scope, lateral movement, replay, and accidental privilege exposure.",
-                    "This framing matters because many architecture bugs start as trust-boundary bugs rather than crypto bugs. A service that assumes every internal caller is safe, an admin tool that shares customer APIs without stronger controls, or a queue consumer that runs with global write access can all be catastrophic even if every hop uses TLS. Threat modeling at HLD level is about deciding where identity is established, where privilege narrows, and where audit trails must survive an incident.",
+                    "A useful HLD threat model is not a giant spreadsheet of hypothetical disasters. It is a map of who can act, what they are trying to access, and where trust changes across the system. External clients, partner systems, support agents, background workers, and platform operators usually need different identities and different guardrails. Zero trust sharpens that model: authenticate and authorize every hop, assume network location is not privilege, re-check context as the request crosses services, and keep least privilege narrow enough that one compromised component cannot laterally roam the system.",
+                    "This framing matters because many architecture bugs start as trust-boundary bugs rather than crypto bugs. A service that assumes every internal caller is safe, an admin tool that shares customer APIs without stronger controls, or a queue consumer that runs with global write access can all be catastrophic even if every hop uses TLS. Threat modeling at HLD level is about deciding where identity is established, where privilege narrows, where continuous verification is required, and where audit trails must survive an incident.",
                 ),
                 [
                     "List human users, services, operators, and background jobs as separate actors with separate privileges.",
@@ -910,29 +934,33 @@ def _auth_threat_modeling_for_hld():
                 ],
             ),
             section(
-                "Authentication proves who is calling, authorization proves what they may do",
+                "Modern auth separates strong user authn, workload identity, and contextual authz",
                 T(
-                    "Authentication and authorization are related but should not collapse into one vague box labeled auth. Authentication establishes a principal, perhaps via a session, short-lived access token, service certificate, or workload identity. Authorization then evaluates the action in context: which tenant, which resource, which role, which elevation path, which environment. Strong systems perform that second step close enough to business logic that product-specific policy is explicit rather than hidden in a gateway rule nobody can reason about.",
-                    "Production trouble appears when architectures authenticate once and then over-trust the rest of the path. A valid identity token does not mean the caller can edit any record, cross any tenant boundary, or impersonate an admin workflow. Senior answers therefore discuss scoped tokens, tenant-aware permission checks, delegated service calls, and step-up mechanisms for privileged actions. The goal is to keep the permission decision observable and debuggable without pushing every domain rule into the edge tier.",
+                    "Authentication and authorization are related but should not collapse into one vague box labeled auth. Authentication establishes a principal, perhaps via a passkey-backed WebAuthn ceremony, an OIDC session, a short-lived access token, or a workload identity such as mTLS or SPIFFE-issued service credentials. Authorization then evaluates the action in context: which tenant, which resource, which role, which elevation path, which environment. Strong systems perform that second step close enough to business logic that product-specific policy is explicit rather than hidden in a gateway rule nobody can reason about.",
+                    "Production trouble appears when architectures authenticate once and then over-trust the rest of the path. A valid identity token does not mean the caller can edit any record, cross any tenant boundary, or impersonate an admin workflow. Senior answers therefore discuss short-lived tokens, tenant-aware permission checks, workload identity for service-to-service calls instead of long-lived shared secrets, and step-up mechanisms for privileged actions. The goal is to keep the permission decision observable and debuggable without pushing every domain rule into the edge tier.",
                 ),
                 [
-                    "Authenticate identities with short-lived credentials or sessions that can be rotated and revoked sensibly.",
+                    "Authenticate users with phishing-resistant factors such as passkeys where the risk justifies it, and keep tokens short lived.",
                     "Perform authorization with resource and tenant context instead of treating identity proof as blanket access.",
                     "Keep domain-specific permission logic visible in application services even if gateways enforce coarse edge policies.",
                 ],
                 code(
-                    "Authorization check with tenant context",
+                    "Authorization check with tenant context and step-up strength",
                     "javascript",
                     lines(
-                        "function canEditInvoice({ actor, invoice }) {",
-                        "  if (actor.role === 'platform-admin') return actor.breakGlassTicketOpen === true;",
+                        "function canEditInvoice({ actor, invoice, privilegedAction = false }) {",
+                        "  if (actor.role === 'platform-admin') {",
+                        "    return actor.breakGlassTicketOpen === true && actor.authStrength === 'passkey';",
+                        "  }",
                         "  if (actor.tenantId !== invoice.tenantId) return false;",
+                        "  if (privilegedAction && actor.authStrength !== 'passkey') return false;",
                         "  return actor.scopes.includes('invoice:write');",
                         "}",
                         "",
                         "console.log(canEditInvoice({",
-                        "  actor: { role: 'manager', tenantId: 't-1', scopes: ['invoice:write'] },",
-                        "  invoice: { tenantId: 't-1', status: 'open' }",
+                        "  actor: { role: 'manager', tenantId: 't-1', scopes: ['invoice:write'], authStrength: 'passkey' },",
+                        "  invoice: { tenantId: 't-1', status: 'open' },",
+                        "  privilegedAction: true",
                         "}));",
                     ),
                 ),
@@ -940,8 +968,8 @@ def _auth_threat_modeling_for_hld():
             section(
                 "Threat modeling should follow the highest-value workflow, not every endpoint equally",
                 T(
-                    "You get more value from a focused threat model of one privileged workflow than from superficial coverage of twenty endpoints. Pick the flow where money, secrets, or durable customer impact move. For example, login, password reset, payout approval, tenant invitation, and admin impersonation are all richer than a generic profile read. Walk the flow step by step and ask how spoofing, tampering, repudiation, information disclosure, denial of service, or privilege escalation could appear.",
-                    "The HLD benefit of that exercise is architectural prioritization. Maybe the password-reset path needs one-time tokens and aggressive abuse limits. Maybe payout approval needs dual control, stronger auditing, and delayed execution. Maybe admin impersonation needs distinct break-glass credentials and immutable logs. Threat modeling at this level is useful because it changes the design in concrete ways instead of becoming compliance theater that leaves the critical workflow untouched.",
+                    "You get more value from a focused threat model of one privileged workflow than from superficial coverage of twenty endpoints. Pick the flow where money, secrets, or durable customer impact move. For example, login, password reset, payout approval, tenant invitation, and admin impersonation are all richer than a generic profile read. Walk the flow step by step and ask how spoofing, tampering, repudiation, information disclosure, denial of service, or privilege escalation could appear. STRIDE remains useful here because it forces the review to stay concrete on the workflow with real blast radius.",
+                    "The HLD benefit of that exercise is architectural prioritization. Maybe the password-reset path needs passkey recovery constraints, one-time tokens, and aggressive abuse limits. Maybe payout approval needs dual control, stronger auditing, and delayed execution. Maybe admin impersonation needs distinct break-glass credentials and immutable logs. Threat modeling at this level is useful because it changes the design in concrete ways instead of becoming compliance theater that leaves the critical workflow untouched.",
                 ),
                 [
                     "Run the threat model on a privileged, money-moving, or identity-mutating workflow first.",
@@ -966,7 +994,7 @@ def _auth_threat_modeling_for_hld():
             section(
                 "Abuse resistance belongs at the architecture level",
                 T(
-                    "Credential stuffing, replay, brute force, enumeration, and permission probing can all overwhelm a design long before a classic exploit appears. This is why login, password-reset, token-refresh, and admin endpoints often need different rate limits, telemetry, and challenge strategies than ordinary product APIs. If the design treats those endpoints like every other request, abuse traffic can become the dominant workload during an incident.",
+                    "Credential stuffing, replay, brute force, enumeration, and permission probing can all overwhelm a design long before a classic exploit appears. This is why login, password-reset, token-refresh, and admin endpoints often need different rate limits, telemetry, and challenge strategies than ordinary product APIs. If the design treats those endpoints like every other request, abuse traffic can become the dominant workload during an incident. OIDC sessions and short-lived tokens reduce replay windows, but only if refresh, revocation, and step-up paths are designed intentionally.",
                     "The deeper lesson is that security and reliability overlap. A replay-resistant write path also benefits correctness. Per-actor rate limiting protects both abuse surfaces and multi-tenant fairness. Audit events feed both incident response and product accountability. Strong HLD answers therefore mention idempotency keys, nonce or token expiration, rate limits by actor type, suspicious-activity alerts, and clear error semantics that do not leak sensitive state to attackers.",
                 ),
                 [
@@ -991,8 +1019,8 @@ def _auth_threat_modeling_for_hld():
             section(
                 "Tenant boundaries and operator privilege deserve explicit architecture",
                 T(
-                    "Many high-severity incidents are not caused by anonymous attackers. They are caused by the wrong tenant seeing the wrong data or by a support or operations tool acting with excessive default power. Multi-tenant systems should treat tenant identity as a first-class dimension in tokens, database filters, caches, and audit records. Operator tools should be designed as distinct privileged systems, not as quiet side doors into the customer plane.",
-                    "This means thinking about blast radius the same way you think about shard keys or replication domains. A cache key missing tenant context can become a cross-tenant leak. A queue consumer with global write scope can mutate the wrong tenant during a bug. An admin impersonation flow without justification logging becomes impossible to investigate later. HLD security maturity comes from making those privilege boundaries visible in the design itself.",
+                    "Many high-severity incidents are not caused by anonymous attackers. They are caused by the wrong tenant seeing the wrong data or by a support or operations tool acting with excessive default power. Multi-tenant systems should treat tenant identity as a first-class dimension in tokens, database filters, caches, and audit records. Operator tools should be designed as distinct privileged systems, not as quiet side doors into the customer plane. Service-to-service calls should also present workload identity instead of reusing one shared secret across the fleet.",
+                    "This means thinking about blast radius the same way you think about shard keys or replication domains. A cache key missing tenant context can become a cross-tenant leak. A queue consumer with global write scope can mutate the wrong tenant during a bug. An admin impersonation flow without justification logging becomes impossible to investigate later. HLD security maturity comes from making those privilege boundaries visible in the design itself and carrying least privilege all the way through the worker and service graph.",
                 ),
                 [
                     "Propagate tenant context through API, storage, cache, and audit layers.",
@@ -1016,14 +1044,15 @@ def _auth_threat_modeling_for_hld():
         checklist=[
             "Identify the principal actors, assets, and trust boundaries for the system.",
             "Separate authentication from authorization and explain where each decision happens.",
-            "Threat-model at least one privileged workflow such as login recovery, payout approval, or admin impersonation.",
+            "Threat-model at least one privileged workflow such as login recovery, payout approval, or admin impersonation with STRIDE-style abuse questions.",
             "Add replay resistance, rate limits, and audit trails to identity- and privilege-mutating endpoints.",
+            "Use workload identity for service-to-service calls instead of long-lived shared secrets.",
             "Carry tenant context through services, caches, jobs, and storage filters.",
             "Design operator and support tooling as explicit privileged paths with reviewable access.",
         ],
         pitfalls=[
             "Treating a valid token as if it automatically grants correct tenant and resource access.",
-            "Assuming internal service traffic is trusted and therefore skipping service identity or scoped permissions.",
+            "Assuming internal service traffic is trusted and therefore skipping workload identity or scoped permissions.",
             "Threat-modeling everything lightly instead of modeling the highest-risk workflow deeply.",
             "Forgetting abuse economics such as credential stuffing, replay, and enumeration on auth endpoints.",
             "Letting admin or support surfaces share customer-plane privileges without stronger audit and approval controls.",
@@ -1035,8 +1064,8 @@ def _auth_threat_modeling_for_hld():
             "Why should support tools and break-glass admin flows be treated differently from ordinary product APIs?",
         ],
         likely_answer_points=[
-            "Strong answers begin with actors, assets, and trust boundaries so the auth design serves an explicit threat model instead of a generic login box.",
-            "Authentication proves identity, but authorization must still be evaluated with resource and tenant context near the business logic that understands the action.",
+            "Strong answers begin with actors, assets, and trust boundaries so the auth design serves an explicit zero-trust threat model instead of a generic login box.",
+            "Authentication proves identity, but authorization must still be evaluated with resource and tenant context near the business logic that understands the action. In 2026 that usually means passkeys or OIDC for users plus workload identity for services.",
             "High-risk workflows like password reset, payout approval, or admin impersonation deserve deeper threat modeling and stronger controls than generic reads.",
             "Security maturity shows up in abuse controls, scoped privileges, tenant-safe caching and jobs, and immutable auditability for privileged actions.",
         ],
@@ -1149,38 +1178,44 @@ def _encryption_secrets_and_tenancy():
             section(
                 "Secret distribution should be short-lived, auditable, and environment aware",
                 T(
-                    "A secret path is an architecture path. Services need database credentials, third-party API tokens, signing keys, and sometimes tenant-specific integration secrets. The secure pattern is usually to fetch short-lived credentials from a managed secret source or workload identity mechanism at runtime, cache them briefly in memory, and rotate them without code redeploys. Hard-coded environment files, long-lived shared passwords, and ad hoc manual rotation make incident response slower and blast radius larger.",
-                    "The operating detail that matters in HLD is renewal behavior. What happens when a secret rotates? Does the service watch for version change, reopen a connection, and recover gracefully? Can one compromised worker expose every tenant's connector token, or are those secrets partitioned by tenant or integration? Which audit event proves who accessed a secret and when? Strong answers connect secret distribution to service startup, rotation cadence, and incident containment.",
+                    "A secret path is an architecture path. Services need database credentials, third-party API tokens, signing keys, and sometimes tenant-specific integration secrets. The secure pattern is usually to fetch short-lived credentials from a managed secret source or workload identity mechanism at runtime, cache them briefly in memory, and rotate them without code redeploys. Hard-coded environment files, long-lived shared passwords, and ad hoc manual rotation make incident response slower and blast radius larger. Modern data platforms apply the same idea to storage access: a catalog or control plane vends scoped credentials for a tenant, table, or prefix instead of distributing one broad object-store key to every worker.",
+                    "The operating detail that matters in HLD is renewal behavior. What happens when a secret rotates? Does the service watch for version change, reopen a connection, and recover gracefully? Can one compromised worker expose every tenant's connector token, or are those secrets partitioned by tenant or integration? Which audit event proves who accessed a secret and when? Strong answers connect secret distribution to service startup, rotation cadence, incident containment, and credential vending boundaries.",
                 ),
                 [
                     "Prefer workload identities and short-lived credentials over static secrets stored on hosts or in source control.",
                     "Design service refresh behavior so rotation does not require emergency redeploys or prolonged downtime.",
-                    "Partition sensitive integration secrets where possible so one compromise does not spill every tenant's credentials.",
+                    "Partition sensitive integration secrets or scoped storage credentials where possible so one compromise does not spill every tenant's access.",
                 ],
                 code(
-                    "Secret refresh with explicit version checks",
+                    "Scoped credential vending with explicit expiry",
                     "javascript",
                     lines(
-                        "async function loadSigningKey(secretStore, cache) {",
-                        "  const latest = await secretStore.get('jwt-signing-key');",
-                        "  if (cache.version !== latest.version) {",
-                        "    cache.material = latest.material;",
-                        "    cache.version = latest.version;",
-                        "  }",
-                        "  return cache.material;",
+                        "async function issueScopedStorageCreds(catalog, tenantId, prefix) {",
+                        "  const lease = await catalog.vendCredentials({",
+                        "    tenantId,",
+                        "    prefix,",
+                        "    ttlSeconds: 900",
+                        "  });",
+                        "  return {",
+                        "    accessKeyId: lease.accessKeyId,",
+                        "    expiresAt: lease.expiresAt,",
+                        "    allowedPrefix: prefix",
+                        "  };",
                         "}",
+                        "",
+                        "issueScopedStorageCreds(catalog, 'tenant-17', 'tenant-17/contracts/');",
                     ),
                 ),
             ),
             section(
-                "Tenant isolation must exist in storage, cache keys, and background jobs",
+                "Tenant isolation and residency must exist in storage, cache keys, and background jobs",
                 T(
-                    "Multi-tenancy is not safe if tenant isolation exists only in controller code. The architecture should carry tenant context through database filters, queue payloads, cache keys, search documents, and audit records. Storage-level protections such as schema-per-tenant, database-per-tenant, or row-level security all have trade-offs, but the key point is that the isolation boundary should be enforced in more than one layer so a single application bug does not silently become a cross-tenant exposure.",
-                    "The right isolation depth depends on risk and operating model. Shared-table multi-tenancy can be efficient if row-level security, cache-key discipline, and job scoping are rigorous. Premium or regulated tenants may justify separate schemas, clusters, or even distinct keys. The senior answer is not that one model is always right; it is that blast radius, cost, and operator ergonomics must all be weighed and that background processing must respect the same tenant boundary as synchronous reads.",
+                    "Multi-tenancy is not safe if tenant isolation exists only in controller code. The architecture should carry tenant context through database filters, queue payloads, cache keys, search documents, and audit records. Storage-level protections such as schema-per-tenant, database-per-tenant, or row-level security all have trade-offs, but the key point is that the isolation boundary should be enforced in more than one layer so a single application bug does not silently become a cross-tenant exposure. Residency adds another dimension: some tenants or data classes may need to stay in-region, which means workers, caches, backups, and projections must honor location as well as tenant identity.",
+                    "The right isolation depth depends on risk and operating model. Shared-table multi-tenancy can be efficient if row-level security, cache-key discipline, job scoping, and residency-aware routing are rigorous. Premium or regulated tenants may justify separate schemas, clusters, or even distinct keys. The senior answer is not that one model is always right; it is that blast radius, cost, residency, and operator ergonomics must all be weighed and that background processing must respect the same tenant boundary as synchronous reads.",
                 ),
                 [
-                    "Carry tenant context end to end: API, database, cache, queue, and audit layers.",
-                    "Choose row-level, schema-level, or cluster-level isolation based on blast radius and operating constraints.",
+                    "Carry tenant and, where needed, residency context end to end: API, database, cache, queue, and audit layers.",
+                    "Choose row-level, schema-level, or cluster-level isolation based on blast radius, residency, and operating constraints.",
                     "Treat missing tenant context in cache keys or worker payloads as a severe architecture flaw.",
                 ],
                 code(
@@ -1201,7 +1236,7 @@ def _encryption_secrets_and_tenancy():
                 "Auditability and break-glass access are part of the design, not exceptions",
                 T(
                     "Eventually someone needs temporary elevated access during an outage, fraud event, or legal hold. If the architecture has no explicit break-glass path, operators will invent one under pressure, usually with poor logging and excessive power. Safer systems define who can elevate, how approval works, how long elevation lasts, what extra logging is captured, and how follow-up review happens. That planning protects both the customer and the operator.",
-                    "The same thinking applies to decrypted-data exposure. Reading ciphertext is one privilege; requesting decryption may be another; bulk export may require a third. Architectural separation of those actions makes abuse easier to detect and permission reviews easier to reason about. In interviews, this is a high-signal place to show that security is operational as well as cryptographic.",
+                    "The same thinking applies to decrypted-data exposure and to sensitive telemetry. Reading ciphertext is one privilege; requesting decryption may be another; bulk export may require a third. When AI or LLM features touch PHI or PII, logs and prompts should be metadata first: correlation IDs, tenant IDs, token counts, model names, and redacted field classes are usually safe; raw secrets, prompts with customer data, and decrypted payloads are not. Architectural separation of those actions makes abuse easier to detect and permission reviews easier to reason about. In interviews, this is a high-signal place to show that security is operational as well as cryptographic.",
                 ),
                 [
                     "Make elevated access explicit, time-bound, and heavily audited.",
@@ -1226,7 +1261,8 @@ def _encryption_secrets_and_tenancy():
             "Classify data by confidentiality, access pattern, and retention before selecting encryption controls.",
             "Use envelope encryption and retain key-version metadata for sensitive records or objects.",
             "Distribute secrets through short-lived identities or managed secret stores with rotation-aware refresh behavior.",
-            "Propagate tenant context into database filters, cache keys, queue payloads, and audit records.",
+            "Use scoped credential vending where broad shared storage credentials would create unnecessary blast radius.",
+            "Propagate tenant and residency context into database filters, cache keys, queue payloads, and audit records.",
             "Define break-glass access with approval, expiry, and enhanced auditing.",
             "Be explicit about where stronger tenant isolation or per-tenant keys are worth the extra operations cost.",
         ],
@@ -1246,8 +1282,8 @@ def _encryption_secrets_and_tenancy():
         likely_answer_points=[
             "Start with data classes and blast radius, because the right encryption and key strategy depends on what data is sensitive and how it is used.",
             "Envelope encryption is valuable because it keeps root keys outside application code, supports rotation, and leaves metadata that operators can reason about later.",
-            "Secret handling is part of system architecture: runtime identity, refresh behavior, partitioning of sensitive tokens, and auditability matter as much as storage.",
-            "Tenant isolation must survive through storage, cache, and background systems; otherwise a single missing scope can become a cross-tenant incident.",
+            "Secret handling is part of system architecture: runtime identity, refresh behavior, scoped credential vending, partitioning of sensitive tokens, and auditability matter as much as storage.",
+            "Tenant isolation must survive through storage, cache, background systems, and residency-aware routing; otherwise a single missing scope can become a cross-tenant or cross-border incident.",
         ],
         exercises=[
             design_exercise(
@@ -1324,8 +1360,8 @@ def _safe_change_dr_and_degradation():
             section(
                 "Progressive delivery lowers blast radius when paired with real signals",
                 T(
-                    "Canaries, dark launches, weighted routing, feature flags, and shadow reads are useful only when they are tied to signals that matter. A rollout that checks CPU but ignores domain correctness, tenant-specific errors, or write latency can still ship a bad change cleanly into production. Safe change therefore needs both traffic control and validation metrics. The architecture must expose which cohorts receive the new path and what evidence proves the system is still behaving correctly.",
-                    "The most convincing designs define the cohort boundary intentionally. User ID, tenant, region, shard, or background-job partition can each be a rollout unit depending on blast radius. Rollout should move in stages with objective stop conditions. If replica lag rises, if reconciliation mismatches grow, if p95 doubles for one tenant tier, or if queue backlog spikes, the system should be able to freeze or roll back before the whole fleet absorbs the change.",
+                    "Canaries, dark launches, weighted routing, feature flags, kill switches, and shadow reads are useful only when they are tied to signals that matter. A rollout that checks CPU but ignores domain correctness, tenant-specific errors, or write latency can still ship a bad change cleanly into production. Safe change therefore needs both traffic control and validation metrics. In current practice those signals are usually emitted through an OpenTelemetry-style traces, metrics, and logs pipeline, then evaluated against service-level objectives before a canary is promoted.",
+                    "The most convincing designs define the cohort boundary intentionally. User ID, tenant, region, shard, or background-job partition can each be a rollout unit depending on blast radius. Rollout should move in stages with objective stop conditions. If error-budget burn accelerates, if replica lag rises, if reconciliation mismatches grow, if p95 doubles for one tenant tier, or if cost per request climbs unexpectedly, the system should be able to freeze, flip a kill switch, or roll back before the whole fleet absorbs the change.",
                 ),
                 [
                     "Roll out by a stable cohort such as tenant, region, or shard instead of by random request when correctness matters across a workflow.",
@@ -1333,16 +1369,25 @@ def _safe_change_dr_and_degradation():
                     "Define stop conditions in advance so rollback decisions are not made from panic alone.",
                 ],
                 code(
-                    "Cohort-based canary decision",
-                    "javascript",
+                    "Rollout gate using SLO and cost signals",
+                    "python",
                     lines(
-                        "function inCanary(tenantId, percent) {",
-                        "  let hash = 0;",
-                        "  for (const ch of tenantId) hash = (hash * 33 + ch.charCodeAt(0)) >>> 0;",
-                        "  return (hash % 100) < percent;",
+                        "signals = {",
+                        "    'error_budget_burn_rate': 0.8,",
+                        "    'checkout_p95_ms': 210,",
+                        "    'cost_per_order_delta_pct': 3.0,",
+                        "    'projection_mismatch_rate': 0.0002,",
                         "}",
                         "",
-                        "console.log(inCanary('tenant-42', 10));",
+                        "def can_promote_canary(s):",
+                        "    return (",
+                        "        s['error_budget_burn_rate'] <= 1.0",
+                        "        and s['checkout_p95_ms'] <= 250",
+                        "        and s['cost_per_order_delta_pct'] <= 5.0",
+                        "        and s['projection_mismatch_rate'] <= 0.001",
+                        "    )",
+                        "",
+                        "print('promote=', can_promote_canary(signals))",
                     ),
                 ),
             ),
@@ -1375,8 +1420,8 @@ def _safe_change_dr_and_degradation():
             section(
                 "Graceful degradation keeps the core journey alive during partial failure",
                 T(
-                    "A system with no degraded mode usually discovers that everything is critical right when a dependency fails. Mature architectures rank features by user importance and business reversibility. Checkout confirmation, balance display, and authentication may be must-survive flows. Recommendations, badges, exports, and some admin insights often are not. When dependency health worsens, the system should shed or simplify the lower-value work first so the core path remains understandable and bounded.",
-                    "This is where resilience and product design meet. A feed may tolerate slightly stale content. A dashboard may hide optional segments and show a freshness banner. A write path may become read-only rather than risk corrupting state. The best answers state these fallbacks concretely and pair them with control mechanisms such as feature flags, circuit breakers, bounded queues, or read-only switches. Saying it degrades gracefully is meaningless unless you can name the user experience.",
+                    "A system with no degraded mode usually discovers that everything is critical right when a dependency fails. Mature architectures rank features by user importance and business reversibility. Checkout confirmation, balance display, and authentication may be must-survive flows. Recommendations, badges, exports, and some admin insights often are not. When dependency health worsens, the system should shed or simplify the lower-value work first so the core path remains understandable and bounded. Feature flags and kill switches are therefore part of the architecture, not just release tooling, because they are the mechanism that turns policy into fast action.",
+                    "This is where resilience and product design meet. A feed may tolerate slightly stale content. A dashboard may hide optional segments and show a freshness banner. A write path may become read-only rather than risk corrupting state. The best answers state these fallbacks concretely and pair them with control mechanisms such as feature flags, circuit breakers, bounded queues, or read-only switches. Saying it degrades gracefully is meaningless unless you can name the user experience and the switch that activates it.",
                 ),
                 [
                     "Rank features by criticality before the outage so shedding order is intentional.",
@@ -1427,6 +1472,7 @@ def _safe_change_dr_and_degradation():
             "Design APIs and schemas for overlap between old and new versions during rollout.",
             "Roll changes by stable cohorts and monitor both technical and business correctness signals.",
             "Define RTO and RPO before choosing replication or disaster-recovery topology.",
+            "Use feature flags or kill switches that can disable risky paths without waiting for a full redeploy.",
             "Describe at least one concrete degraded user experience for partial dependency failure.",
             "Connect failover, rollback, and migration states to runbooks and transition metrics.",
             "Exercise recovery and degraded modes in drills so they remain credible under pressure.",
@@ -1445,9 +1491,9 @@ def _safe_change_dr_and_degradation():
             "Why are drills and runbooks part of architecture quality rather than mere process overhead?",
         ],
         likely_answer_points=[
-            "Safe change requires compatibility windows, cohort-based rollout, and validation signals that prove both correctness and performance.",
+            "Safe change requires compatibility windows, cohort-based rollout, and validation signals that prove correctness, performance, and cost. Modern teams commonly wire those signals through an OpenTelemetry-style observability stack and gate promotion on SLO burn.",
             "Disaster recovery should be described with RTO and RPO so topology and backup choices map to business expectations rather than to intuition.",
-            "Graceful degradation is strongest when it protects the must-survive user journey and explicitly sheds optional work first.",
+            "Graceful degradation is strongest when it protects the must-survive user journey and explicitly sheds optional work first through feature flags or kill switches.",
             "Operational credibility comes from runbooks, drills, and transition metrics because the riskiest period is often the recovery or rollout itself.",
         ],
         exercises=[
@@ -1511,8 +1557,8 @@ def _partitioning_and_hot_key_control():
             section(
                 "Partitioning strategy is a skew-management strategy",
                 T(
-                    "The core mistake in partitioning conversations is to optimize only for even average distribution. Real systems experience celebrity users, flash sales, tenant imbalance, and time-correlated bursts. A partitioning scheme should therefore be evaluated by how it behaves under skew, not just by how well it spreads synthetic uniform traffic. If one shard receives ten times the traffic of the others, the system design needs a plan for that shape before launch day reveals it.",
-                    "This pushes the discussion beyond modulo math and into product semantics. Which entities can become extraordinarily hot? Which reads can be served from caches or replicas? Which writes must remain single-owner? Which fan-out operations can be deferred or rate limited? A good partitioning answer is really an answer about concentrated demand and how the architecture contains it without turning every request into global coordination.",
+                    "The core mistake in partitioning conversations is to optimize only for even average distribution. Real systems experience celebrity users, flash sales, tenant imbalance, and time-correlated bursts. A partitioning scheme should therefore be evaluated by how it behaves under skew, not just by how well it spreads synthetic uniform traffic. If one shard receives ten times the traffic of the others, the system design needs a plan for that shape before launch day reveals it. When the product also needs independent regional or tenant failure domains, partitioning often grows into a cell strategy: each cell owns a subset of demand and can fail, scale, or be degraded more independently than the whole fleet.",
+                    "This pushes the discussion beyond modulo math and into product semantics. Which entities can become extraordinarily hot? Which reads can be served from locality-aware caches or replicas? Which writes must remain single-owner? Which fan-out operations can be deferred or rate limited? A good partitioning answer is really an answer about concentrated demand and how the architecture contains it without turning every request into global coordination.",
                 ),
                 [
                     "Model hot tenants, hot objects, and synchronized traffic bursts explicitly instead of assuming uniform keys.",
@@ -1523,7 +1569,7 @@ def _partitioning_and_hot_key_control():
             section(
                 "Pick keys that preserve locality without locking the system into a corner",
                 T(
-                    "A good partition key usually follows ownership and access locality. User-centric workloads often partition by user or tenant so most reads and writes stay local. Some systems need compound keys that mix owner and bucket, such as tenant plus time bucket, to reduce temporal hotspots. The difficulty is that today's best key can become tomorrow's migration project if it aligns too strongly with a success case like one giant tenant or one bursty event pattern.",
+                    "A good partition key usually follows ownership and access locality. User-centric workloads often partition by user or tenant so most reads and writes stay local. Some systems need compound keys that mix owner and bucket, such as tenant plus time bucket, to reduce temporal hotspots. The difficulty is that today's best key can become tomorrow's migration project if it aligns too strongly with a success case like one giant tenant or one bursty event pattern. If region or compliance is part of the product contract, the key often needs to route first to a cell or region and only then to an internal partition so the failure domain and legal boundary are both visible.",
                     "The safest designs retain some routing indirection. Virtual nodes, placement metadata, or directory services let the system move ownership later without changing the external key. That indirection is not free, but it is often worth the cost because partitioning is a long-lived contract. A senior answer explains both the initial key and the future rebalancing path rather than pretending the first choice will be perfect forever.",
                 ),
                 [
@@ -1555,8 +1601,8 @@ def _partitioning_and_hot_key_control():
             section(
                 "Hot keys need a toolbox, not one universal fix",
                 T(
-                    "A hot key can be handled in several ways depending on the workload. Read-heavy hot objects often benefit from multilayer caches, request coalescing, replica reads, or edge distribution. Write-heavy hot objects may need queued serialization, logical sub-key splitting, rate limits, or a product change that reduces contention on a single record. The point is to address the specific source of heat rather than applying generic sharding and hoping it spreads a fundamentally concentrated access pattern.",
-                    "The right fix also depends on whether the hotspot is permanent or event-driven. A celebrity profile, breaking-news topic, or sale launch may need temporary fan-out protection and CDN or cache priming. A permanently hot tenant may need dedicated isolation or custom partition placement. Strong HLD answers therefore separate temporary burst handling from long-term ownership changes and call out what happens after the immediate fire is contained.",
+                    "A hot key can be handled in several ways depending on the workload. Read-heavy hot objects often benefit from multilayer caches, request coalescing, replica reads, locality-aware caching near the traffic source, or edge distribution. Write-heavy hot objects may need queued serialization, logical sub-key splitting, key salting, rate limits, or a product change that reduces contention on a single record. The point is to address the specific source of heat rather than applying generic sharding and hoping it spreads a fundamentally concentrated access pattern.",
+                    "The right fix also depends on whether the hotspot is permanent or event-driven. A celebrity profile, breaking-news topic, or sale launch may need temporary fan-out protection and CDN or cache priming. A permanently hot tenant may need dedicated isolation, dedicated hot partitions, or custom partition placement inside its own cell. Strong HLD answers therefore separate temporary burst handling from long-term ownership changes and call out what happens after the immediate fire is contained.",
                 ),
                 [
                     "Use different mitigations for read hotspots and write hotspots because their bottlenecks differ.",
@@ -1631,6 +1677,7 @@ def _partitioning_and_hot_key_control():
         checklist=[
             "Choose a partition key by locality and skew tolerance, not only by average spread.",
             "Plan an indirection layer such as virtual nodes or routing metadata for future movement.",
+            "Connect partitioning to cell boundaries when region, tenant, or compliance requires independent failure domains.",
             "Name distinct mitigations for read hotspots and write hotspots.",
             "Describe how rebalancing is staged, observed, and rolled back if needed.",
             "Track shard-level and key-level skew metrics rather than only fleet-wide averages.",
@@ -1651,8 +1698,8 @@ def _partitioning_and_hot_key_control():
         ],
         likely_answer_points=[
             "Partitioning should be judged under skew, because real systems fail from concentrated demand far more often than from perfectly even traffic.",
-            "A strong key keeps dominant workflows local but still allows future movement through virtual nodes or routing metadata.",
-            "Hot-key control requires a toolbox including caching, request coalescing, queued serialization, rate limits, and sometimes tenant isolation.",
+            "A strong key keeps dominant workflows local but still allows future movement through virtual nodes or routing metadata. When needed, a cell boundary adds an explicit blast-radius layer above individual partitions.",
+            "Hot-key control requires a toolbox including salting, caching, request coalescing, locality-aware caching, queued serialization, rate limits, and sometimes tenant isolation or dedicated hot partitions.",
             "Operational maturity shows up in staged rebalancing and skew-specific observability, not just in the choice of hashing algorithm.",
         ],
         exercises=[
@@ -1720,7 +1767,7 @@ def _consensus_quorums_and_leadership():
                 "Coordination is expensive, so start by proving you need it",
                 T(
                     "Consensus and leadership are not badges of sophistication. They are costs paid to maintain one truth about something that cannot safely diverge. Metadata ownership, primary election, schema control, lock coordination, and some critical write paths may justify that cost. Many other workflows do not. If an operation can be partitioned, retried idempotently, or expressed as an eventually reconciled workflow, forcing it through global consensus often turns a scalable problem into a slower and more fragile one.",
-                    "This is the first high-signal distinction in interviews. Strong answers do not say we will use Raft because we need consistency. They say exactly which state requires a single current owner or quorum-backed agreement and which state remains local, cached, or asynchronous. That split is how real systems preserve both safety and throughput.",
+                    "This is the first high-signal distinction in interviews. Strong answers do not say we will use Raft because we need consistency. They say exactly which state requires a single current owner or quorum-backed agreement and which state remains local, cached, or asynchronous. Real systems often put that control-plane truth in an etcd-style metadata service while keeping the data plane partitioned and fast. That split is how real systems preserve both safety and throughput.",
                 ),
                 [
                     "Use coordination only for state that genuinely requires one current owner or globally agreed metadata.",
@@ -1780,7 +1827,7 @@ def _consensus_quorums_and_leadership():
             section(
                 "Membership changes and failover drills are where theory meets operations",
                 T(
-                    "Real consensus-backed systems spend a surprising amount of engineering effort on changing membership safely, replacing failed nodes, and recovering performance after leadership movement. Adding or removing replicas affects quorum calculations, log catch-up, and availability margins. If you do not mention membership changes, the design sounds static in a way production clusters rarely are.",
+                    "Real consensus-backed systems spend a surprising amount of engineering effort on changing membership safely, replacing failed nodes, and recovering performance after leadership movement. Adding or removing replicas affects quorum calculations, log catch-up, and availability margins. If you do not mention membership changes, the design sounds static in a way production clusters rarely are. In a control plane this might mean safely rotating metadata voters or ownership coordinators while the partitioned data plane keeps serving.",
                     "Leadership change also has customer-visible consequences. A brief pause for election may be acceptable for metadata updates but not for every end-user write. A cluster may stay correct but become slow while the new leader warms caches or catches followers up. The best HLD answers acknowledge that consensus systems are safer than ad hoc failover because they are disciplined, not because they are effortless.",
                 ),
                 [
@@ -1850,10 +1897,10 @@ def _consensus_quorums_and_leadership():
             "How would you explain leader failover behavior to an API client or another internal service?",
         ],
         likely_answer_points=[
-            "Coordination should be used only where there must be one current owner or shared metadata truth, because global consensus is expensive.",
+            "Coordination should be used only where there must be one current owner or shared metadata truth, because global consensus is expensive. The usual 2026 pattern is a narrow control plane, often Raft-backed, around partition ownership or metadata.",
             "Quorums trade latency and partial-failure tolerance for better overlap between reads and writes, but they still require a stale-read and repair story.",
             "Leadership is safe only when stale owners are fenced off with terms, leases, or tokens, not merely when a new leader is elected.",
-            "Operational credibility comes from membership-change handling, election behavior, and clear client semantics during ownership transitions.",
+            "Operational credibility comes from membership-change handling, election behavior, and clear client semantics during ownership transitions while the data plane stays mostly partition-local.",
         ],
         exercises=[
             design_exercise(
@@ -1917,7 +1964,7 @@ def _sagas_idempotency_and_workflows():
                 "Think in business intent, not imaginary global transactions",
                 T(
                     "Once a workflow crosses service boundaries, pretending there is one effortless ACID transaction usually hides more than it helps. Payment authorization, inventory reservation, shipment creation, email, and ledger updates may each have local transactional boundaries, but the user still expects one coherent business outcome. HLD maturity comes from modeling that business intent explicitly instead of assuming a coordinator can make all side effects behave like a single database commit.",
-                    "This is why sagas and workflow engines exist. They accept that distributed work may complete in stages, may need retries, and may require compensating action or operator review rather than instant all-or-nothing rollback. The goal is not to abandon correctness. It is to preserve intent honestly using local atomicity plus durable workflow state rather than relying on fantasy infrastructure.",
+                    "This is why sagas and durable workflow engines exist. They accept that distributed work may complete in stages, may need retries, and may require compensating action or operator review rather than instant all-or-nothing rollback. In 2026 it is normal to mention Temporal-style durable execution for high-value long-running workflows, but only alongside fundamentals such as local atomicity, outbox delivery, and idempotent commands. The goal is not to abandon correctness. It is to preserve intent honestly using local atomicity plus durable workflow state rather than relying on fantasy infrastructure.",
                 ),
                 [
                     "Define the business outcome that must be preserved even when sub-steps succeed or fail at different times.",
@@ -1928,8 +1975,8 @@ def _sagas_idempotency_and_workflows():
             section(
                 "Sagas choose between orchestration and choreography, each with real costs",
                 T(
-                    "Orchestration centralizes workflow state and step order, which improves visibility and operational recovery at the cost of a stronger coordinator dependency. Choreography distributes responsibility through events, which can reduce direct coupling but often hides the business process across many consumers. Neither model is free. The right choice depends on how many steps exist, how important step ordering is, and how much centralized visibility operators need when something gets stuck.",
-                    "In interviews, it is not enough to say use a saga. Explain whether the workflow is best treated as a centrally visible state machine or as a small number of event-driven local reactions. If payment failure must trigger inventory release and customer messaging predictably, orchestration may be clearer. If a loose set of subscribers enriches a profile asynchronously, choreography may be acceptable. The signal comes from matching the coordination model to the business recovery needs.",
+                    "Orchestration centralizes workflow state and step order, which improves visibility and operational recovery at the cost of a stronger coordinator dependency. Choreography distributes responsibility through events, which can reduce direct coupling but often hides the business process across many consumers. Neither model is free. The right choice depends on how many steps exist, how important step ordering is, and how much centralized visibility operators need when something gets stuck. Durable execution platforms make orchestration much more common for high-value flows because timers, retries, and replay are built into the workflow runtime instead of hand-built in every service.",
+                    "In interviews, it is not enough to say use a saga. Explain whether the workflow is best treated as a centrally visible state machine or as a small number of event-driven local reactions. If payment failure must trigger inventory release and customer messaging predictably, orchestration may be clearer. If a loose set of subscribers enriches a profile asynchronously, choreography may be acceptable. The signal comes from matching the coordination model to the business recovery needs rather than from picking the most fashionable framework.",
                 ),
                 [
                     "Choose orchestration when visibility, ordering, and operator intervention matter more than full decoupling.",
@@ -2012,7 +2059,7 @@ def _sagas_idempotency_and_workflows():
             section(
                 "Workflow operations need reconciliation and stuck-state recovery",
                 T(
-                    "Even well-designed workflows need audits that compare expected state to observed state. A workflow may be marked complete even though one projection lagged. A payment provider may succeed after the caller timed out. A compensation may fail while the user already saw the failure banner. Reconciliation jobs and operator dashboards are therefore part of the architecture because they close the gap between ideal event flow and messy real-world timing.",
+                    "Even well-designed workflows need audits that compare expected state to observed state. A workflow may be marked complete even though one projection lagged. A payment provider may succeed after the caller timed out. A compensation may fail while the user already saw the failure banner. Reconciliation jobs and operator dashboards are therefore part of the architecture because they close the gap between ideal event flow and messy real-world timing. AI or agent workflows deserve the same discipline: a multi-step tool-using job still needs durable state, retry safety, and a way to detect partial progress or duplicate side effects.",
                     "A strong design names who notices and who repairs stuck workflows. Operators may need a queue of workflows awaiting manual decision, a re-drive button for transient failures, or a report of steps whose wall-clock time exceeds policy. Without that visibility, the only workflow monitoring is user complaints. In HLD, mentioning reconciliation and stuck-state tooling is a strong sign that you understand distributed workflows as long-lived operational systems, not just code paths.",
                 ),
                 [
@@ -2070,10 +2117,10 @@ def _sagas_idempotency_and_workflows():
             "Why do reconciliation jobs matter even after you add a workflow engine and durable events?",
         ],
         likely_answer_points=[
-            "Distributed workflows should preserve business intent through local atomicity plus durable workflow state instead of pretending global ACID exists everywhere.",
+            "Distributed workflows should preserve business intent through local atomicity plus durable workflow state instead of pretending global ACID exists everywhere. Mentioning a Temporal-style durable execution engine is now common for long-running critical workflows, but it does not replace idempotency fundamentals.",
             "Idempotency is a system property built from stable command keys, durable dedupe state, and replaying the original result safely.",
             "Compensation is domain specific: some steps reverse cleanly, while others require explicit corrective actions and operator review.",
-            "Operational maturity comes from reconciliation, stuck-workflow dashboards, and clear eventual-completion semantics for the user.",
+            "Operational maturity comes from reconciliation, stuck-workflow dashboards, and clear eventual-completion semantics for the user, whether the flow is checkout, onboarding, or an AI agent job.",
         ],
         exercises=[
             design_exercise(
@@ -2187,7 +2234,7 @@ def _build_interactive():
             [
                 "Hot-path indexing begins with exact predicates and sort order, not with abstract tables.",
                 "Every secondary index is a permanent write and recovery tax that must buy a measurable win.",
-                "API-level query guardrails are often as important as the index itself.",
+                "Semantic and RAG paths still need explicit ANN recall-versus-latency design, usually paired with metadata indexes and query guardrails.",
             ],
             [
                 example(
@@ -2205,18 +2252,18 @@ def _build_interactive():
                     "The team keeps p95 stable for the main screen and still serves unusual requests through slower controlled paths.",
                 ),
                 example(
-                    "pending-jobs",
-                    "Worker dispatch",
-                    "Use a partial index where state matters more than table size",
-                    "A dispatcher only needs pending jobs whose run_after is due, but the jobs table stores completed history for months.",
-                    "Create a partial index on pending rows instead of indexing the full historical table for one narrow queue-read path.",
+                    "rag-retrieval",
+                    "Semantic retrieval",
+                    "Design vector retrieval as a bounded serving path",
+                    "A knowledge assistant needs tenant-scoped semantic retrieval for policy chunks, plus metadata filters for document type and freshness.",
+                    "Use pgvector with an ANN index for embeddings, pair it with metadata filters such as GIN or composite ownership indexes, and keep the endpoint's candidate set and ranking modes bounded.",
                     [
-                        "Most completed rows are irrelevant to dispatch and only add maintenance cost.",
-                        "The partial predicate keeps the index smaller and warmer in cache.",
-                        "The path stays easy to explain operationally because the index matches one well-defined read pattern.",
+                        "Semantic retrieval still needs a physical index and a latency budget rather than vague AI language.",
+                        "Metadata filtering keeps candidate sets smaller and reduces cross-tenant noise before reranking.",
+                        "The team can explain recall, storage cost, and index maintenance as clearly as any B-tree design.",
                     ],
-                    "A broad secondary index across all states appears simpler, but it spends write and storage budget on rows the dispatcher never touches.",
-                    "Dispatch latency improves while write amplification stays bounded.",
+                    "Treating vector retrieval like magical full scans hidden behind embeddings often produces expensive p95 spikes and unclear correctness.",
+                    "Retrieval stays production-minded because the ANN path, filters, and cost budget are all explicit.",
                 ),
             ],
             "How should you choose the indexing strategy for a new latency-sensitive endpoint?",
@@ -2239,19 +2286,19 @@ def _build_interactive():
                 ),
                 option(
                     "derived-search",
-                    "Move exploratory access to a derived system",
+                    "Use a vector-aware derived retrieval path",
                     "Teams that need broad filtering or ranking but still need a tight transactional path.",
                     [
-                        "Users need search-like behavior or many optional filters.",
-                        "Staleness of a few seconds or minutes is acceptable for exploratory views.",
+                        "Users need hybrid lexical plus semantic retrieval or many optional filters.",
+                        "The team can define ANN recall and latency budgets instead of pretending every result is exact.",
                         "The source-of-truth store should stay optimized for writes and narrow reads.",
                     ],
                     [
-                        "You need event movement, replay, and search relevance tuning.",
+                        "You need event movement, replay, embedding refresh, and retrieval tuning.",
                         "Derived data can lag and must be labeled honestly.",
-                        "Operational surface area grows beyond one database.",
+                        "Operational surface area grows beyond one database unless pgvector inside Postgres is still sufficient.",
                     ],
-                    "Forcing the OLTP store to behave like both a serving database and a search engine creates avoidable pain on both paths.",
+                    "Forcing the OLTP store to behave like a serving database, analytics engine, and unbounded semantic search backend creates avoidable pain on every path.",
                 ),
             ],
             "Tune a merchant order-history endpoint for predictable p95",
@@ -2259,10 +2306,10 @@ def _build_interactive():
             [
                 case_step("Name the exact hot query", "Define tenant or merchant filter, allowed status values, stable sort order, projection, and cursor semantics.", "If the team starts from abstract schema design, the eventual endpoint will inherit an accidental scan path."),
                 case_step("Choose one focused composite index", "Match equality predicates first and order by the same key sequence the UI uses for pagination.", "If the index order and cursor order diverge, the endpoint may still sort in memory or page inconsistently."),
-                case_step("Separate serving from exploration", "Keep CSV export or wide filtering off the hot endpoint and route it through async jobs or search.", "If both use cases share one path, every merchant pays the latency cost of rare investigative queries."),
-                case_step("Roll out with write-cost visibility", "Build the index, watch write p95, storage growth, and replica lag, then shift reads intentionally.", "If index rollout is invisible operationally, the team can trade one latency win for a hidden recovery and write regression."),
+                case_step("Separate serving from exploration", "Keep CSV export, wide filtering, or semantic discovery off the hot endpoint unless they have their own bounded retrieval path.", "If both use cases share one path, every merchant pays the latency cost of rare investigative queries."),
+                case_step("Roll out with write-cost visibility", "Build the index, watch write p95, storage growth, replica lag, and semantic-recall regression where relevant, then shift reads intentionally.", "If index rollout is invisible operationally, the team can trade one latency win for a hidden recovery and write regression."),
             ],
-            ["read p95 by query shape", "write p95 delta after index", "replica lag during build", "origin scan count"],
+            ["read p95 by query shape", "write p95 delta after index", "replica lag during build", "ann recall at k or origin scan count"],
             "Query path and index contract",
             "The request path stays narrow while exports and broad exploration branch to separate systems.",
             """flowchart LR
@@ -2278,7 +2325,7 @@ def _build_interactive():
             "Choose who owns writes, what freshness users can expect, and how partitioning survives both growth and failure.",
             [
                 "Replica reads are a product decision because freshness varies by workflow.",
-                "Shard keys should be defended under skew, not only under uniform traffic.",
+                "Shard keys and cell boundaries should be defended under skew, blast-radius goals, and residency requirements.",
                 "Failover safety and catch-up behavior often matter more than steady-state diagrams.",
             ],
             [
@@ -2298,29 +2345,29 @@ def _build_interactive():
                 ),
                 example(
                     "merchant-shard",
-                    "Merchant isolation",
-                    "Sharding follows ownership and hotspot risk",
-                    "A commerce platform has long-tail merchants plus a few giant event-driven merchants.",
-                    "Shard by merchant ownership but retain enough routing indirection to isolate exceptional merchants or move them safely later.",
+                    "Merchant cells",
+                    "Cell routing contains hotspot and residency blast radius",
+                    "A commerce platform has long-tail merchants, a few giant event-driven merchants, and contractual data-residency requirements.",
+                    "Route merchants to self-contained regional cells, then shard inside the cell so failover, migrations, and hot-merchant isolation stay bounded.",
                     [
                         "Operational isolation follows the same merchant boundary product teams understand.",
-                        "The hottest merchants can be migrated or dedicated without redesigning every key externally.",
-                        "Scatter-gather is reduced for the workflows most merchants care about.",
+                        "A bad deploy or regional fault stays inside one cell instead of becoming a global multi-tenant incident.",
+                        "The hottest merchants can still be migrated or dedicated without redesigning every key externally.",
                     ],
-                    "A time-only shard key spreads writes today but makes merchant-local operations and targeted isolation far harder tomorrow.",
-                    "The platform balances locality for normal workflows with flexibility for abnormal success.",
+                    "A time-only shard key spreads writes today but makes merchant-local operations, residency guarantees, and targeted isolation far harder tomorrow.",
+                    "The platform balances locality for normal workflows with cell-level containment for abnormal success or failure.",
                 ),
             ],
             "Which topology is the better fit for the workflow you are defending?",
             [
                 option(
                     "leader-followers",
-                    "Single write owner with follower reads",
+                    "Single write owner with follower reads and home-region affinity",
                     "Workloads that need simple conflict handling and clear write authority.",
                     [
                         "Read traffic dominates and some bounded staleness is acceptable.",
                         "User journeys that need fresh reads can be routed intentionally to primary.",
-                        "Operational simplicity matters more than write locality across every region.",
+                        "Operational simplicity matters more than multi-writer complexity, even if writes stay anchored to a home region or cell.",
                     ],
                     [
                         "Follower lag must be visible and policy driven.",
@@ -2331,17 +2378,17 @@ def _build_interactive():
                 ),
                 option(
                     "partitioned-authority",
-                    "Partitioned authority with local ownership",
-                    "Workloads where throughput or locality demands multiple write domains.",
+                    "Cell-based authority with local ownership",
+                    "Workloads where throughput, locality, or residency demands multiple write domains.",
                     [
-                        "A stable partition key keeps the dominant workflow local.",
+                        "A stable partition key keeps the dominant workflow local inside each cell.",
                         "Global transactions are rare or can be approximated asynchronously.",
-                        "Traffic skew is visible and hot partitions can be isolated or rebalanced.",
+                        "Traffic skew is visible and hot partitions or merchants can be isolated or rebalanced within a bounded blast radius.",
                     ],
                     [
-                        "Cross-partition reads and reports become harder.",
+                        "Cross-cell reads and reports become harder.",
                         "Rebalancing, routing metadata, and repair add operational burden.",
-                        "User-facing freshness and aggregation rules must be explained carefully.",
+                        "User-facing freshness, aggregation, and residency rules must be explained carefully.",
                     ],
                     "Keeping one global writer for all traffic may simplify correctness but can become the wrong bottleneck or latency anchor.",
                 ),
@@ -2350,13 +2397,13 @@ def _build_interactive():
             "A product needs per-merchant inventory ownership, fast browse reads, strict reservation semantics, and credible regional failover.",
             [
                 case_step("Classify the user journeys", "Separate browse, reserve, confirm, and analytics paths by freshness need before discussing topology.", "If every path inherits the same consistency policy, the design will either overspend on coordination or underdeliver on correctness."),
-                case_step("Assign write ownership and read eligibility", "Choose who owns reservations and define which followers are safe for browse traffic.", "If read routing rules are vague, engineers will accidentally serve confirmation reads from stale replicas."),
-                case_step("Choose a shard key under skew", "Model giant merchants and event spikes, then explain how the system isolates or rebalances them.", "A key that looks even in test traffic may fail immediately during a flash sale."),
-                case_step("Plan failover and repair", "Set promotion guardrails, routing discovery, and catch-up pacing before calling the topology resilient.", "If failover only exists on the diagram, the first incident becomes an improvised data-loss trade-off."),
+                case_step("Assign write ownership and read eligibility", "Choose who owns reservations, define home-region or home-cell writes, and state which followers are safe for browse traffic.", "If read routing rules are vague, engineers will accidentally serve confirmation reads from stale replicas."),
+                case_step("Choose a shard key under skew", "Model giant merchants and event spikes, then explain how the system isolates or rebalances them inside cells.", "A key that looks even in test traffic may fail immediately during a flash sale."),
+                case_step("Plan failover and repair", "Set promotion guardrails, routing discovery, cell fail-in-place behavior, and catch-up pacing before calling the topology resilient.", "If failover only exists on the diagram, the first incident becomes an improvised data-loss trade-off."),
             ],
-            ["primary write latency", "replica lag by region", "per-shard skew", "promotion safety threshold"],
-            "Freshness-aware read routing",
-            "Critical reads stay authoritative while tolerant reads absorb scale from followers.",
+            ["primary write latency", "replica lag by region", "per-cell skew", "residency-policy violations"],
+            "Freshness-aware cell routing",
+            "Critical reads stay authoritative while tolerant reads absorb scale from followers inside bounded cells.",
             """sequenceDiagram
     participant Client
     participant API
@@ -2377,22 +2424,22 @@ def _build_interactive():
             [
                 "Every datastore should have a single clear reason to exist.",
                 "Authority and projection boundaries matter more than brand or benchmark comparisons.",
-                "The smallest viable portfolio is usually the most operable one.",
+                "Vector indexes and lakehouse tables are mainstream choices now, but they still have to earn their ops and rebuild cost.",
             ],
             [
                 example(
                     "creator-platform",
                     "Creator platform",
-                    "Separate truth, search, and blobs deliberately",
-                    "A creator platform needs subscription billing, uploaded media, account search, and analytics.",
-                    "Keep billing and subscription truth relational, store blobs in object storage, project searchable documents into a search system, and cache hot reads separately.",
+                    "Separate truth, semantic retrieval, and analytics deliberately",
+                    "A creator platform needs subscription billing, uploaded media, semantic creator search, and analytics.",
+                    "Keep billing and subscription truth relational, start semantic retrieval in pgvector when joins and ACID adjacency matter, store blobs in object storage, and project replayable analytics into a lakehouse table format such as Iceberg.",
                     [
                         "Billing and entitlement logic benefit from transactional authority and mature constraints.",
                         "Media bytes are large, immutable, and cost sensitive, which suits object storage.",
-                        "Search relevance and broad filters belong in a derived system rather than in the transactional path.",
+                        "Semantic retrieval and analytics stay as deliberate projections instead of quietly polluting the source of truth.",
                     ],
-                    "A one-database-for-everything design either mishandles blobs or turns transactional tables into awkward search indexes.",
-                    "Each store stays aligned with one workload while the source of truth remains unambiguous.",
+                    "A one-database-for-everything design either mishandles blobs, forces awkward retrieval compromises, or turns analytics into bespoke exports nobody trusts.",
+                    "Each store stays aligned with one workload while the source of truth remains unambiguous and the cost model stays explainable.",
                 ),
                 example(
                     "minimal-portfolio",
@@ -2417,7 +2464,7 @@ def _build_interactive():
                     "Teams whose access patterns are still evolving and whose current bottlenecks are not yet existential.",
                     [
                         "The current source of truth can still meet correctness needs.",
-                        "Broad queries or analytics can tolerate asynchronous exports for now.",
+                        "Semantic retrieval may still fit in pgvector or a narrow derived index without a separate specialist store.",
                         "The team would rather preserve operator simplicity than chase theoretical optimality.",
                     ],
                     [
@@ -2433,44 +2480,44 @@ def _build_interactive():
                     "Workloads where the current portfolio cannot meet an important read or retrieval need cleanly.",
                     [
                         "The use case has a clear owner and a clear source of truth.",
-                        "The new system solves a recurring product need such as ranked full-text search or cheap blob storage.",
-                        "Replay, rebuild, and operational ownership are planned up front.",
+                        "The new system solves a recurring product need such as filterable vector retrieval or open-table analytics.",
+                        "Replay, rebuild, unit economics, and operational ownership are planned up front.",
                     ],
                     [
                         "Pipelines, lag, and rebuild costs become permanent responsibilities.",
                         "The team must keep source of truth and derivative roles explicit.",
                         "Migration away later will need overlap and parity validation.",
                     ],
-                    "Trying to imitate search or blob storage inside the primary transactional engine often creates a worse long-term system than one purposeful derived tool.",
+                    "Trying to imitate large-scale vector retrieval or lakehouse projections inside the primary transactional engine often creates a worse long-term system than one purposeful derived tool.",
                 ),
             ],
             "Design a minimal but sufficient storage portfolio for a marketplace",
             "The marketplace needs orders, seller dashboards, image uploads, search, and periodic analytics without overwhelming a small platform team.",
             [
                 case_step("Name the authoritative domains", "Decide which data must stay transactionally correct and which can be projected or archived.", "If authority is unclear, incident response becomes a reconciliation argument instead of a repair action."),
-                case_step("Match each non-authoritative need to one derived system", "Only add search, cache, or blob storage when the access pattern clearly benefits.", "If every feature gets a new datastore, operating complexity will outpace business value."),
-                case_step("Design the movement path", "Define outbox, projection, replay, and rebuild rules from the source of truth.", "A derived store without replay or rebuild is a future outage waiting to happen."),
+                case_step("Match each non-authoritative need to one derived system", "Only add vector, cache, lakehouse, or blob storage when the access pattern and unit economics clearly benefit.", "If every feature gets a new datastore, operating complexity will outpace business value."),
+                case_step("Design the movement path", "Define outbox, projection, replay, embedding refresh, and rebuild rules from the source of truth.", "A derived store without replay or rebuild is a future outage waiting to happen."),
                 case_step("Defend the omissions", "Explain which attractive specialized tools are deferred and how the current portfolio still meets today's workload.", "If no tool is ever deferred, the architecture likely reflects fascination with technology rather than disciplined scope."),
             ],
-            ["projection lag", "search freshness", "cache hit ratio", "number of authoritative stores"],
+            ["projection lag", "vector recall or retrieval freshness", "query-engine cost", "number of authoritative stores"],
             "Authority and projection portfolio",
-            "One source-of-truth core feeds a few purposeful derivatives instead of a sprawling storage zoo.",
+            "One source-of-truth core feeds purposeful vector, cache, blob, and lakehouse derivatives instead of a sprawling storage zoo.",
             """flowchart LR
     RelationalPrimary --> Outbox
-    Outbox --> SearchIndex
+    Outbox --> VectorIndex
     RelationalPrimary --> Cache
     RelationalPrimary --> Metadata
     Metadata --> ObjectStore
-    Outbox --> Analytics
+    Outbox --> Lakehouse
 """,
         ),
         "security-operations-lab/auth-threat-modeling-for-hld": interactive_lesson(
             "Auth and threat modeling lab",
             "Map identity, permission checks, and abuse cases across one high-risk workflow until the control choices become architectural.",
             [
-                "Identity and privilege are different control points with different failure modes.",
+                "Zero trust means identity and authorization must be checked deliberately at every hop.",
                 "Threat modeling is strongest when it starts from one valuable workflow rather than from a giant abstract list.",
-                "Abuse resistance and auditability belong in the architecture, not only in policy docs.",
+                "Passkeys, workload identity, abuse resistance, and auditability belong in the architecture, not only in policy docs.",
             ],
             [
                 example(
@@ -2478,7 +2525,7 @@ def _build_interactive():
                     "Admin console",
                     "Keep operator access on an explicit privileged path",
                     "Support agents need temporary access to customer accounts for debugging while tenant admins manage their own billing data.",
-                    "Separate support and tenant principals, require break-glass justification for elevated access, and audit all impersonation flows independently of customer traffic.",
+                    "Separate support and tenant principals, use OIDC for baseline sessions, require passkey-backed step-up plus break-glass justification for elevated access, and audit all impersonation flows independently of customer traffic.",
                     [
                         "Operator actions have higher blast radius and therefore deserve stronger controls than ordinary customer sessions.",
                         "Clear separation makes incident review and customer trust easier to preserve.",
@@ -2492,7 +2539,7 @@ def _build_interactive():
                     "Password reset",
                     "Threat-model the identity recovery path explicitly",
                     "A product focuses heavily on login tokens but has not deeply reviewed password reset or email change flows.",
-                    "Treat password reset as a privileged workflow with replay resistance, enumeration-safe responses, and aggressive abuse limits.",
+                    "Treat password reset as a privileged workflow with replay resistance, enumeration-safe responses, aggressive abuse limits, and a clear passkey or stronger-factor recovery story.",
                     [
                         "Identity recovery often becomes the easiest path around otherwise solid login design.",
                         "Attackers prefer workflows that leak account existence or bypass stronger factors.",
@@ -2525,9 +2572,9 @@ def _build_interactive():
                     "Centralize only coarse controls at the edge",
                     "Architectures that need consistent authentication and rate limiting but domain-aware authorization inside services.",
                     [
-                        "You want TLS termination, token validation, and baseline abuse policy shared.",
+                        "You want TLS termination, OIDC or token validation, and baseline abuse policy shared.",
                         "Permission decisions depend on tenant or resource context known best by application services.",
-                        "You need audits to reflect business actions, not only gateway decisions.",
+                        "You need audits to reflect business actions, not only gateway decisions, while services still present workload identity to each other.",
                     ],
                     [
                         "Some logic is duplicated conceptually across edge and service tiers.",
@@ -2540,14 +2587,14 @@ def _build_interactive():
             "Threat-model a multi-tenant admin console",
             "A SaaS company is launching a tenant admin console plus a support console with controlled escalation.",
             [
-                case_step("Map actors and privileges", "Separate tenant admins, support agents, platform operators, and background jobs before designing token or role structure.", "If all identities are flattened, the privilege model will hide the real blast radius of operator flows."),
-                case_step("Choose one critical workflow", "Model invite acceptance, password reset, or impersonation end to end and enumerate spoofing, tampering, disclosure, and privilege escalation risks.", "A generic survey will miss the workflow attackers actually exploit first."),
-                case_step("Add architectural controls", "Place scoped identity, step-up checks, abuse limits, and immutable audit events on the chosen path.", "If the controls remain abstract, the threat model does not improve the actual system."),
+                case_step("Map actors and privileges", "Separate tenant admins, support agents, platform operators, services, and background jobs before designing token or role structure.", "If all identities are flattened, the privilege model will hide the real blast radius of operator flows."),
+                case_step("Choose one critical workflow", "Model invite acceptance, password reset, or impersonation end to end and enumerate STRIDE-style spoofing, tampering, disclosure, and privilege escalation risks.", "A generic survey will miss the workflow attackers actually exploit first."),
+                case_step("Add architectural controls", "Place scoped identity, passkey-backed step-up, workload identity, abuse limits, and immutable audit events on the chosen path.", "If the controls remain abstract, the threat model does not improve the actual system."),
                 case_step("Plan misuse detection", "Define which dashboards, alerts, or audit queries reveal abuse before customers do.", "Controls without observability turn incidents into archaeology."),
             ],
-            ["failed login rate", "break-glass activations", "cross-tenant authz denials", "impersonation audit completeness"],
+            ["failed login rate", "step-up challenge rate", "cross-tenant authz denials", "impersonation audit completeness"],
             "Privileged workflow threat map",
-            "High-risk flows get explicit control points instead of inheriting generic happy-path assumptions.",
+            "High-risk flows get explicit zero-trust control points instead of inheriting generic happy-path assumptions.",
             """flowchart LR
     User --> Edge
     Edge --> AuthN
@@ -2564,8 +2611,8 @@ def _build_interactive():
             "Decide what must be encrypted, how secrets rotate, and how tenant boundaries survive through storage and worker paths.",
             [
                 "Data classification comes before key hierarchy choices.",
-                "Secret distribution is part of the runtime architecture, not just a provisioning step.",
-                "Tenant isolation fails if caches and workers ignore the same boundaries respected by APIs.",
+                "Secret distribution and credential vending are part of the runtime architecture, not just a provisioning step.",
+                "Tenant isolation and residency fail if caches and workers ignore the same boundaries respected by APIs.",
             ],
             [
                 example(
@@ -2573,7 +2620,7 @@ def _build_interactive():
                     "Sensitive PII",
                     "Protect only what needs stronger treatment, but do it end to end",
                     "A SaaS billing platform stores invoices, payout details, contracts, and profile metadata with different risk levels.",
-                    "Encrypt payout and contract data with stronger scoped controls, keep relational metadata queryable, and separate blob bytes from transactional rows.",
+                    "Encrypt payout and contract data with stronger scoped controls, keep relational metadata queryable, separate blob bytes from transactional rows, and keep sensitive AI or support logs metadata-first.",
                     [
                         "Not every field needs the same protection or the same operational cost.",
                         "Field and object controls should follow who can access or export the data later.",
@@ -2587,7 +2634,7 @@ def _build_interactive():
                     "Tenant-safe cache",
                     "Carry tenant boundaries beyond the database",
                     "An application already filters database rows by tenant but forgets to include tenant context in one cache key.",
-                    "Make tenant context mandatory in cache keys, worker payloads, and search documents, not only in SQL filters.",
+                    "Make tenant and residency context mandatory in cache keys, worker payloads, search documents, and scoped storage credentials, not only in SQL filters.",
                     [
                         "Cross-tenant leaks often originate in derivative systems rather than in the primary table.",
                         "Defense in depth means the isolation boundary exists in multiple layers.",
@@ -2604,9 +2651,9 @@ def _build_interactive():
                     "Shared tables with strong guards",
                     "Most SaaS workloads that need efficiency and have mature tenant-aware controls.",
                     [
-                        "Tenant context can be propagated reliably through API, DB, cache, and job paths.",
+                        "Tenant and residency context can be propagated reliably through API, DB, cache, and job paths.",
                         "Row-level security or equivalent storage-level guardrails are available.",
-                        "Operator tooling and audit paths are mature enough to review access safely.",
+                        "Operator tooling, audit paths, and scoped credential vending are mature enough to review access safely.",
                     ],
                     [
                         "One bug can still have wider blast radius than in hard-isolated designs.",
@@ -2622,7 +2669,7 @@ def _build_interactive():
                     [
                         "Contracts or compliance requirements justify added cost and operational overhead.",
                         "A small subset of tenants meaningfully changes the risk posture.",
-                        "Per-tenant keys, schemas, or clusters improve customer trust enough to matter commercially.",
+                        "Per-tenant keys, schemas, clusters, or residency boundaries improve customer trust enough to matter commercially.",
                     ],
                     [
                         "Operations, migrations, and cost all become more complex.",
@@ -2636,13 +2683,13 @@ def _build_interactive():
             "The product stores contracts, payout details, tenant-specific webhook credentials, and normal invoice metadata across shared infrastructure.",
             [
                 case_step("Classify the data", "Decide which fields or objects truly need scoped encryption, which need transport protection only, and which must remain queryable.", "If every field is treated identically, the design will either become unworkable or insufficiently protective."),
-                case_step("Pick the secret-distribution path", "Define how services and workers obtain, refresh, and audit access to signing keys, database credentials, and tenant integration secrets.", "Static long-lived secrets turn one host compromise into a platform-wide incident."),
-                case_step("Enforce tenant boundaries in derivatives", "Thread tenant context through cache keys, queue payloads, search documents, and audit records.", "If only the SQL path is tenant aware, a leak can still emerge from derived or cached state."),
+                case_step("Pick the secret-distribution path", "Define how services and workers obtain, refresh, and audit access to signing keys, database credentials, and scoped storage credentials.", "Static long-lived secrets turn one host compromise into a platform-wide incident."),
+                case_step("Enforce tenant boundaries in derivatives", "Thread tenant and residency context through cache keys, queue payloads, search documents, and audit records.", "If only the SQL path is tenant aware, a leak can still emerge from derived or cached state."),
                 case_step("Plan the exception path", "Specify break-glass access, stronger isolation tiers, and how decrypt or export privileges are reviewed.", "Without an explicit exception path, operators will improvise one during the first serious incident."),
             ],
-            ["secret version age", "tenant-scope cache misses", "decrypt audit events", "cross-tenant denial count"],
+            ["secret version age", "scoped-credential lease age", "decrypt audit events", "cross-tenant denial count"],
             "Tenant-aware protection path",
-            "Encryption and tenancy controls follow data through APIs, storage, secrets, and workers.",
+            "Encryption, credential vending, and tenancy controls follow data through APIs, storage, secrets, and workers.",
             """flowchart LR
     Client --> Edge
     Edge --> API
@@ -2660,7 +2707,7 @@ def _build_interactive():
             [
                 "Rollout safety, recovery objectives, and degraded UX are one connected architecture story.",
                 "Backups and failover only matter if restore and transition paths are tested.",
-                "Graceful degradation is meaningful only when the user-visible fallback is explicit.",
+                "OpenTelemetry-style signals, SLO burn, and kill switches turn rollout theory into runtime control.",
             ],
             [
                 example(
@@ -2668,7 +2715,7 @@ def _build_interactive():
                     "Checkout migration",
                     "Use overlap and canary signals for a risky write-path change",
                     "A checkout service is moving from one order projection model to another while traffic remains live.",
-                    "Deploy new code dark, dual-write where needed, shift a stable tenant cohort first, and compare both performance and business-correctness metrics before wider rollout.",
+                    "Deploy new code dark, dual-write where needed, shift a stable tenant cohort first, and compare OpenTelemetry-fed latency, error, mismatch, and cost signals before wider rollout.",
                     [
                         "Write-path changes are dangerous because data and code compatibility must overlap.",
                         "Stable cohorts make rollback and mismatch investigation far easier than random exposure.",
@@ -2682,7 +2729,7 @@ def _build_interactive():
                     "Core-only mode",
                     "Protect the critical journey by shedding enrichments",
                     "An ecommerce site depends on recommendations, fraud enrichment, and analytics beyond the payment and order core.",
-                    "During dependency distress, keep order acceptance and payment alive while disabling or deferring recommendations and nonessential enrichments.",
+                    "During dependency distress, keep order acceptance and payment alive while kill switches disable or defer recommendations and nonessential enrichments.",
                     [
                         "Users care more about successful order placement than about optional content during incidents.",
                         "Clear shedding order prevents low-value work from consuming scarce capacity first.",
@@ -2701,7 +2748,7 @@ def _build_interactive():
                     [
                         "Old and new versions can coexist for a limited window.",
                         "You can validate both correctness and latency on a stable cohort.",
-                        "Rollback or fast disablement is more valuable than raw rollout speed.",
+                        "Rollback or fast disablement is more valuable than raw rollout speed, especially when SLO burn or cost regressions appear.",
                     ],
                     [
                         "Temporary duplication adds complexity during the migration window.",
@@ -2731,11 +2778,11 @@ def _build_interactive():
             "A payment and order stack needs a risky projection migration plus a documented strategy for regional failover and optional dependency loss.",
             [
                 case_step("Define the recovery and rollout promises", "Set RTO, RPO, compatible overlap windows, and canary stop conditions before touching traffic.", "If objectives are implicit, every stakeholder will make a different risk trade-off mid-incident."),
-                case_step("Choose cohort and signals", "Roll out by tenant or region and watch both domain metrics and system metrics.", "If exposure is random and signals are generic, subtle correctness bugs can spread quietly."),
-                case_step("Rank user journeys", "Mark what stays alive in core-only or read-only mode and what work can defer to queues.", "Without an agreed shedding order, operators waste time debating while users time out."),
+                case_step("Choose cohort and signals", "Roll out by tenant or region and watch OpenTelemetry-style domain metrics, SLO burn, and cost signals.", "If exposure is random and signals are generic, subtle correctness bugs can spread quietly."),
+                case_step("Rank user journeys", "Mark what stays alive in core-only or read-only mode and which kill switches defer lower-value work.", "Without an agreed shedding order, operators waste time debating while users time out."),
                 case_step("Exercise the transition", "Drill failover, rollback, and re-entry into normal mode so the design is more than a diagram.", "Unpracticed recovery paths often fail at the human handoff even if the system mechanics look sound."),
             ],
-            ["dual-write mismatch rate", "degraded-mode activation", "failover time", "core-checkout success rate"],
+            ["dual-write mismatch rate", "error-budget burn during canary", "failover time", "cost per checkout delta"],
             "Safe change and degraded mode loop",
             "Traffic shifts gradually while the product keeps a narrower but coherent core experience under stress.",
             """flowchart LR
@@ -2754,7 +2801,7 @@ def _build_interactive():
             [
                 "Skew is the real test of a partitioning scheme.",
                 "Hot reads and hot writes usually need different mitigation tools.",
-                "Rebalancing is itself a risky operational event that must be paced and observed.",
+                "Cells, hot partitions, and locality-aware caching are often as important as the hash function.",
             ],
             [
                 example(
@@ -2762,7 +2809,7 @@ def _build_interactive():
                     "Celebrity profile",
                     "Protect a hot read key without repartitioning first",
                     "One social account is read millions of times per minute, but writes to the profile are rare.",
-                    "Use multilayer caches and request coalescing first, and only consider dedicated isolation if the heat becomes persistent.",
+                    "Use multilayer caches, locality-aware cache placement, and request coalescing first, then consider dedicated isolation or a hot partition if the heat becomes persistent.",
                     [
                         "The bottleneck is repeated reads of one object, not distributed write ownership.",
                         "Coalescing and caching reduce origin amplification quickly without moving the partition.",
@@ -2776,7 +2823,7 @@ def _build_interactive():
                     "Flash-sale SKU",
                     "Serialize hot writes instead of pretending they can stay fully parallel",
                     "A few inventory SKUs receive intense concurrent reservation attempts for a short window.",
-                    "Queue or serialize the reservation path per SKU and pair it with strict cache and availability messaging on the read side.",
+                    "Queue or serialize the reservation path per SKU, use key salting or dedicated hot partitions only where safe, and pair it with strict cache and availability messaging on the read side.",
                     [
                         "The hotspot is write contention on the same logical object, not general shard imbalance alone.",
                         "Serializing one SKU is cheaper than letting parallel optimistic retries collapse the whole partition.",
@@ -2795,7 +2842,7 @@ def _build_interactive():
                     [
                         "Many identical reads target the same key concurrently.",
                         "The underlying object changes infrequently enough for caching to help.",
-                        "Origin load amplification is the main risk.",
+                        "Origin load amplification is the main risk, especially when traffic has locality that edge or regional caches can exploit.",
                     ],
                     [
                         "Freshness must still be defined and invalidation handled safely.",
@@ -2811,7 +2858,7 @@ def _build_interactive():
                     [
                         "Concurrent writes conflict or repeatedly retry on the same owner.",
                         "Correctness is more important than maximizing write parallelism for that object.",
-                        "A temporary queue or dedicated owner can keep blast radius bounded.",
+                        "A temporary queue, dedicated owner, or dedicated hot partition can keep blast radius bounded.",
                     ],
                     [
                         "Latency rises for the hot object.",
@@ -2825,11 +2872,11 @@ def _build_interactive():
             "A commerce service expects a few celebrity products and merchants to dominate traffic briefly but brutally.",
             [
                 case_step("Name the heat source", "Decide whether the hotspot is repeated reads, conflicting writes, or both before choosing tooling.", "If the team misclassifies the hotspot, it may spend time on rebalancing while origin amplification keeps burning."),
-                case_step("Apply the first-line mitigation", "Use cache and coalescing for reads or queued serialization for writes, depending on the dominant risk.", "A generic answer like shard more can hide the fact that one object still remains singularly hot."),
+                case_step("Apply the first-line mitigation", "Use cache and coalescing for reads or queued serialization, salting, or dedicated hot partitions for writes, depending on the dominant risk.", "A generic answer like shard more can hide the fact that one object still remains singularly hot."),
                 case_step("Watch skew signals", "Track top-key concentration, shard p95, cache hit ratio, and queue age on the hotspot path.", "If only fleet averages are watched, the hotspot will disappear inside healthy aggregate numbers."),
-                case_step("Escalate to isolation or movement only when needed", "Reserve dedicated shards or rebalancing for sustained hotspots that outgrow the first-line controls.", "Moving too early can add control-plane churn without removing the actual workload concentration."),
+                case_step("Escalate to isolation or movement only when needed", "Reserve dedicated shards, cell movement, or rebalancing for sustained hotspots that outgrow the first-line controls.", "Moving too early can add control-plane churn without removing the actual workload concentration."),
             ],
-            ["top-key request concentration", "shard p95", "cache hit ratio on hot set", "queue age for serialized writes"],
+            ["top-key request concentration", "shard or cell p95", "cache hit ratio on hot set", "queue age for serialized writes"],
             "Hot object containment path",
             "Different hotspot classes trigger different mitigations before expensive movement.",
             """flowchart LR
@@ -2846,7 +2893,7 @@ def _build_interactive():
             "Consensus, quorums, and leadership lab",
             "Decide what truly needs coordination, then design leader ownership and caller behavior around failures and stale terms.",
             [
-                "Consensus should be isolated to the smallest state surface that truly needs it.",
+                "Consensus should be isolated to the smallest control-plane state surface that truly needs it.",
                 "Quorums buy overlap at a latency and availability cost that must be justified per workflow.",
                 "Leader election is incomplete without stale-leader suppression and client semantics.",
             ],
@@ -2856,7 +2903,7 @@ def _build_interactive():
                     "Partition metadata",
                     "Use leadership for control-plane truth, not for every ordinary read",
                     "A partitioned data service needs one current owner for partition metadata and failover decisions, but user reads should remain local and fast.",
-                    "Keep consensus around ownership metadata while allowing data-plane reads to stay partition local and cached.",
+                    "Keep consensus around ownership metadata, as an etcd-style control plane would, while allowing data-plane reads to stay partition local and cached.",
                     [
                         "Metadata correctness is critical because wrong ownership corrupts the whole partition map.",
                         "Most user reads do not need to pay consensus cost if ownership is already known.",
@@ -2921,11 +2968,11 @@ def _build_interactive():
                 case_step("Prove the need for coordination", "Limit consensus to ownership metadata or another truly global control-plane fact.", "If coordination scope grows casually, the system will become slower without a corresponding safety gain."),
                 case_step("Define stale-owner suppression", "Use terms, leases, or fencing tokens so old leaders cannot keep mutating after failover.", "Election without stale-owner suppression leaves the split-brain risk unsolved."),
                 case_step("Design caller behavior", "Choose whether clients see redirects, retriable failures, or stable endpoints that hide the leader move.", "Undefined caller semantics turn brief failover into random client pain."),
-                case_step("Plan membership and warmup", "Describe how new replicas catch up and when they may participate safely in leadership or quorum.", "If membership change is ignored, the design sounds static and under-tested."),
+                case_step("Plan membership and warmup", "Describe how new replicas catch up and when they may participate safely in leadership or quorum while the partitioned data plane keeps serving.", "If membership change is ignored, the design sounds static and under-tested."),
             ],
             ["election duration", "stale-term rejections", "metadata cache freshness", "quorum write latency"],
             "Leader ownership and fenced writes",
-            "Only the coordination-critical state pays the term and fencing cost.",
+            "Only the coordination-critical control plane pays the term and fencing cost.",
             """sequenceDiagram
     participant Client
     participant Coordinator
@@ -2944,7 +2991,7 @@ def _build_interactive():
             [
                 "Distributed workflows need durable state and retry safety, not only event emission.",
                 "Outbox and inbox patterns turn transport retries into business-safe behavior.",
-                "Operator recovery paths are part of the workflow design, not only a future support concern.",
+                "Durable execution engines and operator recovery paths are part of the workflow design, not only a future support concern.",
             ],
             [
                 example(
@@ -2952,7 +2999,7 @@ def _build_interactive():
                     "Order submission",
                     "Return accepted on the right boundary",
                     "An order path validates cart state, reserves inventory, authorizes payment, and later sends email and analytics.",
-                    "Return accepted after the authoritative core steps succeed, then continue recoverable side effects asynchronously with durable workflow state.",
+                    "Return accepted after the authoritative core steps succeed, then continue recoverable side effects asynchronously with durable workflow state, often in a Temporal-style orchestrated workflow.",
                     [
                         "The user needs confidence that the order exists, not that every downstream side effect is already complete.",
                         "Durable workflow state makes retries and operator recovery coherent.",
@@ -2985,7 +3032,7 @@ def _build_interactive():
                     [
                         "Operators must inspect or intervene in stuck workflows.",
                         "Step order and business timing are important.",
-                        "One service or engine can own the workflow truth clearly.",
+                        "One service or durable execution engine can own the workflow truth clearly.",
                     ],
                     [
                         "The coordinator becomes a critical dependency.",
@@ -3015,13 +3062,13 @@ def _build_interactive():
             "The system spans inventory, payment, shipment, and notification while supporting safe client retries and eventual operator repair.",
             [
                 case_step("Define the acceptance boundary", "State which local transactions must complete before the API returns accepted to the user.", "If acceptance is vague, retries and customer messaging become inconsistent immediately."),
-                case_step("Persist workflow truth", "Store step state durably so retries, compensations, and operators all reason about the same workflow instance.", "If state only lives in transient logs or events, recovery becomes guesswork."),
+                case_step("Persist workflow truth", "Store step state durably so retries, compensations, operators, and AI-agent style substeps all reason about the same workflow instance.", "If state only lives in transient logs or events, recovery becomes guesswork."),
                 case_step("Attach idempotency to commands", "Use stable keys on externally retryable commands and dedupe state on consumers.", "Without replay safety, partial failures become duplicate charges or reservations."),
                 case_step("Plan compensation and repair", "Decide which failures auto-compensate, which require manual review, and how reconciliation finds misses later.", "If recovery is undefined, the workflow is only reliable on the happy path."),
             ],
             ["workflow age", "compensation rate", "duplicate-command collapse count", "stuck workflow count"],
             "Workflow truth and replay safety",
-            "A durable workflow record governs retries, async effects, and operator recovery.",
+            "A durable workflow record governs retries, async effects, AI-agent substeps, and operator recovery.",
             """flowchart LR
     Client --> API
     API --> WorkflowState
@@ -3046,9 +3093,9 @@ def _build_deep_map():
                     "This is why senior storage reviews ask which endpoint or background consumer truly owns the index budget. If no caller is important enough to justify the index, the structure is probably cargo cult. If a caller is important enough, then the team should also state what query shapes are intentionally unsupported and what alternate path handles them.",
                 ),
                 insight(
-                    "Query shape discipline beats planner heroics",
-                    "Database planners are impressive, but they cannot rescue arbitrary product flexibility at scale. Once many optional predicates and sorts coexist, the planner's job becomes a losing optimization problem because the engine no longer has a small set of dominant access paths to exploit.",
-                    "Constrain the request shape at the API boundary and the database remains predictable. Leave it unconstrained and eventually someone builds a dashboard query that looks legal to the API but catastrophically expensive to the storage layer. Strong architecture sets those boundaries earlier than incident response would prefer.",
+                    "Hybrid retrieval still needs query-shape discipline",
+                    "Database planners are impressive, but they cannot rescue arbitrary product flexibility at scale. Once many optional predicates, sorts, and semantic-retrieval modes coexist, the planner's job becomes a losing optimization problem because the engine no longer has a small set of dominant access paths to exploit. ANN indexes improve candidate search, but they do not make every hybrid query cheap or exact.",
+                    "Constrain the request shape at the API boundary and the database remains predictable. Leave it unconstrained and eventually someone builds a dashboard or RAG query that looks legal to the API but catastrophically expensive to the storage layer. Strong architecture sets those boundaries earlier than incident response would prefer.",
                 ),
                 insight(
                     "Pagination and indexing are the same conversation",
@@ -3063,8 +3110,8 @@ def _build_deep_map():
             ],
             "references": [
                 ref("PostgreSQL Indexes", "https://www.postgresql.org/docs/current/indexes.html", "PostgreSQL Documentation", "Practical grounding for how relational indexes work and when different structures matter."),
-                ref("Use The Index, Luke!", "https://use-the-index-luke.com/", "Use The Index, Luke!", "Clear explanations of query plans, pagination, and composite-index behavior."),
-                ref("Amazon Builders' Library: Using load shedding to avoid overload", "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/", "Amazon Builders' Library", "Useful companion reading on constraining work before the storage layer is overwhelmed."),
+                ref("PostgreSQL GIN Indexes", "https://www.postgresql.org/docs/current/gin.html", "PostgreSQL Documentation", "Useful grounding for metadata and lexical filtering patterns that commonly pair with vector retrieval."),
+                ref("pgvector", "https://github.com/pgvector/pgvector", "pgvector", "Primary reference for exact and approximate vector search in Postgres, including HNSW and IVFFlat trade-offs."),
             ],
         },
         "data-storage-lab/replication-sharding-and-consistency": {
@@ -3075,9 +3122,9 @@ def _build_deep_map():
                     "The important shift is to make that freshness window explicit per workflow. Doing so transforms consistency from vague philosophy into an engineering contract with routing consequences, dashboard implications, and user-experience copy when the budget cannot be met.",
                 ),
                 insight(
-                    "Shard keys encode future migrations",
-                    "Choosing a partition key is not just about today's throughput. It decides which records move together, which failures stay local, and how painful the first major rebalancing event will be. A key that aligns poorly with future success cases can lock the system into expensive scatter-gather behavior or repeated hotspot isolation work.",
-                    "That is why good designs preserve some routing indirection. The external identifier should stay stable while the underlying placement can evolve. This is not free, but it is often the difference between manageable growth and emergency redesign.",
+                    "Cell boundaries encode blast radius as much as shard keys do",
+                    "Choosing a partition key is not just about today's throughput. It decides which records move together, which failures stay local, and how painful the first major rebalancing event will be. In modern multi-region systems, that choice often expands into a cell boundary: a self-contained slice of compute and storage that limits operational and compliance blast radius.",
+                    "That is why good designs preserve some routing indirection. The external identifier should stay stable while the underlying cell or shard placement can evolve. This is not free, but it is often the difference between manageable growth and emergency redesign.",
                 ),
                 insight(
                     "Failover quality is judged after promotion",
@@ -3091,8 +3138,8 @@ def _build_deep_map():
                 ),
             ],
             "references": [
-                ref("Designing Data-Intensive Applications", "https://dataintensive.net/", "Martin Kleppmann", "Authoritative background on replication, partitioning, and consistency trade-offs."),
-                ref("Spanner: Google's Globally Distributed Database", "https://research.google/pubs/pub39966/", "Google Research", "Useful reference for globally coordinated consistency and its costs."),
+                ref("What is a cell-based architecture?", "https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/what-is-a-cell-based-architecture.html", "AWS Well-Architected", "Practical reference for self-contained cells, routing, and blast-radius isolation."),
+                ref("Spanner: Google's Globally Distributed Database", "https://research.google/pubs/pub39966/", "Google Research", "Useful reference for globally coordinated consistency and the cost of multi-region write coordination."),
                 ref("Jepsen Analyses", "https://jepsen.io/analyses", "Jepsen", "Operationally grounded reminders that consistency claims should be tested under failure."),
             ],
         },
@@ -3109,8 +3156,8 @@ def _build_deep_map():
                     "The design implication is that derivative systems should come with user-facing expectations, rebuild paths, and operator dashboards from the start. A derived store without those contracts eventually surprises both users and engineers.",
                 ),
                 insight(
-                    "The smallest portfolio compounds fastest",
-                    "Every extra datastore multiplies tools, backups, IAM, testing, and on-call knowledge. The cost curve is nonlinear because data movement paths add failure matrices between systems. That is why strong platform teams often defer a specialist engine until one access pattern becomes impossible to serve gracefully without it.",
+                    "Unit economics are part of storage-fit quality",
+                    "Every extra datastore multiplies tools, backups, IAM, testing, and on-call knowledge. The cost curve is nonlinear because data movement paths add failure matrices between systems. Storage selection quality therefore includes more than technical fit: query-engine cost, compaction cost, and full rebuild cost are first-class design inputs.",
                     "Specialization remains valuable, but the bar should be real workload pain or clear product leverage. Polyglot persistence is strongest when it expresses necessity, not enthusiasm.",
                 ),
                 insight(
@@ -3120,9 +3167,9 @@ def _build_deep_map():
                 ),
             ],
             "references": [
-                ref("Martin Fowler: Polyglot Persistence", "https://martinfowler.com/bliki/PolyglotPersistence.html", "Martin Fowler", "Classic framing for why different data models coexist in one system."),
-                ref("Amazon DynamoDB Design Patterns", "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html", "AWS Documentation", "Helpful reference on access-pattern-driven NoSQL modeling."),
-                ref("Elasticsearch Reference", "https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html", "Elastic Documentation", "Useful grounding on what a search engine is actually optimized to do versus a primary OLTP store."),
+                ref("Apache Iceberg Documentation", "https://iceberg.apache.org/docs/latest/", "Apache Iceberg", "Primary reference for open-table lakehouse patterns, metadata evolution, and replayable analytics projections."),
+                ref("pgvector", "https://github.com/pgvector/pgvector", "pgvector", "Useful reference for the mainstream trade-off of keeping vector search inside Postgres with ACID and joins."),
+                ref("Qdrant Vector Search Overview", "https://qdrant.tech/documentation/overview/vector-search/", "Qdrant Documentation", "Representative specialized vector-store reference for ANN filtering and scale trade-offs beyond pgvector."),
             ],
         },
         "security-operations-lab/auth-threat-modeling-for-hld": {
@@ -3133,8 +3180,8 @@ def _build_deep_map():
                     "Threat modeling those paths first often yields better architectural returns than polishing generic auth diagrams. The controls become tangible: one-time semantics, stronger audit, abuse throttling, and explicit operator review boundaries.",
                 ),
                 insight(
-                    "Authorization wants domain context",
-                    "Centralized token validation is useful, but meaningful authorization usually needs resource and tenant context known best by the application domain. A gateway can confirm the caller is who they claim to be and maybe enforce coarse scopes, yet the service often knows whether a given invoice, project, or account actually belongs to that tenant and action.",
+                    "Zero trust pushes authn and authz onto every hop",
+                    "Centralized token validation is useful, but meaningful authorization usually needs resource and tenant context known best by the application domain. A gateway can confirm the caller is who they claim to be and maybe enforce coarse scopes, yet the service often knows whether a given invoice, project, or account actually belongs to that tenant and action. Workload identity continues that pattern inside the mesh instead of trusting the network.",
                     "This is why strong architectures mix centralized identity mechanisms with locally visible authorization checks. The result is more explainable than a giant edge policy blob and safer than assuming identity proof equals blanket permission.",
                 ),
                 insight(
@@ -3150,8 +3197,8 @@ def _build_deep_map():
             ],
             "references": [
                 ref("OWASP ASVS", "https://owasp.org/www-project-application-security-verification-standard/", "OWASP", "Widely used security-control framework that helps anchor auth and authorization design depth."),
-                ref("OWASP Threat Modeling Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html", "OWASP Cheat Sheet Series", "Practical guide for converting abstract threats into concrete design review questions."),
-                ref("NIST Digital Identity Guidelines", "https://pages.nist.gov/800-63-3/", "NIST", "Authoritative reference for identity, authentication, and lifecycle controls."),
+                ref("Web Authentication: Level 3", "https://www.w3.org/TR/webauthn-3/", "W3C", "Primary reference for passkeys and phishing-resistant authentication on the web."),
+                ref("SPIFFE Workload API", "https://spiffe.io/docs/latest/spiffe-specs/spiffe_workload_api/", "SPIFFE", "Vendor-neutral reference for service-to-service workload identity."),
             ],
         },
         "security-operations-lab/encryption-secrets-and-tenancy": {
@@ -3162,9 +3209,9 @@ def _build_deep_map():
                     "This is why data classification and access-path analysis come first. Teams should know whether they are defending against disk theft, snapshot leakage, compromised app code, operator overreach, or tenant cross-talk, because each scenario changes which layer matters most.",
                 ),
                 insight(
-                    "Secrets have renewal behavior",
-                    "The hard part of secret handling is often not storage but renewal. A service fleet that cannot refresh credentials gracefully turns every rotation into a redeploy or outage risk. A platform that cannot partition partner secrets cleanly turns one integration compromise into a multi-tenant event.",
-                    "Thinking about renewal early improves design quality. Which process fetches the secret, how does it notice a version change, what happens to open connections, and what audit event proves the access all become explicit instead of emergent.",
+                    "Secrets and credentials have renewal behavior",
+                    "The hard part of secret handling is often not storage but renewal. A service fleet that cannot refresh credentials gracefully turns every rotation into a redeploy or outage risk. A platform that cannot partition partner secrets or vend scoped storage credentials cleanly turns one integration compromise into a multi-tenant event.",
+                    "Thinking about renewal early improves design quality. Which process fetches the secret, how does it notice a version change, what happens to open connections, what prefix or dataset does the credential cover, and what audit event proves the access all become explicit instead of emergent.",
                 ),
                 insight(
                     "Tenant isolation is a systems property",
@@ -3180,15 +3227,15 @@ def _build_deep_map():
             "references": [
                 ref("Envelope Encryption", "https://cloud.google.com/kms/docs/envelope-encryption", "Google Cloud Documentation", "Clear explanation of practical envelope-encryption architecture and why key hierarchies matter."),
                 ref("OWASP Secrets Management Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html", "OWASP Cheat Sheet Series", "Useful operational guidance on rotation, retrieval, and secret hygiene."),
-                ref("PostgreSQL Row Security Policies", "https://www.postgresql.org/docs/current/ddl-rowsecurity.html", "PostgreSQL Documentation", "Concrete reference for one common database-level tenant-isolation mechanism."),
+                ref("Handling sensitive data", "https://opentelemetry.io/docs/security/handling-sensitive-data/", "OpenTelemetry Documentation", "Useful guidance for metadata-first telemetry and scrubbing PHI or PII from logs, traces, and metrics."),
             ],
         },
         "security-operations-lab/safe-change-dr-and-degradation": {
             "insights": [
                 insight(
-                    "Compatibility is the hidden enabler of safe rollout",
-                    "Traffic shifting tools are only as good as the compatibility surface beneath them. If schemas, events, or APIs cannot overlap safely, canarying becomes a false comfort because the system still depends on lockstep change underneath.",
-                    "Architectures that value safe change therefore bias toward additive contracts and reversible movement. Progressive delivery is most effective when the data model cooperates with it.",
+                    "Compatibility and telemetry gates enable safe rollout together",
+                    "Traffic shifting tools are only as good as the compatibility surface beneath them. If schemas, events, or APIs cannot overlap safely, canarying becomes a false comfort because the system still depends on lockstep change underneath. If telemetry cannot show domain correctness, latency, and cost regressions quickly, progressive delivery becomes blind ceremony.",
+                    "Architectures that value safe change therefore bias toward additive contracts, reversible movement, and observability that can gate promotion. Progressive delivery is most effective when the data model and telemetry model both cooperate with it.",
                 ),
                 insight(
                     "Recovery objectives convert resilience from taste into math",
@@ -3207,9 +3254,9 @@ def _build_deep_map():
                 ),
             ],
             "references": [
-                ref("Google SRE Book: Addressing Cascading Failures", "https://sre.google/sre-book/addressing-cascading-failures/", "Google SRE Book", "Helpful reference for overload, defensive controls, and preserving useful work."),
-                ref("AWS Well-Architected Reliability Pillar", "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html", "AWS Documentation", "Broad reference on recovery, change management, and fault isolation."),
-                ref("Feature Toggles", "https://martinfowler.com/articles/feature-toggles.html", "Martin Fowler", "Useful framework for understanding rollout, ops, and experiment flags as distinct controls."),
+                ref("OpenTelemetry Documentation", "https://opentelemetry.io/docs/", "OpenTelemetry", "Primary reference for collecting traces, metrics, and logs that commonly feed rollout and degradation decisions."),
+                ref("Alerting on SLOs", "https://sre.google/workbook/alerting-on-slos/", "Google SRE Workbook", "Practical reference for error-budget burn and multi-window alerting used as rollout gates."),
+                ref("Feature Toggles", "https://martinfowler.com/articles/feature-toggles.html", "Martin Fowler", "Useful framework for understanding rollout, ops, and kill-switch style flags as distinct controls."),
             ],
         },
         "distributed-systems-lab/partitioning-and-hot-key-control": {
@@ -3220,9 +3267,9 @@ def _build_deep_map():
                     "Modeling skew early is therefore a form of debt prevention. It pushes engineers to choose keys, metrics, and fallback controls that survive success rather than only surviving average load.",
                 ),
                 insight(
-                    "Read hotspots and write hotspots are different physics",
-                    "Read hotspots usually amplify repeated work and are therefore susceptible to caching, replication, and coalescing. Write hotspots are about contention on a single authority boundary and often require serialization, batching, or altered product semantics instead.",
-                    "Confusing the two leads teams to apply the wrong mitigation. More caches do little for an oversubscribed single-writer record. More shards do little if one object remains the singular point of contention.",
+                    "Read hotspots and write hotspots need different containment tools",
+                    "Read hotspots usually amplify repeated work and are therefore susceptible to caching, replication, coalescing, and locality-aware serving. Write hotspots are about contention on a single authority boundary and often require serialization, salting, batching, or altered product semantics instead.",
+                    "Confusing the two leads teams to apply the wrong mitigation. More caches do little for an oversubscribed single-writer record. More shards do little if one object remains the singular point of contention unless the design can isolate it into a dedicated hot partition or cell.",
                 ),
                 insight(
                     "Rebalancing is a migration, not a toggle",
@@ -3236,9 +3283,9 @@ def _build_deep_map():
                 ),
             ],
             "references": [
+                ref("What is a cell-based architecture?", "https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/what-is-a-cell-based-architecture.html", "AWS Well-Architected", "Useful reference for turning partitioning into bounded regional or tenant failure domains."),
                 ref("Amazon Dynamo: Highly Available Key-value Store", "https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf", "Amazon", "Foundational paper on partitioned ownership, consistent hashing, and failure trade-offs."),
-                ref("The Log: What every software engineer should know about real-time data's unifying abstraction", "https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying", "LinkedIn Engineering", "Helpful for thinking about partitioned streams, ordered ownership, and movement costs."),
-                ref("Caching at Scale", "https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/caching/README.md", "System Design Primer", "Good supporting reading on cache behavior and hotspot mitigation patterns."),
+                ref("Qdrant Vector Search Resource Optimization", "https://qdrant.tech/articles/vector-search-resource-optimization/", "Qdrant", "Good modern reference for ANN tuning language such as HNSW parameters, filtering, and performance trade-offs under skew-like workloads."),
             ],
         },
         "distributed-systems-lab/consensus-quorums-and-leadership": {
@@ -3266,7 +3313,7 @@ def _build_deep_map():
             ],
             "references": [
                 ref("In Search of an Understandable Consensus Algorithm (Raft)", "https://raft.github.io/raft.pdf", "Raft Paper", "Accessible consensus reference with strong grounding in leadership and terms."),
-                ref("ZooKeeper: Wait-free coordination for Internet-scale systems", "https://www.usenix.org/legacy/event/atc10/tech/full_papers/Hunt.pdf", "USENIX", "Classic coordination-system paper useful for control-plane design intuition."),
+                ref("etcd Documentation", "https://etcd.io/docs/", "etcd", "Modern reference for a Raft-backed control plane commonly used for metadata and ownership coordination."),
                 ref("Martin Kleppmann on Fencing Tokens", "https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html", "Martin Kleppmann", "Helpful discussion of leases, stale ownership, and why tokens matter."),
             ],
         },
@@ -3294,7 +3341,7 @@ def _build_deep_map():
                 ),
             ],
             "references": [
-                ref("Microservices.io: Saga Pattern", "https://microservices.io/patterns/data/saga.html", "microservices.io", "Clear conceptual reference for orchestrated and choreographed saga patterns."),
+                ref("Temporal Workflow Execution", "https://docs.temporal.io/workflow-execution", "Temporal", "Primary durable-execution reference for long-running workflows, replay, and recovery."),
                 ref("Microservices.io: Transactional Outbox", "https://microservices.io/patterns/data/transactional-outbox.html", "microservices.io", "Practical grounding for bridging local transactions to asynchronous delivery."),
                 ref("Stripe Idempotent Requests", "https://stripe.com/docs/api/idempotent_requests", "Stripe Documentation", "Excellent real-world reference for caller-visible idempotency contracts."),
             ],

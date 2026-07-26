@@ -40,6 +40,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 
 HLD exhaustive labs (`data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`) are self-contained: 6 long sections, multiple `codeExample`s, design + coding exercises, curated `likelyAnswerPoints`, interactive topic labs, deep dives, and module-specific simulation blueprints.
 
+The generated exhaustive HLD labs in `scripts/hld_lab_content.py` are updated for 2026 interview expectations: storage lessons now cover ANN/vector indexing (`pgvector`, HNSW/IVF) and lakehouse/open-table analytics (`Iceberg` with Delta/Hudi peers), security lessons emphasize zero trust, passkeys/WebAuthn, workload identity, scoped credential vending, and sensitive-data-safe telemetry, and distributed lessons now frame cell-based isolation, control-plane consensus, and durable workflow engines as mainstream patterns.
+
 Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 ## Deep knowledge (`lessonDeepKnowledge.js`)
