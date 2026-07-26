@@ -66,16 +66,7 @@
   --ide-toolbar-bg: var(--bg-soft);
 }
 
-[data-theme='copilot-light'],
-[data-theme='ocean-light'],
-[data-theme='ember-light'],
-[data-theme='forest-light'],
-[data-theme='paper'],
-[data-theme='dawn'],
-[data-theme='blush'],
-[data-theme='petal'],
-[data-theme='ballet'],
-[data-theme='rose-light'] {
+[data-theme-mode='light'] {
   --ide-fg: var(--text);
   --ide-muted: var(--muted);
   --ide-strong-fg: var(--text);

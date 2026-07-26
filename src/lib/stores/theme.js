@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
-import { DEFAULT_THEME_ID, getThemeOption, normalizeThemeId } from '$lib/themes.js';
+import { DEFAULT_THEME_ID, getThemeOption, isLightTheme, normalizeThemeId } from '$lib/themes.js';
 
 const STORAGE_KEY = 'system-design-copilot-theme-v1';
 
@@ -10,6 +10,7 @@ export function applyTheme(themeId) {
 
   const normalized = normalizeThemeId(themeId);
   document.documentElement.dataset.theme = normalized;
+  document.documentElement.dataset.themeMode = isLightTheme(normalized) ? 'light' : 'dark';
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
