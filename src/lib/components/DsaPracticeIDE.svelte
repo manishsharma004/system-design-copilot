@@ -656,8 +656,7 @@
   }
 
   .problem-body {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 0.8rem;
     max-height: 42rem;
     overflow: auto;
@@ -668,8 +667,11 @@
     background: rgba(20, 27, 41, 0.96);
     border: 1px solid rgba(118, 139, 186, 0.16);
     border-radius: 0.9rem;
+    flex-shrink: 0;
     max-height: none;
-    overflow: auto;
+    min-height: min-content;
+    overflow-x: auto;
+    overflow-y: visible;
     padding: 0.85rem 0.9rem;
     white-space: pre-wrap;
     word-break: break-word;
@@ -751,7 +753,9 @@
     border-radius: 0.85rem;
     margin: 0.3rem 0 0;
     max-height: none;
-    overflow: auto;
+    min-height: min-content;
+    overflow-x: auto;
+    overflow-y: visible;
     padding: 0.75rem 0.85rem;
     white-space: pre-wrap;
     word-break: break-word;
