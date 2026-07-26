@@ -18,6 +18,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `lldLearningExpansion.js` | Standalone LLD learning expansion modules (`rawLldLearningModules`) |
 | `dsaCourseData.js` | DSA modules; highlights from embedded/company JSON |
 | `aiEngineerCourseData.js` | AI modules; lessons may include `exercises[]` |
+| `dsaLearningExpansion.js` | DSA concept-lab expansion modules; hand-authored pedagogical lessons |
+| `aiLearningExpansion.js` | AI/ML interactive expansion modules; Pyodide-safe NumPy/sklearn exercises |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
 
 ## Modules by flow
@@ -47,6 +49,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
+- Expansion sources: `rawDsaLearningModules` and `rawAiLearningModules` are standalone exports for future flow assembly.
 - `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`)
 - `simulationLessons.js` — authored + generated HLD sims (`getSimulationLesson`)
 - `lessonEnhancements.js` + `solutionLoader.js` — rich solutions for 9 case studies
