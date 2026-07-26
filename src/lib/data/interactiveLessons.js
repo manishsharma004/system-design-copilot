@@ -1,3 +1,5 @@
+import { learningExpansionInteractive } from './learningExpansionInteractive.js';
+
 /** @type {Record<string, any>} */
 export const interactiveLessons = {
   'data-storage/relational-data-modeling': {
@@ -1872,7 +1874,8 @@ export const interactiveLessons = {
     Quality --> Train
       `
     }
-  }
+  },
+  ...learningExpansionInteractive
 };
 
 /** @param {string} lessonId */
