@@ -22,6 +22,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `dsaLearningExpansion.js` | DSA concept + algorithm labs with on-page stdlib Python examples and coding exercises |
 | `aiEngineerCourseData.js` | AI modules; many lessons include runnable `exercises[]` |
 | `aiLearningExpansion.js` | Interactive ML + deep learning from-scratch labs with full on-page teaching sections, code examples, and exercises |
+| `learningExpansionInteractive.js` | On-page interactive labs for all 24 HLD, LLD, DSA, and AI learning-expansion lessons; merged into `interactiveLessons.js` |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
 
 ## Modules by flow
@@ -51,7 +52,7 @@ Ids: `{moduleSlug}/{lessonSlug}` via `normalizeModule()`.
 
 - Question JSON (lazy in `QuestionBankIDE`): `top-interview-questions-*.json`, company files, strategy files — normalized by `src/lib/dsa/questionBank.js`
 - DSA also pulls `all-companies-questions.json`, `leetcode-companies.json`
-- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`)
+- `interactiveLessons.js` — authored topic labs (`getInteractiveLesson`), including `learningExpansionInteractive.js`
 - `simulationLessons.js` — authored + generated HLD sims (`getSimulationLesson`)
 - `lessonEnhancements.js` + `solutionLoader.js` — rich solutions for case studies
 - Diagrams: `/primer-images/*` under `static/` (asserted in `tests/courseData.test.js`)
