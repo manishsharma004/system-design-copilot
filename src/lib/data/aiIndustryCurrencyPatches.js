@@ -1035,7 +1035,7 @@ export const aiIndustryCurrencyPatches = {
 /**
  * Apply mid-2026 industry currency patches onto course modules.
  * @param {Array<{ slug: string, lessons?: Array<Record<string, unknown>> }>} modules
- * @returns {typeof modules}
+ * @returns {Array<{ slug: string, lessons?: Array<Record<string, unknown>> }>}
  */
 export function applyAiIndustryCurrencyPatches(modules) {
   return (modules || []).map((module) => ({
