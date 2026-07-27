@@ -1,1018 +1,641 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const llmRetrievalLabChapters = {
+const chapters = {
   "llm-retrieval-lab/tokenization-workshop": {
-    "title": "Chapter: Tokenization workshop",
-    "readingTime": "55-70 min",
-    "premise": "Compare whitespace, character, and BPE-like merge tokenization using pure Python and NumPy—no tiktoken or external tokenizer libraries. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Tokenization workshop",
+    readingTime: "65-80 min",
+    premise:
+      "Tokenization is the contract between text and model inputs. This chapter explains whitespace, character, and subword tokenization, vocabulary tradeoffs, special tokens, context budgeting, and production pitfalls.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Tokenization defines the atomic units an LLM sees. Interview answers about vocabulary size, rare words, multilingual text, and sequence length all depend on understanding how text becomes token ids.",
-          "This chapter treats \"Tokenization workshop\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "text-becomes-ids",
+        heading: "Models consume token ids, not raw text",
+        paragraphs: [
+          "An LLM does not directly read a string. A tokenizer normalizes text, splits it into pieces, maps those pieces to integer ids, and often adds special tokens. Those ids index embedding rows inside the model. If the tokenizer changes, the same visible sentence can become a different id sequence with different length and meaning to the model.",
+          "Whitespace tokenization is easy to understand but brittle. It treats spaces as boundaries and often mishandles punctuation, casing, contractions, code, and languages without whitespace word boundaries. Character tokenization has excellent coverage because almost any string can be represented, but it creates long sequences and forces the model to learn larger patterns from very small units.",
+          "Subword tokenization sits between these extremes. Frequent words or fragments stay compact, while rare words break into reusable pieces. Byte-pair encoding, WordPiece, and Unigram tokenizers differ in training method, but all balance vocabulary size against sequence length and coverage. The practical lesson is to measure tokenized length on real inputs, not to guess from characters or words."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "token id",
+            definition:
+              "An integer representing a tokenizer vocabulary entry consumed by a model."
+          },
+          {
+            term: "subword tokenization",
+            definition:
+              "A tokenization strategy that represents text with frequent words or fragments and splits rarer strings into smaller pieces."
+          },
+          {
+            term: "vocabulary",
+            definition:
+              "The fixed set of token pieces a tokenizer can map directly to ids."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why should an app count tokens with the model's tokenizer?",
+            reveal:
+              "Characters and words do not map reliably to token ids. Billing, context limits, truncation, and prompt layout depend on the tokenizer actually used by the model."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Tokenization is model-specific. Token ids from one model family are not portable input to another unless the tokenizer contract matches."
         }
       },
       {
-        "id": "models-never-see-raw-characters-unless-you-choose-that",
-        "heading": "Models never see raw characters unless you choose that",
-        "paragraphs": [
-          "A tokenizer converts a string into a sequence of integer ids from a fixed vocabulary. Whitespace splitting is the simplest word-ish baseline: 'Transformers attend carefully' becomes three tokens. It fails on punctuation ('carefully.' vs 'carefully'), casing, and languages without spaces. Character tokenization turns the same sentence into one token per character, which makes rare words easy to represent but creates long sequences and forces the model to learn spelling from scratch. Subword methods sit in between: common words stay intact, rare words break into pieces. In interviews, state the tradeoff clearly: shorter sequences vs flexible open-vocabulary coverage vs implementation complexity. Always measure sequence length after tokenization because that length drives attention cost.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Whitespace tokenizers are brittle around punctuation and morphology.",
-          "• Character tokenizers maximize coverage but lengthen sequences.",
-          "• Subword tokenizers balance frequency and generalization.",
-          "Production lens — Tokenization as learned compression: Tokenizers turn raw text into integer IDs the model was trained to consume. Subword algorithms—BPE, WordPiece, Unigram—balance vocabulary size against sequence length by keeping frequent chunks intact and splitting rare strings. That is lossy compression with a model-specific codebook: the \"same\" sentence can become very different ID sequences under different tokenizers, and those IDs are not interchangeable across model families.\n\nSpecial tokens, normalization (Unicode, lowercasing, space markers), and pre-tokenization rules are part of the contract. Hand-editing token IDs without understanding BOS/EOS, padding, or mask tokens corrupts inputs silently. In RAG and agents, count tokens with the same tokenizer the model uses; character or whitespace heuristics drift from billed context and truncate mid-subword in surprising ways."
+        id: "vocab-tradeoffs",
+        heading: "Vocabulary size trades memory for shorter sequences",
+        paragraphs: [
+          "A larger vocabulary can represent common strings in fewer tokens, reducing context length and attention cost. It also increases the embedding table and final output projection size. With a 100,000-token vocabulary and 4,096-dimensional embeddings, the embedding matrix alone contains hundreds of millions of parameters if not tied or compressed. Tokenizer design is therefore both an NLP choice and a systems choice.",
+          "A smaller vocabulary improves coverage efficiency for rare variants because pieces are reused more often, but sequences get longer. Longer sequences increase attention cost, prefill latency, and context pressure. Some domains are especially sensitive: code identifiers, JSON, chemical names, log lines, and non-English scripts can tokenize into many pieces under a general-purpose vocabulary.",
+          "Token fertility measures how many tokens a tokenizer produces per word, character, or byte for a domain. High fertility means users burn context faster and pay more for the same visible text. Before blaming a model for poor long-document performance, inspect tokenizer fertility, truncation behavior, and whether important structure is being split or dropped."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Whitespace tokenizers are brittle around punc…",
-            "definition": "Whitespace tokenizers are brittle around punctuation and morphology."
+            term: "embedding table",
+            definition:
+              "The matrix that maps token ids to learned vectors used as model input representations."
           },
           {
-            "term": "Character tokenizers maximize coverage but le…",
-            "definition": "Character tokenizers maximize coverage but lengthen sequences."
+            term: "token fertility",
+            definition:
+              "The number of tokens produced per word, character, byte, or domain unit."
           },
           {
-            "term": "Subword tokenizers balance frequency and gene…",
-            "definition": "Subword tokenizers balance frequency and generalization."
+            term: "context pressure",
+            definition:
+              "The constraint created when useful information competes for limited model context tokens."
           }
         ],
-        "workedExample": {
-          "title": "Whitespace vs character tokenization",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "text = 'Transformers attend carefully.'\nws = text.lower().replace('.', ' .').split()\nchars = list(text.lower())\nprint('whitespace:', ws)\nprint('char count:', len(chars))\nprint('chars head:', chars[:12])",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can contrast whitespace, character, and subword tokenization tradeoffs.",
-            "reveal": "Tokenizers turn raw text into integer IDs the model was trained to consume. Subword algorithms—BPE, WordPiece, Unigram—balance vocabulary size against sequence length by keeping frequent chunks intact and splitting rare strings. That is lossy compression with a model-specific codebook: the \"same\" sentence can become very different ID sequences under different tokenizers, and those IDs are not interchangeable across model families.\n\nSpecial tokens, normalization (Unicode, lowercasing, space markers), and pre-tokenization rules are part of the contract. Hand-editing token IDs without understanding BOS/EOS, padding, or mask tokens corrupts inputs silently. In RAG and agents, count tokens with the same tokenizer the model uses; character or whitespace heuristics drift from billed context and truncate mid-subword in surprising ways."
-          }
-        ]
-      },
-      {
-        "id": "vocabulary-size-sets-a-compression-vs-learning-tradeoff",
-        "heading": "Vocabulary size sets a compression vs learning tradeoff",
-        "paragraphs": [
-          "Suppose your corpus has 50,000 distinct whitespace words. A word vocabulary of 50k can represent frequent terms in one id, but unseen words become UNK. A character vocabulary might be under 100 symbols for English lowercase plus punctuation, so nothing is unknown, yet a 100-word sentence may become hundreds of tokens and hit context limits sooner. Subword vocabularies commonly land between a few thousand and about 100k ids. Larger vocabularies usually shorten sequences and can improve quality, but they grow embedding matrices: vocab_size * d_model parameters. For d_model=768 and vocab=50,000, embeddings alone are about 38.4 million parameters. That is why tokenizer choice is both an NLP decision and a systems decision. Interview answers should connect vocab size to memory, latency, and rare-word behavior together.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Embedding tables scale with vocabulary size times embedding dimension.",
-          "• Unknown tokens are a symptom of too little coverage or domain shift.",
-          "• Sequence length after tokenization drives attention cost.",
-          "Production lens — Fertility drives cost and fairness: Fertility—tokens per word or per character—determines how fast you burn context length and money. Code with long identifiers, JSON, and some non-English scripts often tokenize poorly under general English-centric vocabularies, so a fixed character budget becomes an unfair or inefficient token budget. Measure fertility on your real corpora (code vs prose vs languages) before blaming the model for \"short\" context.\n\nProduct limits should follow tokens, not characters, and may need language-aware or domain-aware policy. A code-oriented tokenizer or light preprocessing (normalizing identifiers, stripping inert boilerplate) can fit more useful signal per window than blindly buying a longer context. Interview answers that connect tokenization to latency, cost, and multilingual equity score higher than answers that treat tokenizers as an opaque library call."
-        ],
-        "keyTerms": [
-          {
-            "term": "Embedding tables scale with vocabulary size",
-            "definition": "Embedding tables scale with vocabulary size times embedding dimension."
-          },
-          {
-            "term": "Unknown tokens are a symptom of",
-            "definition": "Unknown tokens are a symptom of too little coverage or domain shift."
-          },
-          {
-            "term": "Sequence length after tokenization drives att…",
-            "definition": "Sequence length after tokenization drives attention cost."
+            prompt: "Why can a larger vocabulary reduce latency but increase parameters?",
+            reveal:
+              "It can shorten sequences, reducing attention work, but each vocabulary entry needs embedding and often output-projection parameters."
           }
         ],
-        "workedExample": {
-          "title": "Estimate embedding table size",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def embedding_params(vocab_size, d_model):\n    return vocab_size * d_model\n\nfor vocab in [100, 8000, 50000]:\n    print(vocab, '->', embedding_params(vocab, 768), 'params')",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can estimate embedding parameters from vocabulary size.",
-            "reveal": "Fertility—tokens per word or per character—determines how fast you burn context length and money. Code with long identifiers, JSON, and some non-English scripts often tokenize poorly under general English-centric vocabularies, so a fixed character budget becomes an unfair or inefficient token budget. Measure fertility on your real corpora (code vs prose vs languages) before blaming the model for \"short\" context.\n\nProduct limits should follow tokens, not characters, and may need language-aware or domain-aware policy. A code-oriented tokenizer or light preprocessing (normalizing identifiers, stripping inert boilerplate) can fit more useful signal per window than blindly buying a longer context. Interview answers that connect tokenization to latency, cost, and multilingual equity score higher than answers that treat tokenizers as an opaque library call."
-          }
-        ]
-      },
-      {
-        "id": "bpe-like-merges-learn-frequent-pairs",
-        "heading": "BPE-like merges learn frequent pairs",
-        "paragraphs": [
-          "Byte Pair Encoding style training starts from characters (or bytes) and repeatedly merges the most frequent adjacent pair into a new symbol. Example corpus: low, low, low, lower, newer, newer. Initial tokens are characters. The pair ('l','o') may be frequent, merge to 'lo'; then ('lo','w') to 'low'. Over many merges you learn subwords like 'er' and whole words like 'low'. Encoding a new word applies the learned merges in order. This is not the full industrial tokenizer pipeline, but it teaches the core interview idea: merges compress frequent patterns while leaving a path to compose rare words. Implement pair counting with Python dictionaries and strings; NumPy is optional for frequency histograms. Keep merges ordered because encoding depends on that order.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• BPE training greedily merges the most frequent adjacent pair.",
-          "• Encoding applies merges deterministically to a base symbol sequence.",
-          "• Word-boundary markers are often used in production BPE variants.",
-          "Production lens — Domain mismatch and vocab strategy: Medical notes, legalese, log lines, and programming languages expose domain mismatch: pieces that should be atomic split into many tokens, while irrelevant common words occupy vocab slots. Options include continuing tokenizer training / adding vocab for a domain (with embedding resize and continued model training), choosing a model whose tokenizer already fits the domain, or accepting higher fertility and budgeting for it. There is no free lunch—new tokens need learned embeddings.\n\nWhen evaluating tokenizer changes, track not only compression but downstream retrieval and generation quality. A more compact tokenization that destroys meaningful boundaries can hurt. Round-trip encode/decode fidelity, unknown-token rates, and fertility by slice are the basic dashboard. Never assume two \"open\" models share tokenization even if both claim similar parameter counts."
-        ],
-        "keyTerms": [
-          {
-            "term": "BPE training greedily merges the most",
-            "definition": "BPE training greedily merges the most frequent adjacent pair."
-          },
-          {
-            "term": "Encoding applies merges deterministically to a",
-            "definition": "Encoding applies merges deterministically to a base symbol sequence."
-          },
-          {
-            "term": "Word-boundary markers are often used in",
-            "definition": "Word-boundary markers are often used in production BPE variants."
-          }
-        ],
-        "workedExample": {
-          "title": "Count adjacent pairs in a toy corpus",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from collections import Counter\n\ncorpus = ['l o w', 'l o w', 'l o w e r', 'n e w e r', 'n e w e r']\npair_counts = Counter()\nfor sent in corpus:\n    syms = sent.split()\n    for a, b in zip(syms, syms[1:]):\n        pair_counts[(a, b)] += 1\nprint(pair_counts.most_common(5))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement pair counting and one BPE-like merge step.",
-            "reveal": "Medical notes, legalese, log lines, and programming languages expose domain mismatch: pieces that should be atomic split into many tokens, while irrelevant common words occupy vocab slots. Options include continuing tokenizer training / adding vocab for a domain (with embedding resize and continued model training), choosing a model whose tokenizer already fits the domain, or accepting higher fertility and budgeting for it. There is no free lunch—new tokens need learned embeddings.\n\nWhen evaluating tokenizer changes, track not only compression but downstream retrieval and generation quality. A more compact tokenization that destroys meaningful boundaries can hurt. Round-trip encode/decode fidelity, unknown-token rates, and fertility by slice are the basic dashboard. Never assume two \"open\" models share tokenization even if both claim similar parameter counts."
-          }
-        ]
-      },
-      {
-        "id": "implement-a-tiny-trainable-merger",
-        "heading": "Implement a tiny trainable merger",
-        "paragraphs": [
-          "A minimal workshop implementation keeps each word as a list of symbols. For a fixed number of merges: count neighboring pairs across the corpus, pick the best pair, replace adjacent occurrences with a single joined symbol, and record the merge. After training, vocabulary is base characters plus merge products. To encode, start from characters and apply merges in the learned order when both parts are adjacent. Example: after learning ('e','r')->'er' and ('l','o')->'lo', the word 'lower' can become ['lo','w','er']. This is enough to discuss tokenization bugs such as inconsistent normalization, accidental merges across spaces, and why special tokens like PAD/BOS/EOS are reserved outside merge learning. Unit tests should freeze merge order and expected encodings for a golden corpus.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Store merges as an ordered list; order matters for encoding.",
-          "• Operate inside word boundaries unless you intentionally tokenize bytes globally.",
-          "• Reserve special tokens so merges cannot collide with control ids.",
-          "Production lens — Debugging tokenization in systems: Many \"model bugs\" are tokenizer bugs: truncated prompts, split markers that break tool formats, whitespace-sensitive chat templates, or mismatched pad/eos handling between training and inference. Log the tokenized prompt in staging (IDs and decoded pieces) when outputs look inexplicable. For constrained formats (JSON tools, SQL), verify that structural characters are single tokens or at least stably tokenized so constrained decoding remains feasible.\n\nIn interviews and design docs, state which tokenizer version ships with the model, how context limits are enforced, and how user-visible character limits map to tokens. Tokenization is the first stage of every LLM system; treating it as infrastructure with metrics prevents expensive misdiagnosis further down the stack."
-        ],
-        "keyTerms": [
-          {
-            "term": "Store merges as an ordered list;",
-            "definition": "Store merges as an ordered list; order matters for encoding."
-          },
-          {
-            "term": "Operate inside word boundaries unless you",
-            "definition": "Operate inside word boundaries unless you intentionally tokenize bytes globally."
-          },
-          {
-            "term": "Reserve special tokens so merges cannot",
-            "definition": "Reserve special tokens so merges cannot collide with control ids."
-          }
-        ],
-        "workedExample": {
-          "title": "Perform one greedy BPE merge step",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from collections import Counter\n\ndef get_stats(words):\n    stats = Counter()\n    for syms in words:\n        for a, b in zip(syms, syms[1:]):\n            stats[(a, b)] += 1\n    return stats\n\ndef merge_pair(words, pair):\n    a, b = pair\n    merged = a + b\n    out = []\n    for syms in words:\n        row, i = [], 0\n        while i < len(syms):\n            if i < len(syms) - 1 and syms[i] == a and syms[i + 1] == b:\n                row.append(merged); i += 2\n            else:\n                row.append(syms[i]); i += 1\n        out.append(row)\n    return out\n\nwords = [list(w) for w in ['low', 'low', 'lower', 'newer', 'newer']]\npair, _ = get_stats(words).most_common(1)[0]\nwords2 = merge_pair(words, pair)\nprint('merged pair:', pair)\nprint(words2)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can measure token fertility on example text.",
-            "reveal": "Many \"model bugs\" are tokenizer bugs: truncated prompts, split markers that break tool formats, whitespace-sensitive chat templates, or mismatched pad/eos handling between training and inference. Log the tokenized prompt in staging (IDs and decoded pieces) when outputs look inexplicable. For constrained formats (JSON tools, SQL), verify that structural characters are single tokens or at least stably tokenized so constrained decoding remains feasible.\n\nIn interviews and design docs, state which tokenizer version ships with the model, how context limits are enforced, and how user-visible character limits map to tokens. Tokenization is the first stage of every LLM system; treating it as infrastructure with metrics prevents expensive misdiagnosis further down the stack."
-          }
-        ]
-      },
-      {
-        "id": "evaluate-tokenizers-with-length-and-fertility",
-        "heading": "Evaluate tokenizers with length and fertility",
-        "paragraphs": [
-          "Tokenizer quality is not only linguistic elegance. Measure tokens per word (fertility), sequence length distributions, and unknown rates on held-out domain text. If a legal document averages 2.5 tokens/word with a general English tokenizer but 1.3 with a domain-adapted one, attention cost and latency change materially. Also inspect splits for names, numbers, and code. A tokenizer that breaks every digit separately may hurt arithmetic; one that over-merges code operators may hurt programming models. For this lab, compare whitespace, character, and a few BPE merges on the same sentences and report token counts. Interviewers appreciate candidates who connect tokenization metrics to cost and quality rather than treating tokenizers as black boxes. Keep a small dashboard of fertility by domain in real systems.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Fertility = tokens / words is a practical comparison metric.",
-          "• Domain mismatch shows up as longer sequences and odd splits.",
-          "• Numbers, names, and code deserve explicit tokenizer spot checks.",
-          "Production lens — Tokenization as learned compression: Tokenizers turn raw text into integer IDs the model was trained to consume. Subword algorithms—BPE, WordPiece, Unigram—balance vocabulary size against sequence length by keeping frequent chunks intact and splitting rare strings. That is lossy compression with a model-specific codebook: the \"same\" sentence can become very different ID sequences under different tokenizers, and those IDs are not interchangeable across model families.\n\nSpecial tokens, normalization (Unicode, lowercasing, space markers), and pre-tokenization rules are part of the contract. Hand-editing token IDs without understanding BOS/EOS, padding, or mask tokens corrupts inputs silently. In RAG and agents, count tokens with the same tokenizer the model uses; character or whitespace heuristics drift from billed context and truncate mid-subword in surprising ways."
-        ],
-        "keyTerms": [
-          {
-            "term": "Fertility = tokens / words is",
-            "definition": "Fertility = tokens / words is a practical comparison metric."
-          },
-          {
-            "term": "Domain mismatch shows up as longer",
-            "definition": "Domain mismatch shows up as longer sequences and odd splits."
-          },
-          {
-            "term": "Numbers, names, and code deserve explicit",
-            "definition": "Numbers, names, and code deserve explicit tokenizer spot checks."
-          }
-        ],
-        "workedExample": {
-          "title": "Compare fertility across tokenizers",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "text = 'newer lower transformers attend carefully'\nwords = text.split()\nws_tokens = words\nchar_tokens = list(text.replace(' ', ''))\nbpe_tokens = ['new', 'er', 'low', 'er', 'transform', 'ers', 'attend', 'care', 'fully']\nfor name, toks in [('whitespace', ws_tokens), ('char', char_tokens), ('bpe-ish', bpe_tokens)]:\n    print(name, 'tokens', len(toks), 'fertility', round(len(toks) / len(words), 3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain why tokenizer versioning matters in production.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluate tokenizers with length and fertility."
-          }
-        ]
-      },
-      {
-        "id": "interview-talking-points-that-sound-senior",
-        "heading": "Interview talking points that sound senior",
-        "paragraphs": [
-          "Be ready to explain why LLMs use subwords, how vocabulary size affects embedding parameters, and what happens with multilingual text when a tokenizer was trained mostly on English. Mention normalization (Unicode, lowercasing, NFKC) as a silent source of train/serve mismatch. Discuss special tokens for chat templates and why changing tokenizer/template without adapting the model breaks behavior. If asked to implement something, a pair-counting merge loop is a classic whiteboard exercise. If asked about production, talk about versioning tokenizer files with model artifacts so ids never drift between training and inference. Strong candidates also mention that detokenization and trailing spaces can affect exact string match evaluations.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Version tokenizer artifacts with the model.",
-          "• Normalization mismatches create invisible production bugs.",
-          "• Chat/special tokens are part of the product contract, not an afterthought.",
-          "Production lens — Fertility drives cost and fairness: Fertility—tokens per word or per character—determines how fast you burn context length and money. Code with long identifiers, JSON, and some non-English scripts often tokenize poorly under general English-centric vocabularies, so a fixed character budget becomes an unfair or inefficient token budget. Measure fertility on your real corpora (code vs prose vs languages) before blaming the model for \"short\" context.\n\nProduct limits should follow tokens, not characters, and may need language-aware or domain-aware policy. A code-oriented tokenizer or light preprocessing (normalizing identifiers, stripping inert boilerplate) can fit more useful signal per window than blindly buying a longer context. Interview answers that connect tokenization to latency, cost, and multilingual equity score higher than answers that treat tokenizers as an opaque library call."
-        ],
-        "keyTerms": [
-          {
-            "term": "Version tokenizer artifacts with the model.",
-            "definition": "Version tokenizer artifacts with the model."
-          },
-          {
-            "term": "Normalization mismatches create invisible pro…",
-            "definition": "Normalization mismatches create invisible production bugs."
-          },
-          {
-            "term": "Chat/special tokens are part of the",
-            "definition": "Chat/special tokens are part of the product contract, not an afterthought."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "interview",
+          body:
+            "Connect vocabulary size to three things: sequence length, embedding parameters, and domain fairness or efficiency."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for tokenization workshop.",
-          "Trap: Ignoring punctuation and casing in naive whitespace tokenization. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Assuming character tokenization is free because the vocab is small. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Implementing merges without preserving merge order for encoding. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Forgetting special tokens when designing a vocabulary. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Shipping a model with a different tokenizer than it was trained with. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "merges-and-bytes",
+        heading: "BPE-style merges learn reusable text chunks",
+        paragraphs: [
+          "Byte-pair encoding begins with small units such as bytes or characters and repeatedly merges frequent adjacent pairs. If `t` followed by `h` appears often, a merge can create `th`; if `th` followed by `e` appears often, another merge can create `the`. The final vocabulary captures common chunks while still being able to represent uncommon strings through smaller pieces.",
+          "Byte-level tokenizers avoid unknown characters by starting from bytes. That is useful for arbitrary web text, code, and multilingual inputs, but it can produce unintuitive token boundaries. Many tokenizers also encode spaces as part of tokens or special markers, so `word` and ` word` may be different vocabulary entries. This is why hand-editing token strings is error-prone.",
+          "Tokenizer training data shapes model behavior. A tokenizer trained mostly on English prose may split code or underrepresented languages inefficiently. A tokenizer trained with code and structured data may preserve identifiers or syntax better. The model later learns from these pieces, so tokenization affects both cost and learnability."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Tokenization workshop and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Ignoring punctuation and casing in naive whitespace tokenization.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Tokenization as learned compression. Tokenizers turn raw text into integer IDs the model was trained to consume. Subword algorithms—BPE, WordPiece, Unigram—balance vocabulary size against sequence length by keeping frequent chunks intact and splitting rare strings. That is lossy compression with a model-specific codebook: the \"same\" sentence can become very different ID sequences under different tokenizers, and those IDs are not interchangeable across model families.\n\nSpecial tokens, normalization (Unicode, lowercasing, space markers), and pre-tokenization rules are part of the contract. Hand-editing token IDs without understanding BOS/EOS, padding, or mask tokens corrupts inputs silently. In RAG and agents, count tokens with the same tokenizer the model uses; character or whitespace heuristics drift from billed context and truncate mid-subword in surprising ways.",
-          "Fertility drives cost and fairness. Fertility—tokens per word or per character—determines how fast you burn context length and money. Code with long identifiers, JSON, and some non-English scripts often tokenize poorly under general English-centric vocabularies, so a fixed character budget becomes an unfair or inefficient token budget. Measure fertility on your real corpora (code vs prose vs languages) before blaming the model for \"short\" context.\n\nProduct limits should follow tokens, not characters, and may need language-aware or domain-aware policy. A code-oriented tokenizer or light preprocessing (normalizing identifiers, stripping inert boilerplate) can fit more useful signal per window than blindly buying a longer context. Interview answers that connect tokenization to latency, cost, and multilingual equity score higher than answers that treat tokenizers as an opaque library call.",
-          "Domain mismatch and vocab strategy. Medical notes, legalese, log lines, and programming languages expose domain mismatch: pieces that should be atomic split into many tokens, while irrelevant common words occupy vocab slots. Options include continuing tokenizer training / adding vocab for a domain (with embedding resize and continued model training), choosing a model whose tokenizer already fits the domain, or accepting higher fertility and budgeting for it. There is no free lunch—new tokens need learned embeddings.\n\nWhen evaluating tokenizer changes, track not only compression but downstream retrieval and generation quality. A more compact tokenization that destroys meaningful boundaries can hurt. Round-trip encode/decode fidelity, unknown-token rates, and fertility by slice are the basic dashboard. Never assume two \"open\" models share tokenization even if both claim similar parameter counts.",
-          "Debugging tokenization in systems. Many \"model bugs\" are tokenizer bugs: truncated prompts, split markers that break tool formats, whitespace-sensitive chat templates, or mismatched pad/eos handling between training and inference. Log the tokenized prompt in staging (IDs and decoded pieces) when outputs look inexplicable. For constrained formats (JSON tools, SQL), verify that structural characters are single tokens or at least stably tokenized so constrained decoding remains feasible.\n\nIn interviews and design docs, state which tokenizer version ships with the model, how context limits are enforced, and how user-visible character limits map to tokens. Tokenization is the first stage of every LLM system; treating it as infrastructure with metrics prevents expensive misdiagnosis further down the stack."
-        ],
-        "keyTerms": [
-          {
-            "term": "Tokenization as learned compression",
-            "definition": "Tokenizers turn raw text into integer IDs the model was trained to consume. Subword algorithms—BPE, WordPiece, Unigram—balance vocabulary size against sequence length by keeping frequent chunks intact and splitting rare …"
+            term: "BPE",
+            definition:
+              "Byte-pair encoding, a subword method that iteratively merges frequent adjacent units."
           },
           {
-            "term": "Fertility drives cost and fairness",
-            "definition": "Fertility—tokens per word or per character—determines how fast you burn context length and money. Code with long identifiers, JSON, and some non-English scripts often tokenize poorly under general English-centric vocabul…"
+            term: "byte-level tokenizer",
+            definition:
+              "A tokenizer that starts from bytes so arbitrary Unicode text can be represented."
           },
           {
-            "term": "Domain mismatch and vocab strategy",
-            "definition": "Medical notes, legalese, log lines, and programming languages expose domain mismatch: pieces that should be atomic split into many tokens, while irrelevant common words occupy vocab slots. Options include continuing toke…"
+            term: "merge rule",
+            definition:
+              "A learned rule that combines adjacent token pieces into a larger piece."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        checkYourself: [
+          {
+            prompt: "Why do some tokenizers treat leading spaces as part of a token?",
+            reveal:
+              "Space handling is part of the learned tokenization scheme. Encoding spaces with tokens helps preserve word boundaries but makes surface strings context-dependent."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "Do not assume token boundaries align with words. UI highlighting, truncation, and log redaction must account for subword boundaries."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach tokenization workshop as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Why do modern LLMs use subword tokenization? | How does vocabulary size affect model parameters and sequence length? | Walk through one BPE merge step on a tiny corpus."
+        id: "special-tokens",
+        heading: "Special tokens carry control information",
+        paragraphs: [
+          "Tokenizers reserve ids for control roles such as beginning of sequence, end of sequence, padding, unknown, separator, mask, user message, assistant message, tool call, or system instruction. These tokens are not ordinary text. They tell the model and runtime how to frame the sequence. Missing or misplaced special tokens can change behavior even when the visible prompt looks right.",
+          "Chat templates are tokenizer-adjacent contracts. A conversation may be serialized with role markers, separators, tool schemas, and generation prompts. Two models can accept the same natural-language messages but require different template tokens. If an application migrates models without updating chat formatting, quality and safety can regress silently.",
+          "Padding and attention masks also depend on tokenization. Batch inputs often need equal length, so shorter sequences are padded. The model should not attend to padding tokens as if they were content. Correct masks ensure padding exists for tensor shape, not for meaning. Special tokens and masks together define the legal structure of the sequence."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Tokenization workshop as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "special token",
+            definition:
+              "A reserved token id used for control structure rather than ordinary text content."
+          },
+          {
+            term: "chat template",
+            definition:
+              "A model-specific serialization format for messages, roles, tools, and generation prompts."
+          },
+          {
+            term: "padding token",
+            definition:
+              "A token used to make sequences in a batch the same length."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt: "Why is a chat template part of model compatibility?",
+            reveal:
+              "The model was trained to interpret role and boundary tokens in a specific serialized format. Changing the template changes the actual input sequence."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Mention special tokens when discussing prompt migration, tool calling, padding masks, and model swaps."
+        }
+      },
+      {
+        id: "truncation-and-safety",
+        heading: "Token budgeting is a reliability and safety practice",
+        paragraphs: [
+          "Applications often assemble prompts from system instructions, user input, conversation history, retrieved context, tool results, and output budget. If the total exceeds the context window, something must be truncated or summarized. The truncation policy can decide whether the model keeps safety instructions, recent user intent, citations, or stale history. That is a product and safety decision, not merely a utility function.",
+          "Unsafe truncation can remove delimiters, cut JSON in the middle, drop citation metadata, or omit the policy that tells the model how to answer. It can also truncate in the middle of a subword if developers use character slicing before tokenization. A robust system budgets sections explicitly and validates that required parts survive.",
+          "The best token budget is usually smaller than the maximum window. Shorter prompts reduce latency, cost, and distraction. Retrieval should choose high-value chunks; history should be summarized with known limitations; tools should return structured compact outputs. Tokenization is where product quality meets systems efficiency."
+        ],
+        keyTerms: [
+          {
+            term: "token budget",
+            definition:
+              "An allocation of available context tokens across prompt sections and expected output."
+          },
+          {
+            term: "truncation policy",
+            definition:
+              "Rules that decide what content is dropped, summarized, or retained when inputs exceed context limits."
+          },
+          {
+            term: "context window",
+            definition:
+              "The maximum number of tokens a model can process in one request, including prompt and output."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "What prompt section should almost never be dropped by naive truncation?",
+            reveal:
+              "System and safety instructions, required schemas, and current user intent should be protected by explicit budgeting rather than dropped accidentally."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "Character limits are not token limits. Tokenize before enforcing context budgets and validate that required boundaries remain intact."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can contrast whitespace, character, and subword tokenization tradeoffs.",
-        "Can estimate embedding parameters from vocabulary size.",
-        "Can implement pair counting and one BPE-like merge step.",
-        "Can measure token fertility on example text.",
-        "Can explain why tokenizer versioning matters in production."
+    wrapUp: {
+      takeaways: [
+        "Tokenizers map text to model-specific token ids and are part of the model contract.",
+        "Vocabulary size trades parameter memory against sequence length and domain fertility.",
+        "BPE-style merges create reusable subword chunks but do not align perfectly with words.",
+        "Special tokens and chat templates control sequence structure.",
+        "Token budgeting and truncation policies affect cost, latency, quality, and safety."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Neural Machine Translation of Rare Words with Subword Units (arXiv) — https://arxiv.org/abs/1508.07909",
-        "Optional deeper reading: Hugging Face Tokenizers documentation (Hugging Face) — https://huggingface.co/docs/tokenizers/index"
+      nextSteps: [
+        "Measure token fertility for prose, code, and JSON inputs.",
+        "Write a prompt budget that reserves space for system instructions, retrieval context, and output.",
+        "Explain why model migration requires tokenizer and chat-template checks."
       ]
     }
   },
   "llm-retrieval-lab/embeddings-and-similarity-lab": {
-    "title": "Chapter: Embeddings and similarity lab",
-    "readingTime": "55-70 min",
-    "premise": "Build bag-of-words and hashing embeddings, compute cosine similarity, and implement top-k retrieval with NumPy and scikit-learn. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Embeddings and similarity lab",
+    readingTime: "65-80 min",
+    premise:
+      "Embeddings turn items into vectors so retrieval can compare meaning, not just keywords. This chapter covers vector spaces, similarity metrics, normalization, indexing, chunking, and evaluation.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Retrieval systems stand on embedding geometry. If you can build simple vectorizers and rank documents by cosine similarity, you can reason about semantic search, RAG chunk stores, and nearest-neighbor evaluation without treating embeddings as magic.",
-          "This chapter treats \"Embeddings and similarity lab\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "embedding-intuition",
+        heading: "Embeddings place related items near one another",
+        paragraphs: [
+          "An embedding model maps text, images, users, products, or other objects into dense vectors. The training objective encourages related items to have similar vectors and unrelated items to be farther apart. For retrieval, a query and documents are embedded into the same space, and nearest neighbors become candidate context for the LLM.",
+          "Similarity is learned, not universal. An embedding trained for general semantic search may place `reset my password` near `account recovery`, while a code embedding may emphasize API signatures and identifiers. A product catalog embedding may need attributes, brands, and compatibility. The vector space reflects the model, training data, and input formatting.",
+          "Embeddings are useful because they support fuzzy matching. A document can be retrieved even when it does not share exact words with the query. They are risky because fuzzy matching can retrieve plausible but wrong context. Good retrieval systems combine embedding quality with chunking, metadata filters, reranking, and evaluation."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "embedding",
+            definition:
+              "A dense vector representation learned so related objects are near one another under a similarity metric."
+          },
+          {
+            term: "nearest neighbor",
+            definition:
+              "An item whose vector is among the closest to a query vector."
+          },
+          {
+            term: "semantic search",
+            definition:
+              "Retrieval based on meaning-like vector similarity rather than exact keyword overlap alone."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why can embeddings retrieve documents with no shared keywords?",
+            reveal:
+              "The embedding model learns vector similarity from patterns in training data, so related meanings can be near each other even when surface words differ."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Always ask what the embedding model was optimized for. Similarity is task-shaped, not a law of nature."
         }
       },
       {
-        "id": "embeddings-place-text-in-a-vector-space",
-        "heading": "Embeddings place text in a vector space",
-        "paragraphs": [
-          "An embedding maps a document or query to a vector so that related texts are near each other under a chosen metric. Classic bag-of-words (BoW) counts how often each vocabulary term appears. If the vocabulary is [attention, mask, token, loss], the sentence 'attention mask' becomes [1, 1, 0, 0]. TF-IDF reweights counts so common words contribute less. Hashing embeddings skip a fitted vocabulary by hashing terms into a fixed number of buckets; collisions happen, but the vector size stays bounded. Dense neural embeddings are popular in production LLMs, yet the geometry lessons are the same: choose a representation, define similarity, retrieve neighbors, and measure whether the right documents rank highly. Start with BoW so every dimension is inspectable.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Sparse BoW vectors are interpretable because dimensions are terms.",
-          "• Hashing trades interpretability for a fixed-width feature space.",
-          "• Dense embeddings compress meaning but need learned encoders.",
-          "Production lens — Geometry depends on the metric contract: Dense embeddings place text in a vector space where nearby points should be semantically related for your task. Cosine similarity cares about angle; dot product cares about angle and magnitude; Euclidean distance is another geometry again. If you L2-normalize vectors, cosine similarity and inner product agree. If you do not normalize but your ANN index assumes inner product, offline cosine experiments will not match online ranking.\n\nStandardize the contract: train or evaluate with the same similarity the index uses, document normalization in the index config, and freeze that choice across offline eval, online retrieval, and re-ranking. Metric mismatch is one of the highest-frequency reasons \"embedding improvements\" disappear in production. For hybrid search, keep dense scores calibrated or fused carefully with BM25 so one channel does not dominate by raw scale."
+        id: "similarity-metrics",
+        heading: "Cosine, dot product, and Euclidean distance encode different comparisons",
+        paragraphs: [
+          "Cosine similarity compares vector direction and ignores magnitude after normalization. It is common for text embeddings because direction often represents semantic content. Dot product includes magnitude, which can matter if the model encodes confidence, popularity, or norm-based information. Euclidean distance measures straight-line distance and can behave similarly to cosine when vectors are normalized.",
+          "Normalization changes retrieval. If all vectors are L2-normalized, dot product and cosine ranking are equivalent. If vectors are not normalized, high-norm documents may dominate dot-product search. That can be useful or harmful depending on how the embedding model uses norms. The retrieval stack should match the metric recommended for the embedding model and index type.",
+          "Similarity scores are not calibrated probabilities. A cosine score of 0.82 in one embedding model is not comparable to 0.82 in another, and score distributions can vary by query type. Thresholds should be chosen through evaluation on real queries. For RAG, the question is not whether a score looks high; it is whether retrieved chunks contain answerable, faithful context."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Sparse BoW vectors are interpretable because",
-            "definition": "Sparse BoW vectors are interpretable because dimensions are terms."
+            term: "cosine similarity",
+            definition:
+              "The normalized dot product measuring angle similarity between vectors."
           },
           {
-            "term": "Hashing trades interpretability for a fixed-w…",
-            "definition": "Hashing trades interpretability for a fixed-width feature space."
+            term: "L2 normalization",
+            definition:
+              "Scaling a vector so its Euclidean norm equals one."
           },
           {
-            "term": "Dense embeddings compress meaning but need",
-            "definition": "Dense embeddings compress meaning but need learned encoders."
+            term: "similarity threshold",
+            definition:
+              "A cutoff used to accept or reject retrieved items based on score."
           }
         ],
-        "workedExample": {
-          "title": "Bag-of-words vectors with CountVectorizer",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.feature_extraction.text import CountVectorizer\nimport numpy as np\n\ndocs = [\n    'attention is a weighted sum of values',\n    'causal masks block future tokens',\n    'tokenization splits text into subwords',\n]\nvec = CountVectorizer()\nX = vec.fit_transform(docs).toarray()\nprint(vec.get_feature_names_out())\nprint(X)",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can build BoW/TF-IDF vectors with scikit-learn.",
-            "reveal": "Dense embeddings place text in a vector space where nearby points should be semantically related for your task. Cosine similarity cares about angle; dot product cares about angle and magnitude; Euclidean distance is another geometry again. If you L2-normalize vectors, cosine similarity and inner product agree. If you do not normalize but your ANN index assumes inner product, offline cosine experiments will not match online ranking.\n\nStandardize the contract: train or evaluate with the same similarity the index uses, document normalization in the index config, and freeze that choice across offline eval, online retrieval, and re-ranking. Metric mismatch is one of the highest-frequency reasons \"embedding improvements\" disappear in production. For hybrid search, keep dense scores calibrated or fused carefully with BM25 so one channel does not dominate by raw scale."
-          }
-        ]
-      },
-      {
-        "id": "cosine-similarity-focuses-on-direction",
-        "heading": "Cosine similarity focuses on direction",
-        "paragraphs": [
-          "Euclidean distance is sensitive to vector length. A long document with many repeated terms can have a huge BoW norm and look far from a short related query even if they share the same direction. Cosine similarity is cos(theta) = (a · b) / (||a|| ||b||), which ignores magnitude. Values range from -1 to 1 for real vectors; for non-negative BoW counts they fall in [0, 1]. Example: a=[1,1,0], b=[2,2,0], c=[0,0,1]. cos(a,b)=1 even though b is longer; cos(a,c)=0. In retrieval, score every document by cosine against the query vector and take the top k. Always L2-normalize rows if you want cosine to become a simple dot product, which is a common ANN optimization.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Cosine similarity removes pure length effects.",
-          "• For non-negative BoW features, cosine is between 0 and 1.",
-          "• Normalized vectors let you rank by dot product alone.",
-          "Production lens — Hard negatives sharpen the boundary: Random in-batch negatives are often too easy: the model only learns coarse topical separation. Hard negatives—near neighbors that are wrong for the query, such as refund shipping delays versus refund payment failures in an FAQ—force the embedding space to separate confusable intents. Mine them from a current index (top-k wrong documents), review for label noise, and retrain or fine-tune with those pairs.\n\nError analysis should feed the next mining round. If the same confusion class keeps winning, add targeted pairs or fix chunking so documents are not mixing intents. Easy-pair loss curves can look healthy while retrieval@k stays flat; always judge embeddings with retrieval metrics on a labeled query set, not only with intrinsic similarity on hand-picked examples."
-        ],
-        "keyTerms": [
-          {
-            "term": "Cosine similarity removes pure length effects.",
-            "definition": "Cosine similarity removes pure length effects."
-          },
-          {
-            "term": "For non-negative BoW features, cosine is",
-            "definition": "For non-negative BoW features, cosine is between 0 and 1."
-          },
-          {
-            "term": "Normalized vectors let you rank by",
-            "definition": "Normalized vectors let you rank by dot product alone."
+            prompt: "When are dot product and cosine rankings equivalent?",
+            reveal:
+              "When all compared vectors are L2-normalized, dot product equals cosine similarity."
           }
         ],
-        "workedExample": {
-          "title": "Cosine similarity matrix for tiny docs",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\nfrom sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.metrics.pairwise import cosine_similarity\n\ndocs = [\n    'scaled dot product attention',\n    'attention masks and softmax',\n    'gradient descent for linear regression',\n]\nX = TfidfVectorizer().fit_transform(docs)\nS = cosine_similarity(X)\nprint(np.round(S, 3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can compute cosine similarity and explain why it ignores magnitude.",
-            "reveal": "Random in-batch negatives are often too easy: the model only learns coarse topical separation. Hard negatives—near neighbors that are wrong for the query, such as refund shipping delays versus refund payment failures in an FAQ—force the embedding space to separate confusable intents. Mine them from a current index (top-k wrong documents), review for label noise, and retrain or fine-tune with those pairs.\n\nError analysis should feed the next mining round. If the same confusion class keeps winning, add targeted pairs or fix chunking so documents are not mixing intents. Easy-pair loss curves can look healthy while retrieval@k stays flat; always judge embeddings with retrieval metrics on a labeled query set, not only with intrinsic similarity on hand-picked examples."
-          }
-        ]
-      },
-      {
-        "id": "hashing-embeddings-keep-width-fixed",
-        "heading": "Hashing embeddings keep width fixed",
-        "paragraphs": [
-          "HashingVectorizer maps terms through a hash function into n_features buckets. You do not store a vocabulary dictionary, which helps streaming and memory. The cost is collisions: 'attention' and 'regression' might land in the same bucket and become indistinguishable on that axis. With enough features, collisions are rare for small corpora. In interviews, mention hashing when asked how to vectorize high-cardinality text features without maintaining a giant vocab. Practically, compare top-k retrieval quality for CountVectorizer vs HashingVectorizer on the same queries. If hashing collapses important terms, increase n_features or move to learned embeddings. Also note that hashing is one-way: you cannot easily inspect which term produced a coordinate.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Hashing enables fixed-size text features without a fitted vocab.",
-          "• Collisions are the primary quality risk.",
-          "• Increase n_features when retrieval quality drops from collisions.",
-          "Production lens — Intrinsic scores need extrinsic eval: A high cosine between two sentences is meaningless if your task is FAQ retrieval, code search, or entity-heavy support tickets. Build golden queries with relevant document IDs and report recall@k, MRR, or nDCG. Slice by query type: navigational, conceptual, long-tail, adversarial paraphrases. Domain fine-tuning of a smaller embedding model often beats a larger general model on niche corpora when the eval matches production queries.\n\nWatch for train/eval leakage in embedding experiments too: queries paraphrased from the same template, or documents duplicated across splits, inflate metrics. When chunking changes, re-embed and re-eval; comparing scores across incompatible chunk inventories is not an A/B. The lab habit is closed-loop: change representation → rebuild index → measure retrieval → mine new hard negatives."
-        ],
-        "keyTerms": [
-          {
-            "term": "Hashing enables fixed-size text features without",
-            "definition": "Hashing enables fixed-size text features without a fitted vocab."
-          },
-          {
-            "term": "Collisions are the primary quality risk.",
-            "definition": "Collisions are the primary quality risk."
-          },
-          {
-            "term": "Increase n_features when retrieval quality drops",
-            "definition": "Increase n_features when retrieval quality drops from collisions."
-          }
-        ],
-        "workedExample": {
-          "title": "Hashing vectorizer retrieval sketch",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.feature_extraction.text import HashingVectorizer\nfrom sklearn.metrics.pairwise import cosine_similarity\nimport numpy as np\n\ndocs = [\n    'kv cache speeds up autoregressive decoding',\n    'cosine similarity ranks related documents',\n    'dropout randomly zeros activations in training',\n]\nvec = HashingVectorizer(n_features=32, alternate_sign=False, norm='l2')\nX = vec.transform(docs)\nq = vec.transform(['how does kv caching help decoding'])\nscores = cosine_similarity(q, X).ravel()\nprint(list(np.round(scores, 3)))\nprint('top doc index:', int(scores.argmax()))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can use hashing vectorizers and describe collision tradeoffs.",
-            "reveal": "A high cosine between two sentences is meaningless if your task is FAQ retrieval, code search, or entity-heavy support tickets. Build golden queries with relevant document IDs and report recall@k, MRR, or nDCG. Slice by query type: navigational, conceptual, long-tail, adversarial paraphrases. Domain fine-tuning of a smaller embedding model often beats a larger general model on niche corpora when the eval matches production queries.\n\nWatch for train/eval leakage in embedding experiments too: queries paraphrased from the same template, or documents duplicated across splits, inflate metrics. When chunking changes, re-embed and re-eval; comparing scores across incompatible chunk inventories is not an A/B. The lab habit is closed-loop: change representation → rebuild index → measure retrieval → mine new hard negatives."
-          }
-        ]
-      },
-      {
-        "id": "top-k-retrieval-is-ranking-not-generation",
-        "heading": "Top-k retrieval is ranking, not generation",
-        "paragraphs": [
-          "Given query q and document matrix X with rows as documents, compute scores = cosine(q, X), then choose the indices of the k largest scores. That is dense or sparse retrieval depending on the embedding type. Example: scores [0.12, 0.81, 0.44], k=2 -> indices [1, 2]. In RAG, those documents become context for a generator. Keep retrieval evaluation separate from generation quality: a perfect writer cannot fix missing evidence if the retriever never surfaces it. Implement argsort carefully: np.argsort(scores)[::-1][:k]. Ties can be broken by doc id for determinism. Also filter trivial matches like exact query duplicates when measuring generalization.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Retrieval returns ranked evidence; generation consumes it later.",
-          "• Use stable top-k selection for reproducible experiments.",
-          "• Evaluate retrievers before blaming the generator in RAG systems.",
-          "Production lens — Operational properties of embedding spaces: Embedding dimension, quantization, and ANN parameters (HNSW M/ef, IVF lists, etc.) trade recall for latency and memory. Dimensionality reduction or int8/PQ compression can be fine if you re-validate recall@k. Version embeddings with model ID and chunking config; mixing vectors from two models in one index is undefined geometry. Schedule re-embeds when the encoder changes, and dual-read during migrations.\n\nAlso monitor query embedding drift and empty-result rates. Sudden shifts may mean tokenizer/model skew between services, not \"users changed.\" Treat the embedding service as a versioned contract: input text normalization, max tokens, similarity metric, and vector dim are as important as the neural weights."
-        ],
-        "keyTerms": [
-          {
-            "term": "Retrieval returns ranked evidence; generation…",
-            "definition": "Retrieval returns ranked evidence; generation consumes it later."
-          },
-          {
-            "term": "Use stable top-k selection for reproducible",
-            "definition": "Use stable top-k selection for reproducible experiments."
-          },
-          {
-            "term": "Evaluate retrievers before blaming the generator",
-            "definition": "Evaluate retrievers before blaming the generator in RAG systems."
-          }
-        ],
-        "workedExample": {
-          "title": "Implement top-k indices",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nscores = np.array([0.12, 0.81, 0.44, 0.80])\nk = 2\ntop = np.argsort(scores)[::-1][:k]\nprint('top indices:', top)\nprint('top scores:', scores[top])",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement top-k document retrieval for a query.",
-            "reveal": "Embedding dimension, quantization, and ANN parameters (HNSW M/ef, IVF lists, etc.) trade recall for latency and memory. Dimensionality reduction or int8/PQ compression can be fine if you re-validate recall@k. Version embeddings with model ID and chunking config; mixing vectors from two models in one index is undefined geometry. Schedule re-embeds when the encoder changes, and dual-read during migrations.\n\nAlso monitor query embedding drift and empty-result rates. Sudden shifts may mean tokenizer/model skew between services, not \"users changed.\" Treat the embedding service as a versioned contract: input text normalization, max tokens, similarity metric, and vector dim are as important as the neural weights."
-          }
-        ]
-      },
-      {
-        "id": "build-a-mini-search-index-end-to-end",
-        "heading": "Build a mini search index end to end",
-        "paragraphs": [
-          "A workshop-scale pipeline: fit a TF-IDF vectorizer on a corpus, transform documents once, store the sparse or dense matrix, transform each query with the same vectorizer, compute cosine similarities, return top-k texts. This is enough to demo semantic-ish search for shared terminology. Limitations are obvious: synonyms ('mask' vs 'blocking future tokens') may not match without denser embeddings; word order is weak in bag-of-words; long documents dominate unless you chunk. Still, interviewers often ask for a baseline before neural retrieval. Being able to code this baseline in a few minutes with sklearn shows practical competence. Add a simple invert index mental model too: term -> posting list, even if you use vectorized cosine for the exercise.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Fit vectorizers on the corpus, then transform queries with the same fitted object.",
-          "• Chunk long documents before embedding for fairer retrieval.",
-          "• Keep a lexical baseline even when testing dense retrievers.",
-          "Production lens — Geometry depends on the metric contract: Dense embeddings place text in a vector space where nearby points should be semantically related for your task. Cosine similarity cares about angle; dot product cares about angle and magnitude; Euclidean distance is another geometry again. If you L2-normalize vectors, cosine similarity and inner product agree. If you do not normalize but your ANN index assumes inner product, offline cosine experiments will not match online ranking.\n\nStandardize the contract: train or evaluate with the same similarity the index uses, document normalization in the index config, and freeze that choice across offline eval, online retrieval, and re-ranking. Metric mismatch is one of the highest-frequency reasons \"embedding improvements\" disappear in production. For hybrid search, keep dense scores calibrated or fused carefully with BM25 so one channel does not dominate by raw scale."
-        ],
-        "keyTerms": [
-          {
-            "term": "Fit vectorizers on the corpus, then",
-            "definition": "Fit vectorizers on the corpus, then transform queries with the same fitted object."
-          },
-          {
-            "term": "Chunk long documents before embedding for",
-            "definition": "Chunk long documents before embedding for fairer retrieval."
-          },
-          {
-            "term": "Keep a lexical baseline even when",
-            "definition": "Keep a lexical baseline even when testing dense retrievers."
-          }
-        ],
-        "workedExample": {
-          "title": "End-to-end TF-IDF top-k search",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.metrics.pairwise import cosine_similarity\nimport numpy as np\n\ncorpus = [\n    'Positional encodings add order information to transformers.',\n    'Dropout reduces overfitting by randomly zeroing units.',\n    'Causal masks prevent attending to future tokens.',\n    'Batch normalization stabilizes deep network training.',\n]\nvectorizer = TfidfVectorizer()\ndoc_m = vectorizer.fit_transform(corpus)\nquery = 'How do causal masks protect autoregressive decoding?'\nscores = cosine_similarity(vectorizer.transform([query]), doc_m).ravel()\nfor idx in np.argsort(scores)[::-1][:2]:\n    print(round(float(scores[idx]), 3), corpus[idx])",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can outline how dense embeddings plug into the same ranking pattern.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to build a mini search index end to end."
-          }
-        ]
-      },
-      {
-        "id": "what-to-say-about-neural-embeddings-without-using-them-here",
-        "heading": "What to say about neural embeddings without using them here",
-        "paragraphs": [
-          "In production RAG you may call an embedding API or local encoder that returns 384- to 3072-dimensional dense vectors. The retrieval math remains cosine or dot product over an index such as FAISS or a vector database. The failure modes also rhyme with this lab: domain shift, poor chunking, and metric mismatch. Mentally replace CountVectorizer rows with dense rows and the rest of your top-k code stays. Interview strength comes from knowing when sparse lexical retrieval beats dense retrieval (exact identifiers, error codes) and when dense wins (paraphrases). Hybrid retrieval often combines both scores. This lesson stays on sklearn/NumPy so it runs in Pyodide, while still preparing you to discuss denser systems.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Dense retrieval changes the encoder, not the ranking skeleton.",
-          "• Hybrid lexical-plus-dense ranking is a common production pattern.",
-          "• Chunking and metric choice often matter more than tiny model upgrades.",
-          "Production lens — Hard negatives sharpen the boundary: Random in-batch negatives are often too easy: the model only learns coarse topical separation. Hard negatives—near neighbors that are wrong for the query, such as refund shipping delays versus refund payment failures in an FAQ—force the embedding space to separate confusable intents. Mine them from a current index (top-k wrong documents), review for label noise, and retrain or fine-tune with those pairs.\n\nError analysis should feed the next mining round. If the same confusion class keeps winning, add targeted pairs or fix chunking so documents are not mixing intents. Easy-pair loss curves can look healthy while retrieval@k stays flat; always judge embeddings with retrieval metrics on a labeled query set, not only with intrinsic similarity on hand-picked examples."
-        ],
-        "keyTerms": [
-          {
-            "term": "Dense retrieval changes the encoder, not",
-            "definition": "Dense retrieval changes the encoder, not the ranking skeleton."
-          },
-          {
-            "term": "Hybrid lexical-plus-dense ranking is a common",
-            "definition": "Hybrid lexical-plus-dense ranking is a common production pattern."
-          },
-          {
-            "term": "Chunking and metric choice often matter",
-            "definition": "Chunking and metric choice often matter more than tiny model upgrades."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "interview",
+          body:
+            "Do not quote a universal cosine threshold. Explain that thresholds are model, corpus, and query-distribution specific."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for embeddings and similarity lab.",
-          "Trap: Fitting a vectorizer on queries and documents inconsistently. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Using Euclidean distance on raw counts without considering length bias. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Choosing too few hashing features and suffering collisions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Evaluating RAG generators while ignoring retriever recall. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Embedding entire long documents without chunking. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "chunking",
+        heading: "Chunking decides what a retrieved vector can actually answer",
+        paragraphs: [
+          "Documents must often be split before embedding because models and vector indexes work on bounded pieces. Chunk too small and the retrieved text lacks enough context to answer. Chunk too large and unrelated topics share one vector, reducing precision and wasting prompt tokens. The right chunk size depends on document structure, answer granularity, and model context budget.",
+          "Structure-aware chunking usually beats blind character windows. Headings, sections, paragraphs, tables, code blocks, and metadata boundaries carry meaning. Overlap can preserve continuity across boundaries, but too much overlap duplicates context and crowds out other evidence. Metadata such as product, version, date, permission, and source quality can be as important as the text itself.",
+          "A chunk is both a retrieval unit and a prompt unit. It should include enough provenance for citations and enough surrounding context for faithful generation. If a chunk says `it is deprecated` without the preceding feature name, retrieval may succeed but the LLM cannot answer safely. Retrieval quality begins before the vector database: it begins with document preparation."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Embeddings and similarity lab and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Fitting a vectorizer on queries and documents inconsistently.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Geometry depends on the metric contract. Dense embeddings place text in a vector space where nearby points should be semantically related for your task. Cosine similarity cares about angle; dot product cares about angle and magnitude; Euclidean distance is another geometry again. If you L2-normalize vectors, cosine similarity and inner product agree. If you do not normalize but your ANN index assumes inner product, offline cosine experiments will not match online ranking.\n\nStandardize the contract: train or evaluate with the same similarity the index uses, document normalization in the index config, and freeze that choice across offline eval, online retrieval, and re-ranking. Metric mismatch is one of the highest-frequency reasons \"embedding improvements\" disappear in production. For hybrid search, keep dense scores calibrated or fused carefully with BM25 so one channel does not dominate by raw scale.",
-          "Hard negatives sharpen the boundary. Random in-batch negatives are often too easy: the model only learns coarse topical separation. Hard negatives—near neighbors that are wrong for the query, such as refund shipping delays versus refund payment failures in an FAQ—force the embedding space to separate confusable intents. Mine them from a current index (top-k wrong documents), review for label noise, and retrain or fine-tune with those pairs.\n\nError analysis should feed the next mining round. If the same confusion class keeps winning, add targeted pairs or fix chunking so documents are not mixing intents. Easy-pair loss curves can look healthy while retrieval@k stays flat; always judge embeddings with retrieval metrics on a labeled query set, not only with intrinsic similarity on hand-picked examples.",
-          "Intrinsic scores need extrinsic eval. A high cosine between two sentences is meaningless if your task is FAQ retrieval, code search, or entity-heavy support tickets. Build golden queries with relevant document IDs and report recall@k, MRR, or nDCG. Slice by query type: navigational, conceptual, long-tail, adversarial paraphrases. Domain fine-tuning of a smaller embedding model often beats a larger general model on niche corpora when the eval matches production queries.\n\nWatch for train/eval leakage in embedding experiments too: queries paraphrased from the same template, or documents duplicated across splits, inflate metrics. When chunking changes, re-embed and re-eval; comparing scores across incompatible chunk inventories is not an A/B. The lab habit is closed-loop: change representation → rebuild index → measure retrieval → mine new hard negatives.",
-          "Operational properties of embedding spaces. Embedding dimension, quantization, and ANN parameters (HNSW M/ef, IVF lists, etc.) trade recall for latency and memory. Dimensionality reduction or int8/PQ compression can be fine if you re-validate recall@k. Version embeddings with model ID and chunking config; mixing vectors from two models in one index is undefined geometry. Schedule re-embeds when the encoder changes, and dual-read during migrations.\n\nAlso monitor query embedding drift and empty-result rates. Sudden shifts may mean tokenizer/model skew between services, not \"users changed.\" Treat the embedding service as a versioned contract: input text normalization, max tokens, similarity metric, and vector dim are as important as the neural weights."
-        ],
-        "keyTerms": [
-          {
-            "term": "Geometry depends on the metric contract",
-            "definition": "Dense embeddings place text in a vector space where nearby points should be semantically related for your task. Cosine similarity cares about angle; dot product cares about angle and magnitude; Euclidean distance is anot…"
+            term: "chunk",
+            definition:
+              "A bounded text or document segment embedded and retrieved as a unit."
           },
           {
-            "term": "Hard negatives sharpen the boundary",
-            "definition": "Random in-batch negatives are often too easy: the model only learns coarse topical separation. Hard negatives—near neighbors that are wrong for the query, such as refund shipping delays versus refund payment failures in …"
+            term: "overlap",
+            definition:
+              "Repeated content between adjacent chunks used to preserve context across boundaries."
           },
           {
-            "term": "Intrinsic scores need extrinsic eval",
-            "definition": "A high cosine between two sentences is meaningless if your task is FAQ retrieval, code search, or entity-heavy support tickets. Build golden queries with relevant document IDs and report recall@k, MRR, or nDCG. Slice by …"
+            term: "metadata filter",
+            definition:
+              "A retrieval constraint based on structured fields such as product, date, tenant, or permissions."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        checkYourself: [
+          {
+            prompt: "Why can a high-similarity chunk still be unusable?",
+            reveal:
+              "It may lack the surrounding facts, provenance, permissions, or answer-specific detail needed for a faithful response."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "Bad chunking cannot be fully repaired by a better vector index. The retriever can only return the units you created."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach embeddings and similarity lab as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How does cosine similarity differ from Euclidean distance for text vectors? | When would you prefer hashing vectorizers over a fitted vocabulary? | How would you implement top-k retrieval for TF-IDF documents?"
+        id: "indexing-and-ann",
+        heading: "Vector indexes trade exactness for speed and scale",
+        paragraphs: [
+          "Exact nearest-neighbor search compares the query against every vector. That is simple and accurate, but expensive for large corpora. Approximate nearest-neighbor indexes organize vectors so search can inspect a promising subset quickly. Common families include graph-based methods, inverted file indexes, and product quantization. Each has tuning knobs that trade recall, latency, memory, and build time.",
+          "Index configuration should be evaluated with retrieval metrics, not only request latency. A faster index that misses the right document lowers answer quality. A slower exact search may be acceptable for small corpora or offline evaluation. Production systems often use approximate retrieval for candidates and a cross-encoder or LLM reranker for final ordering.",
+          "Indexes also have operational concerns. New documents must be embedded and inserted, deleted documents must disappear, permissions must be enforced, and embedding model upgrades may require reindexing. If old and new embeddings share an index without versioning, similarity becomes incoherent. Treat the embedding model, preprocessing, chunking, and index as one versioned retrieval artifact."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Embeddings and similarity lab as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "ANN",
+            definition:
+              "Approximate nearest-neighbor search, which finds likely nearest vectors faster than exhaustive comparison."
+          },
+          {
+            term: "recall at k",
+            definition:
+              "The fraction of relevant items retrieved within the top k results."
+          },
+          {
+            term: "reranker",
+            definition:
+              "A second-stage model that reorders retrieved candidates using richer query-document interaction."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt: "Why evaluate ANN recall before celebrating lower latency?",
+            reveal:
+              "Lower latency is harmful if the index stops returning relevant evidence. Retrieval quality must remain high enough for the RAG task."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Version embeddings, chunking, and index parameters together. Mixed retrieval artifacts make similarity scores hard to interpret."
+        }
+      },
+      {
+        id: "retrieval-evaluation",
+        heading: "Embedding labs need retrieval evaluation, not just pretty neighbors",
+        paragraphs: [
+          "A nearest-neighbor demo is useful, but production retrieval needs a test set. For each query, store relevant document ids or answer-bearing chunks. Then measure recall at k, precision at k, mean reciprocal rank, and failure slices. If the right chunk usually appears at rank 12 and the prompt includes only top 5, answer generation will struggle no matter how good the LLM is.",
+          "Qualitative inspection remains valuable. Look at false neighbors, duplicates, stale documents, and chunks that match query wording but not intent. Compare lexical search, embedding search, hybrid retrieval, and reranking. Some failures are fixed by better chunking or metadata filters rather than by changing embedding models.",
+          "The strongest retrieval systems are instrumented. Log query text, rewritten query, filters, candidate ids, scores, reranked ids, final context ids, and answer citations. These logs let teams reproduce bad answers, grow golden sets, and determine whether the failure came from retrieval, ranking, prompt construction, or generation."
+        ],
+        keyTerms: [
+          {
+            term: "MRR",
+            definition:
+              "Mean reciprocal rank, a metric that rewards placing the first relevant result near the top."
+          },
+          {
+            term: "answer-bearing chunk",
+            definition:
+              "A retrieved unit that contains the evidence needed to answer a query."
+          },
+          {
+            term: "retrieval trace",
+            definition:
+              "Logged retrieval inputs, filters, candidates, scores, and selected context for debugging."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "What should you inspect when answers are wrong despite plausible retrieved text?",
+            reveal:
+              "Inspect whether the retrieved chunks contain the actual answer, whether ranking placed them in context, and whether prompt construction preserved the evidence."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Separate retrieval failure from generation failure. Good RAG debugging starts with the context actually supplied to the model."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can build BoW/TF-IDF vectors with scikit-learn.",
-        "Can compute cosine similarity and explain why it ignores magnitude.",
-        "Can use hashing vectorizers and describe collision tradeoffs.",
-        "Can implement top-k document retrieval for a query.",
-        "Can outline how dense embeddings plug into the same ranking pattern."
+    wrapUp: {
+      takeaways: [
+        "Embeddings map items into learned vector spaces where similarity is task-shaped.",
+        "Cosine, dot product, and Euclidean metrics behave differently unless vectors are normalized.",
+        "Chunking and metadata decide what retrieval units can answer.",
+        "ANN indexes trade recall, latency, memory, and operational complexity.",
+        "Retrieval evaluation needs query-to-relevant-context goldens and traces, not only visual demos."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks (arXiv) — https://arxiv.org/abs/1908.10084",
-        "Optional deeper reading: Dense Passage Retrieval for Open-Domain Question Answering (arXiv) — https://arxiv.org/abs/2004.04906"
+      nextSteps: [
+        "Measure recall at k for a small query-to-document golden set.",
+        "Compare fixed-size chunking with heading-aware chunking on one document.",
+        "Log a retrieval trace and classify a failure as chunking, filtering, ranking, or generation."
       ]
     }
   },
   "llm-retrieval-lab/rag-evaluation-workshop": {
-    "title": "Chapter: RAG evaluation workshop",
-    "readingTime": "60-75 min",
-    "premise": "Chunk documents, measure retrieval with recall@k and MRR, and run simple grounded-answer checks using string overlap—all in NumPy/sklearn-friendly Python. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: RAG evaluation workshop",
+    readingTime: "70-85 min",
+    premise:
+      "RAG quality depends on retrieval, context assembly, generation, and grounding. This chapter covers golden sets, context recall and precision, faithfulness, hybrid retrieval with reciprocal rank fusion, and release-ready evaluation loops.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "RAG systems fail in distinct stages: chunking, retrieval, and grounded generation. Interviewers want candidates who can measure each stage instead of only demoing a happy-path answer.",
-          "This chapter treats \"RAG evaluation workshop\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "rag-eval-scope",
+        heading: "RAG evaluation must separate pipeline stages",
+        paragraphs: [
+          "A RAG answer can fail for several reasons. The query may be rewritten badly, retrieval may miss evidence, ranking may bury the right chunk, context assembly may truncate the source, the generator may ignore evidence, or the answer may hallucinate beyond the context. A single thumbs-up score cannot tell you which subsystem to fix.",
+          "Stage-aware evaluation starts by saving traces. For each query, record rewritten query, filters, retrieved ids, scores, selected context, final answer, citations, latency, and model version. Then evaluate retrieval before generation and generation against supplied context. This prevents the common confusion where a model is blamed for hallucination when it never received the right document.",
+          "The workshop goal is to build an evaluation harness that can run before release. It should compare prompt changes, embedding model upgrades, chunking changes, index parameters, rerankers, and model swaps against the same golden set. RAG is a system, so the eval needs system observability."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "RAG trace",
+            definition:
+              "A record of retrieval, context assembly, generation, citations, and metadata for one RAG request."
+          },
+          {
+            term: "stage-aware evaluation",
+            definition:
+              "Evaluation that scores retrieval, context quality, grounding, and answer quality separately."
+          },
+          {
+            term: "grounding",
+            definition:
+              "The degree to which an answer is supported by supplied evidence."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why is it dangerous to evaluate only the final answer?",
+            reveal:
+              "Final-answer scores hide whether failures come from retrieval, ranking, context truncation, generation, or citation behavior, making fixes guessy."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Debug RAG from left to right: query, filters, candidates, selected context, answer, citations."
         }
       },
       {
-        "id": "rag-is-a-pipeline-with-separable-failure-modes",
-        "heading": "RAG is a pipeline with separable failure modes",
-        "paragraphs": [
-          "Retrieval-augmented generation first finds evidence, then asks a model to answer using that evidence. If retrieval misses the needed chunk, the generator may hallucinate confidently. If retrieval is fine but the prompt is weak, the model may ignore evidence. If both are fine but evaluation only checks fluent answers, you can ship grounded-looking falsehoods. A practical evaluation stack measures: (1) chunk coverage and sizes, (2) retrieval recall@k / MRR against labeled relevant docs, (3) answer groundedness via overlap or entailment-style checks, and (4) final task metrics such as exact match or rubric scores. This lesson implements (1)-(3) with simple tools that run in-browser. Keep the stages separate in dashboards and in interview answers.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Evaluate retrieval before judging generator quality.",
-          "• Chunking choices change both recall and noise in context windows.",
-          "• Groundedness checks whether answers stick to retrieved evidence.",
-          "Production lens — Retrieval quality is the ceiling: RAG systems have at least two stages: retrieve evidence, then generate an answer conditioned on that evidence. If the right chunks never enter the context window, no prompt tweak can ground the answer in them. Measure recall@k, precision@k, and nDCG on a labeled retrieval set before spending weeks on prompt wording. Component metrics turn \"the bot is wrong\" into \"chunking misses section headers\" or \"hybrid fusion under-weights BM25.\"\n\nEnd-to-end scores alone conflate failures. An LLM-as-judge helpfulness number can stay flat while you fix retrieval, or look good while the model hallucinates fluently past weak evidence. Always keep a retrieval dashboard next to answer quality. The practical rule: raise the retrieval ceiling first, then tune generation under the constraint of real top-k context."
+        id: "golden-sets",
+        heading: "Golden sets turn production questions into repeatable tests",
+        paragraphs: [
+          "A RAG golden set contains user-like queries plus expected evidence and answer criteria. For each item, store query text, relevant document or chunk ids, reference answer or rubric, required citations, tags, and known edge cases. Good tags include product area, language, freshness, permission boundary, adversarial prompt, and answer type. The set should include both answerable and unanswerable questions.",
+          "Goldens should be grown from real incidents, search logs, support tickets, expert-written scenarios, and adversarial probes. They need owners and review because product policy and documents change. If a source document is updated, the relevant chunk ids or reference answer may need a new version. Stale goldens can block good releases or pass bad ones.",
+          "A small high-quality golden set beats a large ambiguous one. Each example should make expected behavior clear enough that a human or grader can judge consistently. For regulated or high-impact domains, double annotation and adjudication improve reliability. For fast-moving products, a tiered set can separate smoke tests, release gates, and deeper nightly evaluation."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Evaluate retrieval before judging generator q…",
-            "definition": "Evaluate retrieval before judging generator quality."
+            term: "golden set",
+            definition:
+              "A curated, versioned evaluation dataset with expected evidence and answer criteria."
           },
           {
-            "term": "Chunking choices change both recall and",
-            "definition": "Chunking choices change both recall and noise in context windows."
+            term: "reference answer",
+            definition:
+              "An expected answer or rubric used to judge generated responses."
           },
           {
-            "term": "Groundedness checks whether answers stick to",
-            "definition": "Groundedness checks whether answers stick to retrieved evidence."
+            term: "unanswerable query",
+            definition:
+              "A query for which the system should abstain or ask for clarification because evidence is missing."
           }
         ],
-        "workedExample": {
-          "title": "Tiny RAG stages as data structures",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "query = 'What does a causal mask do?'\nchunks = [\n    'Causal masks block future tokens during decoding.',\n    'Dropout randomly zeroes activations during training.',\n]\nretrieved = [chunks[0]]\nanswer = 'A causal mask prevents attending to future tokens.'\nprint({'query': query, 'retrieved': retrieved, 'answer': answer})",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can chunk text with fixed windows and overlap.",
-            "reveal": "RAG systems have at least two stages: retrieve evidence, then generate an answer conditioned on that evidence. If the right chunks never enter the context window, no prompt tweak can ground the answer in them. Measure recall@k, precision@k, and nDCG on a labeled retrieval set before spending weeks on prompt wording. Component metrics turn \"the bot is wrong\" into \"chunking misses section headers\" or \"hybrid fusion under-weights BM25.\"\n\nEnd-to-end scores alone conflate failures. An LLM-as-judge helpfulness number can stay flat while you fix retrieval, or look good while the model hallucinates fluently past weak evidence. Always keep a retrieval dashboard next to answer quality. The practical rule: raise the retrieval ceiling first, then tune generation under the constraint of real top-k context."
-          }
-        ]
-      },
-      {
-        "id": "chunking-trades-context-completeness-against-precision",
-        "heading": "Chunking trades context completeness against precision",
-        "paragraphs": [
-          "Long documents rarely fit into prompts and dilute embeddings. Chunking splits them into passages. Fixed-size character or token windows with overlap are common baselines. Example: text length 1000, chunk 300, overlap 50 -> starts at 0, 250, 500, 750. Too-small chunks lose surrounding definitions; too-large chunks add irrelevant sentences and hurt cosine ranking. Overlap reduces boundary tears where an answer spans two windows. In interviews, mention structure-aware chunking (by headings, paragraphs, functions) as an improvement over naive windows. For evaluation, store chunk_id and parent_doc_id so you can compute document-level or chunk-level recall. Always log chunk length histograms; extreme lengths are a smell.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Overlap helps when answers cross chunk boundaries.",
-          "• Track parent document ids for aggregation metrics.",
-          "• Prefer structure-aware splits when documents have clear sections.",
-          "Production lens — Faithfulness versus fluency: Users punish confident fabrication more than short refusals. Faithfulness/groundedness checks ask whether claims in the answer are supported by retrieved snippets—via NLI-style models, citation coverage, or LLM-as-judge protocols that only see the evidence. Helpfulness without faithfulness rewards eloquent lies. Make groundedness a release gate alongside latency and cost.\n\nDesign failure modes deliberately: refuse when evidence is weak, ask a clarifying question when the query is ambiguous, or cite snippets so users can verify. Adversarial and out-of-corpus queries belong in the golden set. A demo that answers everything from parametric memory is not a RAG success; it is an untested hallucination path."
-        ],
-        "keyTerms": [
-          {
-            "term": "Overlap helps when answers cross chunk",
-            "definition": "Overlap helps when answers cross chunk boundaries."
-          },
-          {
-            "term": "Track parent document ids for aggregation",
-            "definition": "Track parent document ids for aggregation metrics."
-          },
-          {
-            "term": "Prefer structure-aware splits when documents …",
-            "definition": "Prefer structure-aware splits when documents have clear sections."
+            prompt: "Why include unanswerable questions in a RAG golden set?",
+            reveal:
+              "They test whether the system abstains or asks for clarification instead of fabricating answers when retrieval lacks evidence."
           }
         ],
-        "workedExample": {
-          "title": "Fixed-window chunking with overlap",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def chunk_text(text, size=40, overlap=10):\n    chunks, start = [], 0\n    while start < len(text):\n        end = min(len(text), start + size)\n        chunks.append(text[start:end])\n        if end == len(text):\n            break\n        start += size - overlap\n    return chunks\n\ntext = 'Causal masks block future tokens. Softmax turns scores into weights. Values are mixed by those weights.'\nfor i, ch in enumerate(chunk_text(text, size=45, overlap=12)):\n    print(i, repr(ch))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can compute recall@k from relevant and retrieved ids.",
-            "reveal": "Users punish confident fabrication more than short refusals. Faithfulness/groundedness checks ask whether claims in the answer are supported by retrieved snippets—via NLI-style models, citation coverage, or LLM-as-judge protocols that only see the evidence. Helpfulness without faithfulness rewards eloquent lies. Make groundedness a release gate alongside latency and cost.\n\nDesign failure modes deliberately: refuse when evidence is weak, ask a clarifying question when the query is ambiguous, or cite snippets so users can verify. Adversarial and out-of-corpus queries belong in the golden set. A demo that answers everything from parametric memory is not a RAG success; it is an untested hallucination path."
-          }
-        ]
-      },
-      {
-        "id": "recall-k-asks-whether-evidence-made-the-shortlist",
-        "heading": "Recall@k asks whether evidence made the shortlist",
-        "paragraphs": [
-          "For one query, let R be the set of relevant chunk ids and let Pred_k be the top-k retrieved ids. Recall@k = |R intersect Pred_k| / |R|. If two chunks are relevant and top-3 retrieval finds one, recall@3 is 0.5. Macro-average over queries for a dataset score. Recall ignores order except through k. It answers: did we fetch enough evidence for the generator to have a chance? If recall@5 is 0.4, improving the prompt alone is unlikely to fix correctness. Use labeled pairs (query -> relevant chunk ids) from synthetic or hand-built sets in workshops; production systems may derive labels from clicks or adjudicated eval sets. Report confidence intervals when n_queries is small.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Recall@k is set overlap, not generation quality.",
-          "• Choose k based on how many chunks you actually put in the prompt.",
-          "• Low recall means the retriever is the bottleneck.",
-          "Production lens — Golden sets need coverage, not vanity: A useful eval set covers navigational lookups, conceptual how-to questions, multi-hop needs, near-duplicate FAQs, and adversarial paraphrases. Include cases where the correct answer is \"not in corpus.\" Size matters less than diversity and label quality: fifty well-labeled queries with document IDs beat five hundred noisy ones. Version the set with corpus snapshots so you know whether a regression is model or data.\n\nAttribute failures: retrieval miss, correctly retrieved but poorly ranked, context truncated, prompt ignores citation, or generator invents unsupported detail. Attribution drives the backlog—chunk size, hybrid search, re-ranker, or generation policy. Without attribution, teams thrash on the wrong stage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Recall@k is set overlap, not generation",
-            "definition": "Recall@k is set overlap, not generation quality."
-          },
-          {
-            "term": "Choose k based on how many",
-            "definition": "Choose k based on how many chunks you actually put in the prompt."
-          },
-          {
-            "term": "Low recall means the retriever is",
-            "definition": "Low recall means the retriever is the bottleneck."
-          }
-        ],
-        "workedExample": {
-          "title": "Compute recall@k for one query",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def recall_at_k(relevant, retrieved, k):\n    pred = set(retrieved[:k])\n    rel = set(relevant)\n    if not rel:\n        return 0.0\n    return len(rel & pred) / len(rel)\n\nprint(recall_at_k([1, 4], [4, 2, 1, 7], k=3))\nprint(recall_at_k([1, 4], [3, 2, 7, 1], k=3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can compute MRR / reciprocal rank.",
-            "reveal": "A useful eval set covers navigational lookups, conceptual how-to questions, multi-hop needs, near-duplicate FAQs, and adversarial paraphrases. Include cases where the correct answer is \"not in corpus.\" Size matters less than diversity and label quality: fifty well-labeled queries with document IDs beat five hundred noisy ones. Version the set with corpus snapshots so you know whether a regression is model or data.\n\nAttribute failures: retrieval miss, correctly retrieved but poorly ranked, context truncated, prompt ignores citation, or generator invents unsupported detail. Attribution drives the backlog—chunk size, hybrid search, re-ranker, or generation policy. Without attribution, teams thrash on the wrong stage."
-          }
-        ]
-      },
-      {
-        "id": "mrr-rewards-early-relevant-hits",
-        "heading": "MRR rewards early relevant hits",
-        "paragraphs": [
-          "Mean Reciprocal Rank focuses on the rank of the first relevant document. For a query, find the smallest rank i (1-based) where the retrieved item is relevant, then contribute 1/i; if none, contribute 0. Average over queries. Example: relevant doc appears at ranks 1, 2, and 5 across three queries -> RR values 1, 0.5, 0.2 -> MRR=0.567. Compared with recall@k, MRR cares about putting something useful near the top, which matters when the prompt can afford only one or two chunks. In interviews, be ready to compare MRR, recall@k, nDCG, and precision@k and pick metrics that match product constraints. Implement MRR with a simple loop before jumping to libraries.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Reciprocal rank uses 1/rank of the first relevant hit.",
-          "• MRR is sensitive to top-of-list quality.",
-          "• Use MRR when only a tiny context budget is available.",
-          "Production lens — Online feedback closes the loop: Offline golden sets lag product reality. Log retrieval IDs, clicked citations, explicit thumbs, and downstream task success (ticket resolved, checkout completed). Use them to sample hard queries for human labeling, not as unconstrained automatic training labels without review. Canary new chunking or embedding versions on traffic slices with paired retrieval and groundedness metrics.\n\nRAG evaluation is a product discipline: own the metrics, the failure taxonomy, and the gates. Interview-ready answers separate recall@k from answer correctness, name faithfulness checks, and describe how production logs refresh the eval set. That story is more credible than claiming a single BLEU-like number for the whole system."
-        ],
-        "keyTerms": [
-          {
-            "term": "Reciprocal rank uses 1/rank of the",
-            "definition": "Reciprocal rank uses 1/rank of the first relevant hit."
-          },
-          {
-            "term": "MRR is sensitive to top-of-list quality.",
-            "definition": "MRR is sensitive to top-of-list quality."
-          },
-          {
-            "term": "Use MRR when only a tiny",
-            "definition": "Use MRR when only a tiny context budget is available."
-          }
-        ],
-        "workedExample": {
-          "title": "Mean reciprocal rank over queries",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def reciprocal_rank(relevant, retrieved):\n    rel = set(relevant)\n    for i, doc_id in enumerate(retrieved, start=1):\n        if doc_id in rel:\n            return 1.0 / i\n    return 0.0\n\nrrs = [\n    reciprocal_rank([4], [4, 2, 1]),\n    reciprocal_rank([1, 4], [3, 1, 4]),\n    reciprocal_rank([7], [1, 2, 3]),\n]\nprint(rrs, 'MRR=', round(sum(rrs) / len(rrs), 3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can run a simple answer-evidence overlap groundedness check.",
-            "reveal": "Offline golden sets lag product reality. Log retrieval IDs, clicked citations, explicit thumbs, and downstream task success (ticket resolved, checkout completed). Use them to sample hard queries for human labeling, not as unconstrained automatic training labels without review. Canary new chunking or embedding versions on traffic slices with paired retrieval and groundedness metrics.\n\nRAG evaluation is a product discipline: own the metrics, the failure taxonomy, and the gates. Interview-ready answers separate recall@k from answer correctness, name faithfulness checks, and describe how production logs refresh the eval set. That story is more credible than claiming a single BLEU-like number for the whole system."
-          }
-        ]
-      },
-      {
-        "id": "grounded-answer-checks-with-string-overlap",
-        "heading": "Grounded-answer checks with string overlap",
-        "paragraphs": [
-          "A lightweight groundedness heuristic asks whether answer content appears in retrieved evidence. Token-overlap precision: tokenize answer and evidence into words, then compute |ans_tokens intersect evidence_tokens| / |ans_tokens|. If the answer is 'Causal masks block future tokens' and evidence contains those words, overlap is high. This is imperfect: paraphrases score low, and copying irrelevant shared stopwords can score medium. Still, it is a useful regression test for workshops and CI smoke tests. Stronger systems use NLI models or LLM-as-judge, but those are heavier and not Pyodide-friendly here. Pair overlap with retrieval metrics: high overlap and low recall can mean the model is parroting incomplete evidence. Low overlap and high recall can mean the generator ignored context.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Overlap checks are brittle but cheap smoke tests for grounding.",
-          "• Remove stopwords if you want a stricter content overlap score.",
-          "• Combine groundedness with retrieval recall for diagnosis.",
-          "Production lens — Retrieval quality is the ceiling: RAG systems have at least two stages: retrieve evidence, then generate an answer conditioned on that evidence. If the right chunks never enter the context window, no prompt tweak can ground the answer in them. Measure recall@k, precision@k, and nDCG on a labeled retrieval set before spending weeks on prompt wording. Component metrics turn \"the bot is wrong\" into \"chunking misses section headers\" or \"hybrid fusion under-weights BM25.\"\n\nEnd-to-end scores alone conflate failures. An LLM-as-judge helpfulness number can stay flat while you fix retrieval, or look good while the model hallucinates fluently past weak evidence. Always keep a retrieval dashboard next to answer quality. The practical rule: raise the retrieval ceiling first, then tune generation under the constraint of real top-k context."
-        ],
-        "keyTerms": [
-          {
-            "term": "Overlap checks are brittle but cheap",
-            "definition": "Overlap checks are brittle but cheap smoke tests for grounding."
-          },
-          {
-            "term": "Remove stopwords if you want a",
-            "definition": "Remove stopwords if you want a stricter content overlap score."
-          },
-          {
-            "term": "Combine groundedness with retrieval recall for",
-            "definition": "Combine groundedness with retrieval recall for diagnosis."
-          }
-        ],
-        "workedExample": {
-          "title": "Answer-evidence token overlap",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def overlap_precision(answer, evidence):\n    a = set(answer.lower().split())\n    e = set(evidence.lower().split())\n    if not a:\n        return 0.0\n    return len(a & e) / len(a)\n\nevidence = 'Causal masks block future tokens during decoding.'\ngood = 'Causal masks block future tokens'\nbad = 'Dropout improves causal attention accuracy'\nprint('good', round(overlap_precision(good, evidence), 3))\nprint('bad', round(overlap_precision(bad, evidence), 3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain how to diagnose RAG failures by stage.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to grounded-answer checks with string overlap."
-          }
-        ]
-      },
-      {
-        "id": "put-metrics-together-into-an-evaluation-harness",
-        "heading": "Put metrics together into an evaluation harness",
-        "paragraphs": [
-          "A complete workshop harness builds chunks, runs a TF-IDF retriever, computes recall@k and MRR on labeled queries, generates or stubs answers, and reports overlap groundedness. Example synthetic label: query about causal masks maps to chunk_id 0. If retriever returns [0, 2, 1], recall@3=1 and RR=1. If the stub answer copies the chunk, overlap is high. In interviews, describe gates: do not tune prompts when recall@k is below a threshold; do not expand context k forever because noise and cost rise; track metric slices by question type. Production adds citation requirements, human review, and adversarial questions. Showing that you can implement the skeleton without frameworks signals ownership of quality, not just model choice.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Gate prompt work on minimum retrieval recall.",
-          "• Slice metrics by query type and document domain.",
-          "• Keep an automated harness even when human eval is the gold standard.",
-          "Production lens — Faithfulness versus fluency: Users punish confident fabrication more than short refusals. Faithfulness/groundedness checks ask whether claims in the answer are supported by retrieved snippets—via NLI-style models, citation coverage, or LLM-as-judge protocols that only see the evidence. Helpfulness without faithfulness rewards eloquent lies. Make groundedness a release gate alongside latency and cost.\n\nDesign failure modes deliberately: refuse when evidence is weak, ask a clarifying question when the query is ambiguous, or cite snippets so users can verify. Adversarial and out-of-corpus queries belong in the golden set. A demo that answers everything from parametric memory is not a RAG success; it is an untested hallucination path."
-        ],
-        "keyTerms": [
-          {
-            "term": "Gate prompt work on minimum retrieval",
-            "definition": "Gate prompt work on minimum retrieval recall."
-          },
-          {
-            "term": "Slice metrics by query type and",
-            "definition": "Slice metrics by query type and document domain."
-          },
-          {
-            "term": "Keep an automated harness even when",
-            "definition": "Keep an automated harness even when human eval is the gold standard."
-          }
-        ],
-        "workedExample": {
-          "title": "Mini harness numbers for one labeled query",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.metrics.pairwise import cosine_similarity\nimport numpy as np\n\nchunks = [\n    'Causal masks block future tokens during decoding.',\n    'Random forests average many decision trees.',\n    'Batch norm stabilizes layer activations.',\n]\nquery = 'Why use a causal mask?'\nrelevant = [0]\nvec = TfidfVectorizer().fit(chunks)\nscores = cosine_similarity(vec.transform([query]), vec.transform(chunks)).ravel()\nranking = np.argsort(scores)[::-1].tolist()\npred = ranking[:2]\nrecall = len(set(relevant) & set(pred)) / len(relevant)\nrr = 1.0 / (ranking.index(relevant[0]) + 1)\nprint('ranking', ranking, 'recall@2', recall, 'RR', rr)",
-          "language": "python"
+        callout: {
+          tone: "interview",
+          body:
+            "Describe goldens as versioned artifacts with query, relevant context ids, expected behavior, tags, and owners."
         }
       },
       {
-        "id": "ragas-style-metrics-llm-as-judge-caveats-and-ci-golden-sets",
-        "heading": "RAGAS-style metrics, LLM-as-judge caveats, and CI golden sets",
-        "paragraphs": [
-          "Workshop metrics (recall@k, MRR, token overlap) are necessary but not sufficient for 2026 production RAG. RAGAS-style evaluation popularized decomposing quality into signals such as faithfulness/groundedness, answer relevance, and context precision/recall—scored with embeddings or LLM judges against the retrieved context. Use the idea even if you implement simplified proxies in NumPy: an answer that does not overlap evidence fails faithfulness; retrieved context that never appears in the answer may be wasted tokens (context precision). LLM-as-judge scales rubrics but brings position bias, verbosity bias, self-preference for the judge’s cousin models, and instability across temperatures—always calibrate against a human-labeled subset and freeze judge prompts/models as versioned artifacts. CI golden sets are the backbone: a few dozen to a few hundred queries with relevant chunk ids and acceptable answer keys, run on every chunker/embedder/prompt change. Fail the build on recall or faithfulness regressions beyond a delta. Keep goldens free of training/synthetic contamination, refresh them when products change, and slice by query type so one happy-path FAQ does not hide multi-hop failures.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Decompose RAG quality into faithfulness, relevance, and context precision/recall-style signals.",
-          "• Calibrate LLM judges on human labels; version judge prompts and models.",
-          "• Run golden retrieval/answer suites in CI on every index or prompt change.",
-          "• Watch for contamination and slice metrics by query archetype.",
-          "Production lens — Golden sets need coverage, not vanity: A useful eval set covers navigational lookups, conceptual how-to questions, multi-hop needs, near-duplicate FAQs, and adversarial paraphrases. Include cases where the correct answer is \"not in corpus.\" Size matters less than diversity and label quality: fifty well-labeled queries with document IDs beat five hundred noisy ones. Version the set with corpus snapshots so you know whether a regression is model or data.\n\nAttribute failures: retrieval miss, correctly retrieved but poorly ranked, context truncated, prompt ignores citation, or generator invents unsupported detail. Attribution drives the backlog—chunk size, hybrid search, re-ranker, or generation policy. Without attribution, teams thrash on the wrong stage."
+        id: "context-metrics",
+        heading: "Context recall and precision measure evidence quality",
+        paragraphs: [
+          "Context recall asks whether the supplied context contains the evidence needed to answer. If the golden says chunks A and B are relevant and the prompt includes only A, recall may be partial. If neither appears, generation is unlikely to be faithful. Low context recall points to retrieval, filters, chunking, indexing, or top-k budget problems.",
+          "Context precision asks whether supplied context is mostly useful rather than clutter. A prompt that includes the right chunk plus nine irrelevant chunks may have high recall but poor precision. Irrelevant context wastes tokens and can distract the model into mixing facts. Precision matters more as context windows get crowded or when documents contain conflicting policy versions.",
+          "These metrics should be computed before judging the answer. A faithful answer is hard if the evidence is absent; an unfaithful answer is especially concerning when the evidence was present. Stage metrics create useful diagnosis. Retrieval teams optimize recall and precision; prompt and generation teams optimize how well the answer uses the selected context."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Decompose RAG quality into faithfulness, rele…",
-            "definition": "Decompose RAG quality into faithfulness, relevance, and context precision/recall-style signals."
+            term: "context recall",
+            definition:
+              "The fraction of required evidence retrieved or included in the prompt context."
           },
           {
-            "term": "Calibrate LLM judges on human labels;",
-            "definition": "Calibrate LLM judges on human labels; version judge prompts and models."
+            term: "context precision",
+            definition:
+              "The fraction of supplied context that is relevant to the query."
           },
           {
-            "term": "Run golden retrieval/answer suites in CI",
-            "definition": "Run golden retrieval/answer suites in CI on every index or prompt change."
-          },
-          {
-            "term": "Watch for contamination and slice metrics",
-            "definition": "Watch for contamination and slice metrics by query archetype."
+            term: "top-k",
+            definition:
+              "The number of highest-ranked retrieved items passed to a later stage."
           }
         ],
-        "workedExample": {
-          "title": "Tiny faithfulness proxy for CI",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def faithfulness_proxy(answer, contexts):\n    ans = set(answer.lower().split())\n    ctx = set(\" \".join(contexts).lower().split())\n    if not ans:\n        return 0.0\n    return len(ans & ctx) / len(ans)\n\nprint(round(faithfulness_proxy('causal masks block future tokens', ['Causal masks block future tokens during decoding.']), 2))\nprint(round(faithfulness_proxy('quantum flux capacitor unlocked', ['Causal masks block future tokens.']), 2))",
-          "language": "python"
-        },
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        checkYourself: [
+          {
+            prompt: "What does high recall but low precision suggest?",
+            reveal:
+              "The system finds the needed evidence but includes too much irrelevant context, so ranking, filtering, reranking, or context budgeting may need work."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Measure context quality before answer quality. It tells you whether generation had a fair chance."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for rag evaluation workshop.",
-          "Trap: Judging RAG only by final answer fluency. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Using chunking without overlap when answers span boundaries. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Tuning prompts while recall@k is still poor. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Treating token overlap as perfect factuality. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Forgetting to label relevant chunks for retrieval offline eval. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "faithfulness-answer-quality",
+        heading: "Faithfulness is support by context, not generic helpfulness",
+        paragraphs: [
+          "Faithfulness measures whether answer claims are supported by the supplied context. An answer can be fluent, relevant, and still unfaithful if it invents details. It can also be faithful but incomplete if it cites only part of the policy. RAG evaluation should distinguish faithfulness, answer relevance, completeness, citation correctness, and abstention behavior.",
+          "Automated graders can help, but they need careful rubrics. A grader may prefer verbose answers, miss subtle contradictions, or accept unsupported paraphrases. Stronger checks decompose answers into claims and verify each claim against retrieved context, citation ids, or structured facts. Human review remains important for high-risk slices and for calibrating LLM-as-judge scores.",
+          "Faithfulness also depends on prompt design. The model should be instructed to answer only from context, cite sources, say when evidence is insufficient, and avoid merging conflicting versions. The evaluation harness should test those instructions directly. If the model fails only when documents conflict, add conflict cases to goldens rather than relying on average scores."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for RAG evaluation workshop and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Judging RAG only by final answer fluency.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Retrieval quality is the ceiling. RAG systems have at least two stages: retrieve evidence, then generate an answer conditioned on that evidence. If the right chunks never enter the context window, no prompt tweak can ground the answer in them. Measure recall@k, precision@k, and nDCG on a labeled retrieval set before spending weeks on prompt wording. Component metrics turn \"the bot is wrong\" into \"chunking misses section headers\" or \"hybrid fusion under-weights BM25.\"\n\nEnd-to-end scores alone conflate failures. An LLM-as-judge helpfulness number can stay flat while you fix retrieval, or look good while the model hallucinates fluently past weak evidence. Always keep a retrieval dashboard next to answer quality. The practical rule: raise the retrieval ceiling first, then tune generation under the constraint of real top-k context.",
-          "Faithfulness versus fluency. Users punish confident fabrication more than short refusals. Faithfulness/groundedness checks ask whether claims in the answer are supported by retrieved snippets—via NLI-style models, citation coverage, or LLM-as-judge protocols that only see the evidence. Helpfulness without faithfulness rewards eloquent lies. Make groundedness a release gate alongside latency and cost.\n\nDesign failure modes deliberately: refuse when evidence is weak, ask a clarifying question when the query is ambiguous, or cite snippets so users can verify. Adversarial and out-of-corpus queries belong in the golden set. A demo that answers everything from parametric memory is not a RAG success; it is an untested hallucination path.",
-          "Golden sets need coverage, not vanity. A useful eval set covers navigational lookups, conceptual how-to questions, multi-hop needs, near-duplicate FAQs, and adversarial paraphrases. Include cases where the correct answer is \"not in corpus.\" Size matters less than diversity and label quality: fifty well-labeled queries with document IDs beat five hundred noisy ones. Version the set with corpus snapshots so you know whether a regression is model or data.\n\nAttribute failures: retrieval miss, correctly retrieved but poorly ranked, context truncated, prompt ignores citation, or generator invents unsupported detail. Attribution drives the backlog—chunk size, hybrid search, re-ranker, or generation policy. Without attribution, teams thrash on the wrong stage.",
-          "Online feedback closes the loop. Offline golden sets lag product reality. Log retrieval IDs, clicked citations, explicit thumbs, and downstream task success (ticket resolved, checkout completed). Use them to sample hard queries for human labeling, not as unconstrained automatic training labels without review. Canary new chunking or embedding versions on traffic slices with paired retrieval and groundedness metrics.\n\nRAG evaluation is a product discipline: own the metrics, the failure taxonomy, and the gates. Interview-ready answers separate recall@k from answer correctness, name faithfulness checks, and describe how production logs refresh the eval set. That story is more credible than claiming a single BLEU-like number for the whole system."
-        ],
-        "keyTerms": [
-          {
-            "term": "Retrieval quality is the ceiling",
-            "definition": "RAG systems have at least two stages: retrieve evidence, then generate an answer conditioned on that evidence. If the right chunks never enter the context window, no prompt tweak can ground the answer in them. Measure re…"
+            term: "faithfulness",
+            definition:
+              "The degree to which answer claims are supported by the provided context."
           },
           {
-            "term": "Faithfulness versus fluency",
-            "definition": "Users punish confident fabrication more than short refusals. Faithfulness/groundedness checks ask whether claims in the answer are supported by retrieved snippets—via NLI-style models, citation coverage, or LLM-as-judge …"
+            term: "citation correctness",
+            definition:
+              "Whether citations point to sources that actually support the claims they accompany."
           },
           {
-            "term": "Golden sets need coverage, not vanity",
-            "definition": "A useful eval set covers navigational lookups, conceptual how-to questions, multi-hop needs, near-duplicate FAQs, and adversarial paraphrases. Include cases where the correct answer is \"not in corpus.\" Size matters less …"
+            term: "LLM-as-judge",
+            definition:
+              "Using an LLM to grade outputs according to a rubric or comparison task."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        checkYourself: [
+          {
+            prompt: "Can an answer be relevant but unfaithful?",
+            reveal:
+              "Yes. It may address the question but include claims that are not supported by the retrieved context."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "Do not let a generic helpfulness judge stand in for grounding. Faithfulness must reference supplied evidence."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach rag evaluation workshop as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you evaluate a RAG system beyond reading a few answers? | What does recall@k tell you that an answer BLEU score does not? | When is MRR more informative than recall@k?"
+        id: "hybrid-rrf",
+        heading: "Hybrid retrieval and RRF improve candidate coverage",
+        paragraphs: [
+          "Dense embeddings capture semantic similarity, while lexical methods such as BM25 capture exact terms, names, identifiers, and rare phrases. Many RAG systems use both because each fails differently. Embeddings may miss exact error codes; lexical search may miss paraphrases. Hybrid retrieval gathers candidates from both channels before reranking or fusion.",
+          "Reciprocal rank fusion, or RRF, combines ranked lists without requiring comparable raw scores. For each candidate, it sums terms like `1 / (k + rank)` across lists, where `k` dampens the impact of top ranks. A document that appears reasonably high in both dense and lexical results can outrank a document that appears only in one list. RRF is simple, robust, and useful when score scales differ.",
+          "Hybrid systems still need evaluation. More candidates can improve recall but also increase latency and precision burden. Rerankers can refine the candidate list using richer query-document interactions, but they add cost. A release gate should compare dense-only, lexical-only, hybrid RRF, and hybrid-plus-reranker on the same golden set, including exact-match-heavy queries and paraphrase-heavy queries."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of RAG evaluation workshop as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "hybrid retrieval",
+            definition:
+              "Combining lexical and dense vector retrieval to improve candidate coverage."
+          },
+          {
+            term: "BM25",
+            definition:
+              "A lexical ranking method based on term frequency, inverse document frequency, and document-length normalization."
+          },
+          {
+            term: "RRF",
+            definition:
+              "Reciprocal rank fusion, a method for combining ranked lists by summing reciprocal rank scores."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt: "Why is RRF useful when combining BM25 and vector search?",
+            reveal:
+              "It uses ranks rather than raw scores, so it can combine lists whose scoring scales are not directly comparable."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "For RAG retrieval, propose hybrid search plus RRF when queries mix paraphrases with exact identifiers, errors, names, or policy terms."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can chunk text with fixed windows and overlap.",
-        "Can compute recall@k from relevant and retrieved ids.",
-        "Can compute MRR / reciprocal rank.",
-        "Can run a simple answer-evidence overlap groundedness check.",
-        "Can explain how to diagnose RAG failures by stage."
+    wrapUp: {
+      takeaways: [
+        "RAG evaluation should score retrieval, context assembly, grounding, and answer behavior separately.",
+        "Golden sets need expected evidence ids, answer rubrics, tags, owners, and versioning.",
+        "Context recall and precision diagnose whether the model received useful evidence.",
+        "Faithfulness measures support by supplied context, not generic helpfulness.",
+        "Hybrid retrieval with RRF combines lexical and dense strengths when raw scores are not comparable."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (arXiv) — https://arxiv.org/abs/2005.11401",
-        "Optional deeper reading: RAGAS: Automated Evaluation of Retrieval Augmented Generation (arXiv) — https://arxiv.org/abs/2309.15217"
+      nextSteps: [
+        "Create ten RAG goldens with relevant chunk ids and answer rubrics.",
+        "Compute context recall and precision for dense-only and hybrid retrieval.",
+        "Add an unanswerable-query gate that checks abstention and citation behavior."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const llmRetrievalLabChapters = JSON.parse(JSON.stringify(chapters));

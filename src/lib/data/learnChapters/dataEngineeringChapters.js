@@ -1,549 +1,429 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const dataEngineeringChapters = {
+const chapters = {
   "data-engineering-for-ml/data-pipelines-at-scale": {
-    "title": "Chapter: Data pipelines at scale",
-    "readingTime": "55-70 min",
-    "premise": "Batch and stream processing, ETL design patterns, and data quality validation for ML training data. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Data pipelines at scale",
+    readingTime: "65-80 min",
+    premise:
+      "Production ML depends on data systems that can move, validate, replay, and serve facts at the right time. This chapter builds a practical mental model for batch and streaming pipelines, distributed execution, late data, schema evolution, and feature stores.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "ML quality is bounded by data reliability. Scalable pipelines, validation, and late-data handling are core AI engineering—not someone else's problem.",
-          "This chapter treats \"Data pipelines at scale\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "pipeline-purpose",
+        heading: "A data pipeline is part of the model, not plumbing",
+        paragraphs: [
+          "A model is trained on examples, but those examples are produced by a system of collectors, queues, storage tables, transforms, validations, and serving paths. When the system changes, the model's input distribution changes even if the model artifact does not. A reliable ML pipeline therefore has to be designed as part of the model boundary: it defines what facts exist, when they become visible, how they are corrected, and which version of those facts a training job or online prediction can use.",
+          "The central design question is not whether to choose a fashionable framework. It is what freshness, correctness, scale, replay, and ownership requirements the product actually has. Fraud scoring may require minute-level features and point-in-time correctness. Weekly demand forecasting may tolerate overnight recompute but needs stable backfills across many years. A recommendation feed might use a streaming path for recent clicks and a batch path for slower profile aggregates. Each case changes the engineering burden.",
+          "Good pipeline design starts with contracts. Define the event schema, partitioning strategy, data quality checks, expected latency, idempotency rule, and recovery plan before training depends on the output. If the model team cannot answer where a feature came from, which rows were excluded, or how a failed run is replayed, the training metric is not reproducible evidence. It is a temporary observation from a fragile data path."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "data contract",
+            definition:
+              "An explicit agreement about schema, meaning, freshness, quality checks, and ownership for data consumed by downstream systems."
+          },
+          {
+            term: "idempotency",
+            definition:
+              "The property that retrying the same write or transform does not duplicate or corrupt output."
+          },
+          {
+            term: "replay",
+            definition:
+              "The ability to recompute downstream state from retained source data for recovery, backfills, audits, or new feature logic."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why should an ML engineer care about retry behavior and backfills?",
+            reveal:
+              "Retries and backfills can silently change training rows, feature values, and label alignment. If a pipeline cannot replay deterministically, model comparison becomes unreliable because two runs may train on different facts."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "When asked to design an ML pipeline, state the prediction use case first, then derive freshness, correctness, replay, validation, and serving requirements from that use case."
         }
       },
       {
-        "id": "batch-and-stream-paths-for-ml-data",
-        "heading": "Batch and stream paths for ML data",
-        "paragraphs": [
-          "Batch pipelines process partitions (hours/days) with predictable recompute. Streams process events with low lag and harder exactly-once semantics. Many ML platforms are hybrid: stream into a feature store for online features, batch for training sets. Choose based on freshness needs and operational maturity. Idempotent writes and partition planning matter more than framework brand names. Data quality SLAs are part of model SLOs whether or not they appear on the same dashboard. Data quality SLAs are part of model SLOs whether or not they appear on the same dashboard. Data quality SLAs are part of model SLOs whether or not they appear on the same dashboard.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Pick batch vs stream from freshness/ops constraints.",
-          "• Design idempotent sinks.",
-          "• Hybrid architectures are common and OK.",
-          "Production lens — Batch vs streaming is a freshness and complexity trade-off: Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills complicate feature correctness. Idempotent writes and partition strategies (time, tenant) prevent full reprocessing on every job failure."
+        id: "batch-vs-streaming",
+        heading: "Batch and streaming are freshness and recovery choices",
+        paragraphs: [
+          "Batch processing groups data into bounded windows such as hourly partitions, daily snapshots, or month-end ledgers. It is attractive because it is easy to inspect, easy to rerun, and easy to align with warehouse storage. A failed daily transform can often be fixed by deleting one partition and recomputing it from source. For many ML workloads, especially training datasets and slow-changing aggregates, this simplicity is a feature rather than a compromise.",
+          "Streaming treats the input as an unbounded sequence of events and continuously updates outputs. It is useful when prediction quality depends on recent behavior: a fraud model needs the last five minutes of payment attempts, a ranking model wants fresh engagement, and an anomaly detector reacts to current sensor readings. Streaming adds operational complexity because events may arrive out of order, messages may be retried, state must be checkpointed, and exactly-once behavior is usually an end-to-end design property rather than a switch in a framework.",
+          "Most serious ML platforms are hybrid. Batch jobs create reproducible training sets, historical aggregates, and large offline joins. Streams update online features, counters, alerts, or incremental tables. The key is to prevent the two paths from defining the same feature differently. If training computes `purchases_7d` in SQL and serving computes it in a streaming job, the team needs shared definitions, common tests, and drift checks between offline and online values."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Pick batch vs stream from freshness/ops",
-            "definition": "Pick batch vs stream from freshness/ops constraints."
+            term: "bounded data",
+            definition:
+              "A finite input collection such as a daily partition or static snapshot that can be processed to completion."
           },
           {
-            "term": "Design idempotent sinks.",
-            "definition": "Design idempotent sinks."
+            term: "unbounded data",
+            definition:
+              "A continuously arriving event stream with no natural end, requiring windowing and state management."
           },
           {
-            "term": "Hybrid architectures are common and OK.",
-            "definition": "Hybrid architectures are common and OK."
+            term: "hybrid architecture",
+            definition:
+              "A platform that uses batch processing for reproducible history and streaming for low-latency updates."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Chooses batch/stream/hybrid thoughtfully.",
-            "reveal": "Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills complicate feature correctness. Idempotent writes and partition strategies (time, tenant) prevent full reprocessing on every job failure."
-          }
-        ]
-      },
-      {
-        "id": "validation-beats-optimistic-schemas",
-        "heading": "Validation beats optimistic schemas",
-        "paragraphs": [
-          "At scale, assume poison rows arrive. Validate types, ranges, null rates, referential integrity, and distribution drift before training. Fail or quarantine bad partitions. Great Expectations-style checks or custom asserts both work if enforced. Silent schema evolution (\"extra column, missing column\") is a top cause of training incidents. Quarantine beats best-effort parsing when the cost of poisoning training is high. Quarantine beats best-effort parsing when the cost of poisoning training is high.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Validate before expensive training compute.",
-          "• Quarantine bad partitions instead of poisoning lakes.",
-          "• Alert on schema changes explicitly.",
-          "Production lens — Data quality gates belong in the pipeline: Schema evolution, null checks, distribution monitors, and anomaly alerts should block downstream training when violated. Great Expectations, dbt tests, and custom validators encode SLAs. ML-specific concerns include label leakage across time boundaries and train-serve skew from different SQL paths computing \"the same\" feature."
-        ],
-        "keyTerms": [
-          {
-            "term": "Validate before expensive training compute.",
-            "definition": "Validate before expensive training compute."
-          },
-          {
-            "term": "Quarantine bad partitions instead of poisoning",
-            "definition": "Quarantine bad partitions instead of poisoning lakes."
-          },
-          {
-            "term": "Alert on schema changes explicitly.",
-            "definition": "Alert on schema changes explicitly."
+            prompt: "When is batch the better answer even if streaming sounds more modern?",
+            reveal:
+              "Batch is often better when the product tolerates slower freshness, requires simple replay, needs large historical joins, or has a small team that cannot safely operate stateful streaming jobs."
           }
         ],
-        "workedExample": {
-          "title": "Partition validation checks",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import pandas as pd\n\ndef validate_partition(df):\n    errors = []\n    if df[\"user_id\"].isna().any():\n        errors.append(\"null user_id\")\n    if (df[\"amount\"] < 0).any():\n        errors.append(\"negative amount\")\n    if df[\"amount\"].mean() > 10000:\n        errors.append(\"amount mean spike\")\n    return errors\n\ndf = pd.DataFrame({\"user_id\":[1,2,None], \"amount\":[10,-1,5]})\nprint(validate_partition(df))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Implements validation gates on partitions.",
-            "reveal": "Schema evolution, null checks, distribution monitors, and anomaly alerts should block downstream training when violated. Great Expectations, dbt tests, and custom validators encode SLAs. ML-specific concerns include label leakage across time boundaries and train-serve skew from different SQL paths computing \"the same\" feature."
-          }
-        ]
-      },
-      {
-        "id": "late-data-recomputes-and-time-travel",
-        "heading": "Late data, recomputes, and time travel",
-        "paragraphs": [
-          "Events arrive late. Training sets need watermarks and recomputation policies. Feature point-in-time joins must define how late updates revise history. Document whether your pipeline is append-only or mutable. Backfills should be routine, not heroic. Cost out recompute windows before promising daily full refreshes of enormous corpora. Bytes scanned and shuffle volume predict cloud bills better than row counts. Bytes scanned and shuffle volume predict cloud bills better than row counts.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Define watermarks and late-data policies.",
-          "• Make backfills a scheduled capability.",
-          "• Clarify mutability of historical features.",
-          "Production lens — Batch vs streaming is a freshness and complexity trade-off: Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills complicate feature correctness. Idempotent writes and partition strategies (time, tenant) prevent full reprocessing on every job failure."
-        ],
-        "keyTerms": [
-          {
-            "term": "Define watermarks and late-data policies.",
-            "definition": "Define watermarks and late-data policies."
-          },
-          {
-            "term": "Make backfills a scheduled capability.",
-            "definition": "Make backfills a scheduled capability."
-          },
-          {
-            "term": "Clarify mutability of historical features.",
-            "definition": "Clarify mutability of historical features."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Plans late data and backfills.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to late data, recomputes, and time travel."
-          }
-        ]
-      },
-      {
-        "id": "efficient-transforms-and-storage-layout",
-        "heading": "Efficient transforms and storage layout",
-        "paragraphs": [
-          "Columnar formats, partition pruning, and predicate pushdown dominate performance. Avoid wide Python row loops on huge frames when vectorized or SQL engines suffice. For teaching we use pandas/NumPy, but the principles transfer to Spark/BigQuery: minimize shuffles, narrow columns early, and measure bytes scanned. Compact small files. Readiness flags prevent the classic 'train on half a day of data' silent failure. Readiness flags prevent the classic 'train on half a day of data' silent failure.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Prune columns/partitions early.",
-          "• Watch shuffle and small-file problems.",
-          "• Measure bytes scanned as a first-class cost.",
-          "Production lens — Data quality gates belong in the pipeline: Schema evolution, null checks, distribution monitors, and anomaly alerts should block downstream training when violated. Great Expectations, dbt tests, and custom validators encode SLAs. ML-specific concerns include label leakage across time boundaries and train-serve skew from different SQL paths computing \"the same\" feature."
-        ],
-        "keyTerms": [
-          {
-            "term": "Prune columns/partitions early.",
-            "definition": "Prune columns/partitions early."
-          },
-          {
-            "term": "Watch shuffle and small-file problems.",
-            "definition": "Watch shuffle and small-file problems."
-          },
-          {
-            "term": "Measure bytes scanned as a first-class",
-            "definition": "Measure bytes scanned as a first-class cost."
-          }
-        ],
-        "workedExample": {
-          "title": "Filter early pattern",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"date\": [\"2026-07-01\"]*3 + [\"2026-07-02\"]*3,\n    \"country\": [\"US\",\"US\",\"FR\",\"US\",\"FR\",\"FR\"],\n    \"x\": range(6),\n})\n# prune partition then columns\npart = df[df.date == \"2026-07-02\"][[\"country\", \"x\"]]\nprint(part[part.country == \"FR\"])",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Uses storage layout efficiently.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to efficient transforms and storage layout."
-          }
-        ]
-      },
-      {
-        "id": "orchestration-and-data-slas-for-ml",
-        "heading": "Orchestration and data SLAs for ML",
-        "paragraphs": [
-          "Training jobs depend on data SLAs. Publish freshness indicators (\"features for date D ready\"). Downstream model jobs should wait on sensors/flags, not wall-clock guesses. When SLAs break, degrade gracefully (reuse yesterday's model). Cross-team contracts on schemas and freshness prevent finger-pointing. Schema contracts across teams need owners and compatibility tests. Schema contracts across teams need owners and compatibility tests.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Expose data readiness signals to training DAGs.",
-          "• Degrade gracefully on missed SLAs.",
-          "• Contract on schemas across teams.",
-          "Production lens — Batch vs streaming is a freshness and complexity trade-off: Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills complicate feature correctness. Idempotent writes and partition strategies (time, tenant) prevent full reprocessing on every job failure."
-        ],
-        "keyTerms": [
-          {
-            "term": "Expose data readiness signals to training",
-            "definition": "Expose data readiness signals to training DAGs."
-          },
-          {
-            "term": "Degrade gracefully on missed SLAs.",
-            "definition": "Degrade gracefully on missed SLAs."
-          },
-          {
-            "term": "Contract on schemas across teams.",
-            "definition": "Contract on schemas across teams."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Connects data SLAs to training triggers.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to orchestration and data slas for ml."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "tip",
+          body:
+            "Do not describe streaming as automatically superior. Describe the latency benefit and the extra burden: state, checkpoints, ordering, late events, and operational alerts."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for data pipelines at scale.",
-          "Trap: Training on unvalidated partitions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No late-data policy. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Wide unschematized JSON lakes as features. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Wall-clock scheduling without readiness sensors. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "distributed-engines",
+        heading: "Spark and Flink are execution models with different instincts",
+        paragraphs: [
+          "Spark popularized resilient distributed batch processing by representing work as transformations over partitioned data. Modern Spark SQL, DataFrames, and structured streaming hide many details, but the same fundamentals remain: partitions determine parallelism, shuffles move data across the network, joins can explode if keys are skewed, and caching only helps when reused data is actually expensive to recompute. For ML training data, Spark is often used to clean logs, build labels, join dimensions, and materialize offline feature tables.",
+          "Flink is designed around stateful stream processing. It treats event time, watermarks, windows, checkpoints, and exactly-once sinks as first-class concerns. A Flink job can maintain keyed state such as per-user counters, update it as events arrive, and recover from failure using checkpoints. That makes it powerful for online feature computation, but it also means state size, checkpoint duration, backpressure, and savepoint compatibility become production design issues.",
+          "The interview-level distinction is not `Spark equals batch, Flink equals streaming` in a simplistic way. Spark can stream and Flink can process bounded inputs. The deeper distinction is operational posture. Spark teams often reason in partitions, shuffles, and recompute. Flink teams often reason in event time, state, watermarks, and continuous recovery. Choosing between them depends on the workload's latency target, statefulness, team experience, and ecosystem fit."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Data pipelines at scale and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Training on unvalidated partitions.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Batch vs streaming is a freshness and complexity trade-off. Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills complicate feature correctness. Idempotent writes and partition strategies (time, tenant) prevent full reprocessing on every job failure.",
-          "Data quality gates belong in the pipeline. Schema evolution, null checks, distribution monitors, and anomaly alerts should block downstream training when violated. Great Expectations, dbt tests, and custom validators encode SLAs. ML-specific concerns include label leakage across time boundaries and train-serve skew from different SQL paths computing \"the same\" feature."
-        ],
-        "keyTerms": [
-          {
-            "term": "Batch vs streaming is a freshness and complexity trade-off",
-            "definition": "Lambda and kappa architectures addressed hybrid needs; modern stacks often use incremental batch (Iceberg/Delta) plus streaming for latency-sensitive features. Exactly-once semantics, late-arriving data, and backfills co…"
+            term: "shuffle",
+            definition:
+              "A distributed data movement step, commonly caused by joins, group-bys, and repartitioning, that can dominate runtime."
           },
           {
-            "term": "Data quality gates belong in the pipeline",
-            "definition": "Schema evolution, null checks, distribution monitors, and anomaly alerts should block downstream training when violated. Great Expectations, dbt tests, and custom validators encode SLAs. ML-specific concerns include labe…"
+            term: "checkpoint",
+            definition:
+              "A durable snapshot of streaming operator state used to resume processing after failure."
+          },
+          {
+            term: "backpressure",
+            definition:
+              "A condition where downstream processing cannot keep up with input, causing queues and lag to grow."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        checkYourself: [
+          {
+            prompt: "What does a shuffle tell you about the cost profile of a pipeline?",
+            reveal:
+              "A shuffle means data must be redistributed across workers, usually involving network and disk. It is often the expensive step to inspect when a distributed job is slow or unstable."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Name the execution risks, not only the engine names: skewed keys, large shuffles, state growth, checkpoint failures, lag, and incompatible schema changes."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach data pipelines at scale as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Design a feature pipeline with daily batch + online stream. | How do you handle late-arriving events in training data? | What validation checks gate a training partition?"
+        id: "late-data-and-schema-evolution",
+        heading: "Late data and schema evolution decide whether history can be trusted",
+        paragraphs: [
+          "Real events do not arrive in perfect timestamp order. Mobile clients go offline, queues retry, source systems batch uploads, and partners send corrections after the original transaction. A pipeline has to distinguish processing time, which is when the system observes an event, from event time, which is when the event actually happened. ML features usually care about event time because the model should learn the world as it existed at prediction time, not the order in which logs happened to arrive.",
+          "Watermarks give stream processors a policy for how long to wait for late events before closing a window. A strict watermark reduces latency but may miss delayed facts. A generous watermark improves completeness but increases state and delays output. Some domains also need correction streams or retraction logic because late events may change previously emitted aggregates. For training sets, the same issue appears as backfills: if yesterday's labels arrive today, the dataset version must say which cutoff and correction policy were used.",
+          "Schema evolution is the other source of historical fragility. Adding an optional field is usually manageable, renaming a field can break consumers, and changing meaning without changing the name is the most dangerous case. A feature named `active_user` might change from a 7-day window to a 30-day window and make old models incomparable. Schema registries, compatibility checks, semantic versioning, and quarantine paths help, but the most important habit is treating schema changes as product changes that require communication and tests."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Data pipelines at scale as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "event time",
+            definition:
+              "The timestamp at which the business event occurred, independent of when the pipeline processed it."
+          },
+          {
+            term: "watermark",
+            definition:
+              "A stream-processing estimate that data earlier than a given event-time point is mostly complete."
+          },
+          {
+            term: "schema evolution",
+            definition:
+              "Controlled change to fields, types, compatibility, and semantics over time."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt: "Why is changing a feature's meaning worse than adding a new nullable field?",
+            reveal:
+              "Consumers may continue to run without errors while receiving values with different semantics. That can corrupt models and dashboards silently, whereas a new nullable field is usually easier to ignore or validate."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "A pipeline that passes type checks can still be wrong if event-time cutoffs or feature semantics changed. Validate meaning, not only shape."
+        }
+      },
+      {
+        id: "feature-stores",
+        heading: "Feature stores encode definitions, time, and serving paths",
+        paragraphs: [
+          "A feature store is not just a key-value database for model inputs. Its value is the controlled definition of features across offline training and online serving. A feature definition should specify the source data, transformation logic, entity keys, timestamp behavior, freshness expectation, owner, validation rules, and serving availability. Without those details, the store becomes a warehouse shortcut and train-serving skew returns under a different name.",
+          "Offline stores materialize historical feature values for training and evaluation. Online stores serve low-latency values for inference. The hard requirement is point-in-time correctness: when building a training row for a prediction at time t, the pipeline should join only feature values that would have been available before t. Otherwise the model learns from the future. Feature stores often provide as-of joins, materialization jobs, and freshness monitors to make that discipline repeatable.",
+          "A mature feature platform also handles lifecycle concerns. Features need discovery, documentation, permissions, backfills, deprecation, and monitoring. Highly reused features deserve strong contracts because a bad change can affect many models at once. Low-value one-off features may not deserve platform overhead. The practical rule is to put shared, production-critical, or online-used features behind the strongest governance, while keeping experimentation lightweight enough that teams still explore."
+        ],
+        keyTerms: [
+          {
+            term: "offline feature store",
+            definition:
+              "Historical feature storage optimized for training, evaluation, backfills, and point-in-time joins."
+          },
+          {
+            term: "online feature store",
+            definition:
+              "Low-latency storage that serves current feature values to production inference systems."
+          },
+          {
+            term: "point-in-time join",
+            definition:
+              "A join that uses only feature values available before the prediction timestamp for each training row."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "What makes a feature store useful beyond central storage?",
+            reveal:
+              "It standardizes definitions, ownership, validation, point-in-time training joins, online serving, freshness monitoring, and reuse. Storage alone does not prevent skew."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "In system design answers, connect the feature store to both sides of ML: reproducible offline training sets and low-latency online inference."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Chooses batch/stream/hybrid thoughtfully.",
-        "Implements validation gates on partitions.",
-        "Plans late data and backfills.",
-        "Uses storage layout efficiently.",
-        "Connects data SLAs to training triggers."
+    wrapUp: {
+      takeaways: [
+        "Pipeline requirements come from model freshness, correctness, replay, and serving needs.",
+        "Batch favors inspection and recompute; streaming favors freshness but introduces state, ordering, and recovery complexity.",
+        "Spark and Flink differ most in operational instincts: partitions and shuffles versus event time and stateful recovery.",
+        "Late data, watermarks, and schema evolution determine whether historical features remain trustworthy.",
+        "Feature stores are strongest when they encode definitions, point-in-time correctness, and offline-online consistency."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Apache Spark Documentation (Apache) — https://spark.apache.org/docs/latest/",
-        "Optional deeper reading: The Dataflow Model (Google Research) — https://research.google/pubs/pub43864/"
+      nextSteps: [
+        "Sketch a hybrid pipeline for a fraud model with both batch labels and streaming counters.",
+        "Write a data contract for one feature, including freshness, owner, schema, and validation checks.",
+        "Explain how you would backfill a corrected event field without corrupting model comparisons."
       ]
     }
   },
   "data-engineering-for-ml/dataset-management": {
-    "title": "Chapter: Dataset management and versioning",
-    "readingTime": "55-70 min",
-    "premise": "Data versioning, lineage tracking, labeling pipelines, and dataset governance for reproducible ML. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Dataset management and versioning",
+    readingTime: "65-80 min",
+    premise:
+      "Datasets are production artifacts. This chapter explains how versioning, lineage, reproducible splits, privacy controls, and train-serving skew prevention turn raw data into evidence that models can be compared and shipped safely.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Datasets are living products: versioned, lineage-tracked, quality-measured, and privacy-constrained. Model reproducibility collapses without dataset management discipline.",
-          "This chapter treats \"Dataset management and versioning\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "datasets-as-products",
+        heading: "A dataset version is a claim about evidence",
+        paragraphs: [
+          "A training dataset is not merely a table loaded into a notebook. It is a claim that a specific population, time range, label definition, feature set, filtering policy, and split procedure were used to evaluate a model. If any of those ingredients change without a version, model metrics lose their meaning. Two AUC numbers are comparable only when the underlying evidence is comparable or the difference is intentionally documented.",
+          "Dataset management gives teams a way to answer ordinary but important questions. Which raw snapshots produced this model? Which rows were excluded? Which label policy was used? What code built the features? Was PII removed before export? Can we recreate the exact train, validation, and test sets six months later? These questions appear during incidents, audits, model refreshes, and handoffs between teams.",
+          "The discipline can be lightweight or heavy depending on risk. A research prototype may need a manifest file with input paths, row counts, hashes, and split seeds. A regulated credit model may need immutable dataset artifacts, approval workflow, lineage graphs, retention policies, and access logs. The principle is the same in both cases: preserve enough context that a future engineer can reproduce the evidence rather than reverse-engineer it."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "dataset manifest",
+            definition:
+              "A record of source inputs, transformations, filters, row counts, checksums, split rules, and metadata for a dataset version."
+          },
+          {
+            term: "immutable artifact",
+            definition:
+              "A stored object that is not edited in place; new data creates a new version instead."
+          },
+          {
+            term: "evidence trail",
+            definition:
+              "The chain of data, code, parameters, and approvals that supports a model result or release."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why is a split seed alone not enough for reproducibility?",
+            reveal:
+              "The seed recreates a split only if the input rows, ordering, filters, label policy, and code are the same. Dataset reproducibility needs the full manifest, not only randomness."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Define a dataset version by inputs, code, parameters, time cutoffs, split policy, quality checks, and privacy state. That answer is stronger than saying `we store it in S3`."
         }
       },
       {
-        "id": "versioning-datasets-like-code",
-        "heading": "Versioning datasets like code",
-        "paragraphs": [
-          "A dataset version should be immutable and addressable (content hash or snapshot ID). Training configs pin dataset versions alongside code SHAs and hyperparameters. Store diffs or snapshots efficiently, but never silently mutate \"latest\" under a model that claimed reproducibility. Record transforms that produced a version from raw sources. Immutable versions make 'what changed?' a diff problem instead of an archaeology dig. Immutable versions make 'what changed?' a diff problem instead of an archaeology dig.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Pin immutable dataset IDs in training configs.",
-          "• Record transform lineage from raw to train set.",
-          "• Forbid silent mutation of published versions.",
-          "Production lens — Dataset versioning is as critical as model versioning: DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinHash, exact hash) and PII scrubbing pipelines prevent memorization and compliance violations."
+        id: "versioning-and-lineage",
+        heading: "Versioning and lineage make model comparisons honest",
+        paragraphs: [
+          "Dataset versioning can be implemented with lakehouse table snapshots, content-addressed files, DVC-style manifests, warehouse clone points, or a custom registry. The tool matters less than the invariant: a version should identify the exact records and transformations used. If a partition is overwritten in place, an old model run may become impossible to explain. If source data is append-only but transformation code changes, the same raw inputs can still produce a different dataset and need a new derived version.",
+          "Lineage connects versions across the data graph. Raw events feed cleaned tables, cleaned tables feed feature tables, feature tables feed training sets, and training sets feed models. When an upstream bug is discovered, lineage answers which datasets and models are affected. Without lineage, teams either overreact by retraining everything or underreact by missing a dependent model. Both outcomes are expensive.",
+          "Lineage should include code and configuration, not only table names. A join condition, null imputation policy, deduplication rule, or label horizon can change model behavior while the table path stays the same. Practical manifests record git commit, job image, parameter values, source snapshot ids, row counts by split, and validation results. The goal is not bureaucratic decoration; it is fast, confident reasoning when something goes wrong."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Pin immutable dataset IDs in training",
-            "definition": "Pin immutable dataset IDs in training configs."
+            term: "lineage",
+            definition:
+              "A record of upstream data, code, transformations, and artifacts that produced a downstream dataset or model."
           },
           {
-            "term": "Record transform lineage from raw to",
-            "definition": "Record transform lineage from raw to train set."
+            term: "snapshot",
+            definition:
+              "A consistent view of a table or file collection at a particular version or time."
           },
           {
-            "term": "Forbid silent mutation of published versions.",
-            "definition": "Forbid silent mutation of published versions."
+            term: "derived dataset",
+            definition:
+              "A dataset produced by transforming, filtering, joining, or labeling source data."
           }
         ],
-        "workedExample": {
-          "title": "Content-hash a CSV snapshot",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import hashlib\nimport pandas as pd\n\ndef dataset_id(df):\n    payload = df.sort_index(axis=1).to_csv(index=False).encode()\n    return hashlib.sha256(payload).hexdigest()[:12]\n\na = pd.DataFrame({\"x\":[1,2], \"y\":[0,1]})\nb = pd.DataFrame({\"y\":[0,1], \"x\":[1,2]})\nprint(dataset_id(a), dataset_id(b), dataset_id(a) == dataset_id(b))",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Pins immutable dataset versions in training.",
-            "reveal": "DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinHash, exact hash) and PII scrubbing pipelines prevent memorization and compliance violations."
-          }
-        ]
-      },
-      {
-        "id": "labeling-quality-and-agreement",
-        "heading": "Labeling quality and agreement",
-        "paragraphs": [
-          "Labels are noisy. Measure inter-annotator agreement (Cohen's kappa, etc.), use gold questions, and route hard items to experts. Weak supervision and active learning can reduce cost but need evaluation against gold sets. For LLMs, preference labels and rubric scores have their own biases—document rater guidelines. Dataset management includes the human process, not only files in object storage. Labeling guidelines drift; version them next to the labels they produced. Labeling guidelines drift; version them next to the labels they produced.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Quantify annotator agreement continuously.",
-          "• Hold out gold labels for quality control.",
-          "• Document labeling guidelines as versioned artifacts.",
-          "Production lens — Labeling workflows define the ceiling on model quality: Inter-annotator agreement, adjudication, active learning, and gold-standard hidden sets quantify label noise. Biased or rushed annotation propagates directly to production errors. Invest in tooling (Label Studio, Prodigy), clear guidelines, and stratified sampling so rare classes and edge cases receive adequate coverage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Quantify annotator agreement continuously.",
-            "definition": "Quantify annotator agreement continuously."
-          },
-          {
-            "term": "Hold out gold labels for quality",
-            "definition": "Hold out gold labels for quality control."
-          },
-          {
-            "term": "Document labeling guidelines as versioned art…",
-            "definition": "Document labeling guidelines as versioned artifacts."
+            prompt: "What should lineage tell you after discovering a bad source column?",
+            reveal:
+              "It should identify derived datasets, features, training runs, models, dashboards, and serving paths that consumed the bad column so remediation is scoped accurately."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Measures labeling agreement and gold QC.",
-            "reveal": "Inter-annotator agreement, adjudication, active learning, and gold-standard hidden sets quantify label noise. Biased or rushed annotation propagates directly to production errors. Invest in tooling (Label Studio, Prodigy), clear guidelines, and stratified sampling so rare classes and edge cases receive adequate coverage."
-          }
-        ]
-      },
-      {
-        "id": "lineage-provenance-and-reproducibility",
-        "heading": "Lineage, provenance, and reproducibility",
-        "paragraphs": [
-          "Provenance answers: which raw dumps, which cleaning script, which label version produced this train set? When a bug is found in a parser, you must find affected models. Propagate dataset IDs into model registries and prediction logs when feasible. Reproducibility is a graph problem across data and code. Derived artifacts inherit sensitivity—embeddings and caches are not automatically anonymous. Derived artifacts inherit sensitivity—embeddings and caches are not automatically anonymous.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Propagate dataset IDs into model metadata.",
-          "• Make impacted-model queries answerable after data bugs.",
-          "• Store configs that fully specify rebuilds.",
-          "Production lens — Dataset versioning is as critical as model versioning: DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinHash, exact hash) and PII scrubbing pipelines prevent memorization and compliance violations."
-        ],
-        "keyTerms": [
-          {
-            "term": "Propagate dataset IDs into model metadata.",
-            "definition": "Propagate dataset IDs into model metadata."
-          },
-          {
-            "term": "Make impacted-model queries answerable after …",
-            "definition": "Make impacted-model queries answerable after data bugs."
-          },
-          {
-            "term": "Store configs that fully specify rebuilds.",
-            "definition": "Store configs that fully specify rebuilds."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Tracks lineage to raw sources.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to lineage, provenance, and reproducibility."
-          }
-        ]
-      },
-      {
-        "id": "privacy-pii-and-retention-in-datasets",
-        "heading": "Privacy, PII, and retention in datasets",
-        "paragraphs": [
-          "Minimize PII in training sets; mask or hash when possible. Access-control datasets by sensitivity. Retention policies must cover derived artifacts (embeddings, caches). Deletion requests may require rebuilding versions. Differential privacy is a stronger guarantee for some releases—but not a default checkbox. Involve privacy review when user content enters training. Dataset SLOs need humans on call, or models will absorb silent decay. Dataset SLOs need humans on call, or models will absorb silent decay.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Treat derived embeddings as potentially sensitive.",
-          "• ACL sensitive datasets.",
-          "• Plan deletion/rebuild mechanics.",
-          "Production lens — Labeling workflows define the ceiling on model quality: Inter-annotator agreement, adjudication, active learning, and gold-standard hidden sets quantify label noise. Biased or rushed annotation propagates directly to production errors. Invest in tooling (Label Studio, Prodigy), clear guidelines, and stratified sampling so rare classes and edge cases receive adequate coverage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Treat derived embeddings as potentially sensi…",
-            "definition": "Treat derived embeddings as potentially sensitive."
-          },
-          {
-            "term": "ACL sensitive datasets.",
-            "definition": "ACL sensitive datasets."
-          },
-          {
-            "term": "Plan deletion/rebuild mechanics.",
-            "definition": "Plan deletion/rebuild mechanics."
-          }
-        ],
-        "workedExample": {
-          "title": "Mask PII fields in a frame",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import hashlib\nimport pandas as pd\n\ndef mask_email(email):\n    return hashlib.sha256(email.encode()).hexdigest()[:8]\n\ndf = pd.DataFrame({\"email\": [\"a@x.com\", \"b@y.com\"], \"label\":[0,1]})\ndf[\"email\"] = df[\"email\"].map(mask_email)\nprint(df)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Handles PII/retention for derived artifacts.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to privacy, pii, and retention in datasets."
-          }
-        ]
-      },
-      {
-        "id": "quality-metrics-and-dataset-slos",
-        "heading": "Quality metrics and dataset SLOs",
-        "paragraphs": [
-          "Publish dataset quality dashboards: label agreement, class balance, null rates, freshness, slice coverage. Define SLOs (\"train set for market X ready by 06:00 with agreement >= 0.7\"). Dataset owners—not only model owners—should be on call for quality regressions. This organizational pattern prevents models from absorbing silent data decay. Reproducibility graphs should let you answer which models used a bad raw dump within minutes. Reproducibility graphs should let you answer which models used a bad raw dump within minutes.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Give datasets owners and SLOs.",
-          "• Monitor quality continuously after publish.",
-          "• Block training when SLOs fail.",
-          "Production lens — Dataset versioning is as critical as model versioning: DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinHash, exact hash) and PII scrubbing pipelines prevent memorization and compliance violations."
-        ],
-        "keyTerms": [
-          {
-            "term": "Give datasets owners and SLOs.",
-            "definition": "Give datasets owners and SLOs."
-          },
-          {
-            "term": "Monitor quality continuously after publish.",
-            "definition": "Monitor quality continuously after publish."
-          },
-          {
-            "term": "Block training when SLOs fail.",
-            "definition": "Block training when SLOs fail."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Defines dataset quality SLOs and owners.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to quality metrics and dataset slos."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "tip",
+          body:
+            "For interviews, describe lineage as incident response infrastructure. It reduces guesswork when upstream data quality defects are found."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for dataset management and versioning.",
-          "Trap: Mutating 'latest.csv' without a new version ID. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No gold set for label QC. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Embeddings retaining PII without controls. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Models owned but datasets unowned. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "train-serving-skew",
+        heading: "Train-serving skew is a dataset management failure",
+        paragraphs: [
+          "Train-serving skew happens when the model sees one feature distribution or meaning during training and a different one during inference. Sometimes the cause is obvious, such as serving missing a column. More often it is subtle: training uses a warehouse join that includes late-arriving corrections, while serving uses a cache updated every ten minutes; training normalizes with a global mean, while serving recomputes from a small request batch; training encodes categories with a vocabulary that production did not deploy.",
+          "Dataset management reduces skew by tying training data to serving contracts. The same feature definitions, transformations, category maps, timestamp cutoffs, and default values should be versioned with the model. For online features, training sets should be built from historical feature values using point-in-time joins, not from a convenient full-history aggregation. For request features, the schema should specify types, units, nullable behavior, and valid ranges.",
+          "Monitoring closes the loop because some skew appears only after deployment. Compare online feature distributions with the training dataset version, track missing and default rates, and sample logged inference rows for offline recomputation. If offline recomputation of the same request produces a different feature vector, the problem is not model drift; it is a broken contract between dataset construction and serving."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Dataset management and versioning and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Mutating 'latest.csv' without a new version ID.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Dataset versioning is as critical as model versioning. DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinHash, exact hash) and PII scrubbing pipelines prevent memorization and compliance violations.",
-          "Labeling workflows define the ceiling on model quality. Inter-annotator agreement, adjudication, active learning, and gold-standard hidden sets quantify label noise. Biased or rushed annotation propagates directly to production errors. Invest in tooling (Label Studio, Prodigy), clear guidelines, and stratified sampling so rare classes and edge cases receive adequate coverage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Dataset versioning is as critical as model versioning",
-            "definition": "DVC, LakeFS, and Hugging Face datasets provide reproducible snapshots with hashes and metadata. Splits must be stable and documented—reshuffling leaks test information. For multimodal and LLM corpora, deduplication (MinH…"
+            term: "train-serving skew",
+            definition:
+              "A mismatch between feature values, definitions, distributions, or transformations used during training and those used during inference."
           },
           {
-            "term": "Labeling workflows define the ceiling on model quality",
-            "definition": "Inter-annotator agreement, adjudication, active learning, and gold-standard hidden sets quantify label noise. Biased or rushed annotation propagates directly to production errors. Invest in tooling (Label Studio, Prodigy…"
+            term: "feature contract",
+            definition:
+              "A specification for feature name, type, units, freshness, source, transformation, defaults, and owner."
+          },
+          {
+            term: "offline recomputation",
+            definition:
+              "Rebuilding production feature vectors from logged inputs to check consistency with serving behavior."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        checkYourself: [
+          {
+            prompt: "How can a feature be correct in both training and serving code but still skewed?",
+            reveal:
+              "The two paths may use different data cutoffs, freshness, vocabularies, imputation defaults, or source systems. Code correctness does not guarantee semantic equivalence."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "If production recomputes transformations from live request batches, it is probably changing the coordinate system the model learned during training."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach dataset management and versioning as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you version datasets for full reproducibility? | Design a labeling QC process for medical images. | How do deletion requests affect trained models?"
+        id: "pii-and-governance",
+        heading: "PII handling is part of the dataset lifecycle",
+        paragraphs: [
+          "ML datasets often contain direct identifiers, quasi-identifiers, behavioral traces, free-text fields, or labels that reveal sensitive facts. Dataset management must therefore track what personal data exists, why it is needed, who can access it, how long it is retained, and how it is removed. Privacy cannot be patched after a model is trained if the artifact or embeddings have already absorbed sensitive content.",
+          "Practical controls include classification, minimization, access grants, encryption, redaction, tokenization, aggregation, and audit logs. Free text deserves special care because names, emails, addresses, medical details, and secrets can appear in fields that look harmless. For LLM and embedding workflows, teams also need to decide whether source documents can be used for training, retrieval, evaluation, or logging. Those are different uses and may require different consent or retention rules.",
+          "Privacy controls should be recorded in the dataset version. A manifest might state that email addresses were hashed with a keyed function, raw text was redacted before embedding, rows from opted-out users were excluded, and the artifact expires after a set retention period. During audits or deletion requests, that metadata matters as much as the model metric. The dataset is not only a technical artifact; it is a governed record of allowed use."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Dataset management and versioning as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "PII",
+            definition:
+              "Personally identifiable information that can identify, contact, locate, or distinguish a person directly or indirectly."
+          },
+          {
+            term: "data minimization",
+            definition:
+              "Collecting and retaining only the personal data needed for a specific, justified purpose."
+          },
+          {
+            term: "retention policy",
+            definition:
+              "A rule defining how long data or derived artifacts are kept and when they must be deleted or reprocessed."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt: "Why should privacy state be versioned with a dataset?",
+            reveal:
+              "A future user must know whether an artifact includes sensitive data, opted-out users, redacted text, or restricted fields. Privacy state affects access, retention, reuse, and legal obligations."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "Embedding text does not automatically make sensitive data safe. Treat embeddings and model artifacts as derived data that may inherit governance requirements."
+        }
+      },
+      {
+        id: "reproducible-splits",
+        heading: "Reproducible splits protect evaluation from accidental optimism",
+        paragraphs: [
+          "A split is a scientific design decision. Random row splits are easy, but they can leak user history, time trends, session context, or near-duplicate examples across train and test. If production predicts future behavior, a time-based split is often more honest. If production sees new users, a group split by user is more honest. If labels are rare, stratification may be needed, but it should not override the main generalization boundary.",
+          "Reproducibility means storing the split assignment, not merely the method. Hash-based splits over stable entity ids are useful because new rows can be assigned consistently. Time cutoffs should be explicit and timezone-safe. For cross-validation, each fold must fit preprocessing only on its training portion. Hyperparameter tuning should not repeatedly peek at the final test set. These rules sound basic until a deadline pushes someone to reuse the test data as a scoreboard.",
+          "Evaluation datasets also age. A frozen test set is good for comparing model versions, but it may stop representing current traffic. Mature teams keep a stable benchmark for regression detection and add rolling or recent holdouts for distribution shift. The answer is not one perfect split; it is a documented evaluation portfolio where each split has a purpose and known limitations."
+        ],
+        keyTerms: [
+          {
+            term: "group split",
+            definition:
+              "A split that keeps all examples from the same entity, user, session, or group in one evaluation partition."
+          },
+          {
+            term: "time-based split",
+            definition:
+              "A split that trains on earlier data and evaluates on later data to mimic future prediction."
+          },
+          {
+            term: "holdout set",
+            definition:
+              "A reserved dataset used for unbiased evaluation after model selection or tuning."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt: "Why might a random split be misleading for churn prediction?",
+            reveal:
+              "Rows from the same customer or future events may appear in both train and test. The model can learn customer-specific history or time patterns that would not generalize to honest future scoring."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "State the production generalization question before choosing a split: new time, new user, new geography, new product, or new distribution."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Pins immutable dataset versions in training.",
-        "Measures labeling agreement and gold QC.",
-        "Tracks lineage to raw sources.",
-        "Handles PII/retention for derived artifacts.",
-        "Defines dataset quality SLOs and owners."
+    wrapUp: {
+      takeaways: [
+        "Dataset versions make model metrics reproducible and comparable.",
+        "Lineage connects source data, code, transforms, derived datasets, and models for audits and incidents.",
+        "Train-serving skew is often caused by mismatched feature definitions, cutoffs, transformations, or vocabularies.",
+        "PII controls belong in the dataset lifecycle and must be recorded with artifacts.",
+        "Reproducible splits should match the production generalization boundary, not just a random seed."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Hugging Face Datasets (Hugging Face) — https://huggingface.co/docs/datasets/index",
-        "Optional deeper reading: Datasheets for Datasets (arXiv) — https://arxiv.org/abs/1803.09010"
+      nextSteps: [
+        "Draft a dataset manifest for a churn model, including split policy and PII controls.",
+        "Explain how you would detect train-serving skew using logged inference rows.",
+        "Compare random, group, and time-based splits for a product recommendation dataset."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const dataEngineeringChapters = JSON.parse(JSON.stringify(chapters));
