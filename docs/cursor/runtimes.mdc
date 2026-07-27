@@ -26,6 +26,7 @@ Consumers: `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte`. Test-case parsing 
 - Worker: `static/ml-py-worker.js` (off-thread Pyodide)
 - Packages: numpy, pandas, matplotlib, scikit-learn
 - UI: `MLPracticeIDE.svelte`
+- Lesson / Learn-reader snippets: `LessonCodeSnippet.svelte` via shared `lessonPythonRunner.js` (same worker + packages; Run / Reset / stdout)
 
 ## Simulation (native JS)
 
