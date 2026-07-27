@@ -205,6 +205,41 @@ export function buildSearchEngineUrls(prompt) {
   }
 }
 
+/** Default coaching instructions prepended to Learn-reader Search with AI queries. */
+export const DEFAULT_LEARN_SELECTION_SYSTEM_PROMPT =
+  'You are a patient interview coach for system design, algorithms, and AI/ML. Explain selected study text clearly for a serious learner. Prefer precise definitions, intuition, one concrete example, common failure modes, and when the idea matters in practice or interviews. Avoid fluff, hype, and unsupported claims. If the selection is ambiguous, state assumptions briefly, then explain.'
+
+/**
+ * Build a System/User prompt for Learn chapter text selection → Search with AI.
+ * Mirrors the search-engine path used by LlmAssistantPanel so providers get coaching context.
+ *
+ * @param {string} selectedText
+ * @param {{ lessonTitle?: string, moduleTitle?: string }} [context]
+ */
+export function buildLearnSelectionSearchPrompt(selectedText, context = {}) {
+  const selection = String(selectedText ?? '').trim()
+  const lessonTitle = typeof context.lessonTitle === 'string' ? context.lessonTitle.trim() : ''
+  const moduleTitle = typeof context.moduleTitle === 'string' ? context.moduleTitle.trim() : ''
+
+  const contextLines = []
+  if (moduleTitle) contextLines.push(`Module: ${moduleTitle}`)
+  if (lessonTitle) contextLines.push(`Lesson / chapter: ${lessonTitle}`)
+
+  const userPrompt = [
+    contextLines.length ? contextLines.join('\n') : null,
+    'Explain the following selected study text for an interview learner.',
+    '',
+    'Selection:',
+    `"""${selection}"""`,
+    '',
+    'Cover, in order: (1) plain-language intuition, (2) precise definition, (3) a tiny concrete example, (4) common pitfalls or misconceptions, (5) why it matters in interviews or production.'
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return `System: ${DEFAULT_LEARN_SELECTION_SYSTEM_PROMPT}\nUser: ${userPrompt}`
+}
+
 /**
  * @param {{ role: string, content: string }[]} messages
  */

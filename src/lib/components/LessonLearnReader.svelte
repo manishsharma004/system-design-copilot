@@ -267,7 +267,11 @@
         </nav>
 
         <div class="learn-reader-content" bind:this={contentEl}>
-          <SelectionSearchPopup rootEl={contentEl} />
+          <SelectionSearchPopup
+            rootEl={contentEl}
+            lessonTitle={learnChapter?.title || lesson.title}
+            moduleTitle={moduleTitle}
+          />
 
           <article class="learn-reader-section" id="learn-premise">
             <p class="eyebrow">Premise</p>
