@@ -1,6 +1,7 @@
 <svelte:options runes={false} />
 <script>
   import { base } from '$app/paths';
+  import { browser } from '$app/environment';
   import { page } from '$app/stores';
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
@@ -23,11 +24,15 @@
   let learnQuerySeen = '';
 
   $: flow = getFlowBySlug(data.module.flowSlug);
-  $: learnQueryKey = `${data.lesson.id}:${$page.url.searchParams.get('learn') ?? ''}`;
-  $: if (learnQueryKey !== learnQuerySeen) {
-    learnQuerySeen = learnQueryKey;
-    if ($page.url.searchParams.get('learn') === '1') {
-      learnOpen = true;
+  // searchParams are unavailable during prerender; only read them in the browser.
+  $: if (browser) {
+    const learnParam = $page.url.searchParams.get('learn') ?? '';
+    const learnQueryKey = `${data.lesson.id}:${learnParam}`;
+    if (learnQueryKey !== learnQuerySeen) {
+      learnQuerySeen = learnQueryKey;
+      if (learnParam === '1') {
+        learnOpen = true;
+      }
     }
   }
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
