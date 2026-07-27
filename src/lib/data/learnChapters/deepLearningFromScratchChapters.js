@@ -1,957 +1,761 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const deepLearningFromScratchChapters = {
+const chapters = {
   "deep-learning-from-scratch/perceptron-and-mlp-numpy": {
-    "title": "Chapter: Perceptron and MLP with NumPy",
-    "readingTime": "60-75 min",
-    "premise": "Build a perceptron for linearly separable data, then train a two-layer MLP that can learn XOR. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Perceptron and MLP with NumPy",
+    readingTime: "70-85 min",
+    premise:
+      "A from-scratch neural network makes activations, losses, gradients, and parameter updates visible. This chapter builds from a single perceptron to a two-layer MLP using NumPy-level reasoning.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "From-scratch neural nets make model behavior less mysterious. You see exactly where activations, loss, gradients, and updates enter the training loop.",
-          "This chapter treats \"Perceptron and MLP with NumPy\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "perceptron-boundary",
+        heading: "A perceptron is a linear boundary with a hard decision",
+        paragraphs: [
+          "A perceptron computes a score by taking a dot product between input features and weights, adding a bias, and applying a threshold. In two dimensions, the equation `w1*x1 + w2*x2 + b = 0` is a line. Points on one side predict one class; points on the other side predict the other. The weights rotate the boundary, and the bias shifts it.",
+          "This is enough for linearly separable patterns such as AND or OR. It is not enough for XOR, where the positive examples occupy opposite corners of a square. No single straight line can separate those corners from the negatives. That limitation is representational, not a failure of optimization. Training longer cannot make a one-layer linear model express a nonlinearly separable pattern.",
+          "The perceptron is still worth implementing because it reveals the skeleton of neural networks. Inputs become scores, scores become predictions, predictions produce errors, and errors update parameters. Later networks replace the hard threshold with differentiable activations and stack multiple layers, but the basic habit of tracking shapes and parameter roles starts here."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "perceptron",
+            definition:
+              "A linear binary classifier that thresholds a weighted sum of input features."
+          },
+          {
+            term: "bias",
+            definition:
+              "A learned offset that shifts the decision boundary independently of input values."
+          },
+          {
+            term: "linear separability",
+            definition:
+              "The condition that classes can be separated by a line, plane, or hyperplane in feature space."
+          }
+        ],
+        workedExample: {
+          title: "AND gate with a hand-coded perceptron",
+          body:
+            "The weights add the two input bits, and the bias requires both bits to be one before the score crosses zero.",
+          code:
+            "import numpy as np\n\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\nw = np.array([1.0, 1.0])\nb = -1.5\nscores = X @ w + b\npred = (scores >= 0).astype(int)\nprint(scores)\nprint(pred)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why can a perceptron solve AND but not XOR?",
+            reveal:
+              "AND has a single linear boundary that separates the positive example from negatives. XOR requires two separated positive regions, which one linear boundary cannot express."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Draw the boundary before coding. If the geometry is impossible, more epochs will not fix the model family."
         }
       },
       {
-        "id": "a-perceptron-is-a-linear-decision-rule",
-        "heading": "A perceptron is a linear decision rule",
-        "paragraphs": [
-          "A perceptron computes z = w1*x1 + w2*x2 + b and applies a step function. If z >= 0, it predicts 1; otherwise it predicts 0. The weights set the boundary direction and the bias shifts it. For the AND gate, weights [1, 1] and bias -1.5 work: input [1, 1] gives z = 1 + 1 - 1.5 = 0.5, so the prediction is 1. Input [1, 0] gives z = 1 + 0 - 1.5 = -0.5, so the prediction is 0. Geometrically, the boundary is the line x1 + x2 - 1.5 = 0. Points on one side are positive. That is powerful for linearly separable tasks and impossible for patterns that need curved or disconnected regions.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Weights define the orientation of the separating line or hyperplane.",
-          "• Bias shifts the boundary without changing its orientation.",
-          "• A hard step activation gives binary predictions but no smooth gradient.",
-          "Production lens — Linear boundary limit: A perceptron computes y = step(w dot x + b), so its decision boundary is a hyperplane. In two dimensions, that boundary is a line. It can separate points where one class lies mostly above the line and the other below, but it cannot solve XOR because XOR needs two separated positive regions. This limitation is not a training failure; it is representational. No single linear boundary can assign (0,1) and (1,0) positive while assigning (0,0) and (1,1) negative.\n\nAn MLP adds hidden units that transform the input before the final linear decision. One hidden unit can represent a half-space; multiple units can combine half-spaces into more complex regions. Nonlinear activation is essential. If layer1 is xW1 and layer2 is hW2 with no nonlinearity, the composition is x(W1W2), still one linear map. ReLU, sigmoid, or tanh makes the network a learned feature composer rather than a deeper linear model."
+        id: "perceptron-training",
+        heading: "The perceptron update moves the boundary after mistakes",
+        paragraphs: [
+          "The perceptron training rule updates only on errors. If the target is 1 but the model predicts 0, the weights move toward the input vector so the score increases next time. If the target is 0 but the model predicts 1, the weights move away from the input vector so the score decreases. The bias update shifts the boundary even when an input vector has zeros.",
+          "The learning rate controls step size. Too small can require many passes; too large can bounce around. For linearly separable data, the perceptron convergence theorem says the algorithm will eventually find a separating boundary under suitable conditions. For nonseparable data, mistakes may never disappear because the model family cannot satisfy all examples at once.",
+          "Implementing the loop by hand teaches a useful debugging habit: print mistakes by epoch and inspect the final scores, not only the final class predictions. Scores show margin. A model that predicts correctly with tiny scores is less confident than one with large positive or negative margins. This intuition will later connect to logistic loss, hinge loss, and neural network logits."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Weights define the orientation of the",
-            "definition": "Weights define the orientation of the separating line or hyperplane."
+            term: "learning rate",
+            definition:
+              "A scalar controlling how large each parameter update is."
           },
           {
-            "term": "Bias shifts the boundary without changing",
-            "definition": "Bias shifts the boundary without changing its orientation."
+            term: "margin",
+            definition:
+              "The signed distance-like confidence of an example relative to a decision boundary."
           },
           {
-            "term": "A hard step activation gives binary",
-            "definition": "A hard step activation gives binary predictions but no smooth gradient."
+            term: "epoch",
+            definition:
+              "One complete pass over the training dataset."
           }
         ],
-        "workedExample": {
-          "title": "Predict AND with a hand-coded perceptron",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef predict(X, weights, bias):\n    return (X @ weights + bias >= 0).astype(int)\n\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\nweights = np.array([1.0, 1.0])\nbias = -1.5\nprint(\"scores:\", (X @ weights + bias).round(2))\nprint(\"predictions:\", predict(X, weights, bias))",
-          "language": "python"
+        workedExample: {
+          title: "Perceptron updates on AND",
+          body:
+            "The loop updates weights and bias only when the threshold prediction disagrees with the target.",
+          code:
+            "import numpy as np\n\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\ny = np.array([0, 0, 0, 1])\nw = np.zeros(2)\nb = 0.0\nlr = 0.2\nfor epoch in range(8):\n    mistakes = 0\n    for x, target in zip(X, y):\n        pred = int(x @ w + b >= 0)\n        err = target - pred\n        mistakes += int(err != 0)\n        w += lr * err * x\n        b += lr * err\n    print(epoch, w.round(2), round(b, 2), mistakes)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can implement a perceptron prediction and update rule.",
-            "reveal": "A perceptron computes y = step(w dot x + b), so its decision boundary is a hyperplane. In two dimensions, that boundary is a line. It can separate points where one class lies mostly above the line and the other below, but it cannot solve XOR because XOR needs two separated positive regions. This limitation is not a training failure; it is representational. No single linear boundary can assign (0,1) and (1,0) positive while assigning (0,0) and (1,1) negative.\n\nAn MLP adds hidden units that transform the input before the final linear decision. One hidden unit can represent a half-space; multiple units can combine half-spaces into more complex regions. Nonlinear activation is essential. If layer1 is xW1 and layer2 is hW2 with no nonlinearity, the composition is x(W1W2), still one linear map. ReLU, sigmoid, or tanh makes the network a learned feature composer rather than a deeper linear model."
-          }
-        ]
-      },
-      {
-        "id": "the-perceptron-update-is-targeted-correction",
-        "heading": "The perceptron update is targeted correction",
-        "paragraphs": [
-          "The training rule updates only when the prediction is wrong. For one example, error = target - prediction. Then w = w + learning_rate * error * x and b = b + learning_rate * error. Suppose weights start [0, 0], bias 0, learning rate 0.2, and the example is x=[1, 1], target=1. The score is 0, the step predicts 1, error is 0, and nothing changes. If the example is x=[0, 0], target=0, the score is 0, prediction is 1, error is -1, weights stay [0, 0] because x is zero, and bias becomes -0.2. That bias shift makes the all-zero case less likely to fire next time. Over many passes, mistakes push the boundary until separable data is classified correctly.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• The sign of the error decides whether the boundary moves toward or away from the example.",
-          "• The learning rate controls how large each correction is.",
-          "• For separable data, the perceptron convergence theorem says a solution will eventually be found.",
-          "Production lens — Shape calculus: From-scratch NumPy networks are mostly shape discipline. If X has shape (batch, input_dim), W1 has (input_dim, hidden_dim), and b1 has (hidden_dim,), then Z1 = X @ W1 + b1 has (batch, hidden_dim). A2 for classification might be (batch, num_classes). Gradients mirror parameters: dW1 has the same shape as W1, db1 has the same shape as b1, and dX has the same shape as X. Shape mismatches reveal algebra mistakes faster than staring at loss curves.\n\nBatching affects scale. If loss is averaged over batch size m, gradients should usually be divided by m so learning rate behavior does not change when batch size changes. Bias gradients sum over rows, not columns, because one bias value is shared across the batch for each hidden unit. Broadcasting can hide mistakes: adding b with shape (batch, 1) instead of (hidden_dim,) may run but mean the wrong thing. Write expected shapes beside equations while implementing."
-        ],
-        "keyTerms": [
-          {
-            "term": "The sign of the error decides",
-            "definition": "The sign of the error decides whether the boundary moves toward or away from the example."
-          },
-          {
-            "term": "The learning rate controls how large",
-            "definition": "The learning rate controls how large each correction is."
-          },
-          {
-            "term": "For separable data, the perceptron convergence",
-            "definition": "For separable data, the perceptron convergence theorem says a solution will eventually be found."
+            prompt: "What does the sign of `target - pred` decide?",
+            reveal:
+              "It decides whether the boundary should move so the score for that example increases or decreases on the next pass."
           }
         ],
-        "workedExample": {
-          "title": "Train a perceptron on AND",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\ny = np.array([0, 0, 0, 1])\nweights = np.zeros(2)\nbias = 0.0\nlr = 0.2\n\ndef step(z):\n    return 1 if z >= 0 else 0\n\nfor epoch in range(12):\n    mistakes = 0\n    for x, target in zip(X, y):\n        pred = step(x @ weights + bias)\n        error = target - pred\n        mistakes += int(error != 0)\n        weights += lr * error * x\n        bias += lr * error\n    if epoch in [0, 1, 11]:\n        print(epoch, \"weights\", weights.round(2), \"bias\", round(bias, 2), \"mistakes\", mistakes)\n\nprint(\"final predictions:\", np.array([step(x @ weights + bias) for x in X]))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain why XOR needs a hidden layer.",
-            "reveal": "From-scratch NumPy networks are mostly shape discipline. If X has shape (batch, input_dim), W1 has (input_dim, hidden_dim), and b1 has (hidden_dim,), then Z1 = X @ W1 + b1 has (batch, hidden_dim). A2 for classification might be (batch, num_classes). Gradients mirror parameters: dW1 has the same shape as W1, db1 has the same shape as b1, and dX has the same shape as X. Shape mismatches reveal algebra mistakes faster than staring at loss curves.\n\nBatching affects scale. If loss is averaged over batch size m, gradients should usually be divided by m so learning rate behavior does not change when batch size changes. Bias gradients sum over rows, not columns, because one bias value is shared across the batch for each hidden unit. Broadcasting can hide mistakes: adding b with shape (batch, 1) instead of (hidden_dim,) may run but mean the wrong thing. Write expected shapes beside equations while implementing."
-          }
-        ]
-      },
-      {
-        "id": "xor-proves-why-one-linear-boundary-is-not-enough",
-        "heading": "XOR proves why one linear boundary is not enough",
-        "paragraphs": [
-          "XOR outputs 1 for [0, 1] and [1, 0], but 0 for [0, 0] and [1, 1]. Try drawing one straight line that puts the two diagonal positive corners on one side and the two diagonal negative corners on the other. It cannot be done. Algebra shows the conflict. To classify [1, 0] positive, w1 + b >= 0. To classify [0, 1] positive, w2 + b >= 0. To classify [0, 0] negative, b < 0. Adding the first two inequalities gives w1 + w2 + 2b >= 0. But [1, 1] must be negative, so w1 + w2 + b < 0. Since b < 0, these inequalities fight each other. A hidden layer solves this by creating intermediate features such as \"x1 OR x2\" and \"x1 AND x2\", then combining them nonlinearly.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• A single perceptron can solve AND and OR but not XOR.",
-          "• Hidden units create learned features before the final decision.",
-          "• Nonlinear activations are what make stacked layers more expressive than one linear model.",
-          "Production lens — Initialization signal flow: Initialization controls whether signals survive depth before learning starts. If weights are too small, activations and gradients shrink toward zero layer by layer. If weights are too large, activations explode or saturate nonlinearities. Xavier initialization scales variance around 1 / fan_in or 2 / (fan_in + fan_out) for tanh-like activations. He initialization uses roughly 2 / fan_in for ReLU because about half the activations are zeroed. The goal is stable activation variance through forward and backward passes.\n\nA simple check is to pass random data through the network and inspect activation means and standard deviations per layer. If layer 1 has std 1.0 and layer 5 has std 0.001, gradients will struggle. If layer 5 has std 200, optimization may explode. Initialization does not replace learning rate tuning, normalization, or residual connections, but it sets the starting numerical regime. Deep learning is optimization under floating-point constraints, not just drawing a graph of neurons."
-        ],
-        "keyTerms": [
-          {
-            "term": "A single perceptron can solve AND",
-            "definition": "A single perceptron can solve AND and OR but not XOR."
-          },
-          {
-            "term": "Hidden units create learned features before",
-            "definition": "Hidden units create learned features before the final decision."
-          },
-          {
-            "term": "Nonlinear activations are what make stacked",
-            "definition": "Nonlinear activations are what make stacked layers more expressive than one linear model."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can trace MLP matrix shapes through a forward pass.",
-            "reveal": "Initialization controls whether signals survive depth before learning starts. If weights are too small, activations and gradients shrink toward zero layer by layer. If weights are too large, activations explode or saturate nonlinearities. Xavier initialization scales variance around 1 / fan_in or 2 / (fan_in + fan_out) for tanh-like activations. He initialization uses roughly 2 / fan_in for ReLU because about half the activations are zeroed. The goal is stable activation variance through forward and backward passes.\n\nA simple check is to pass random data through the network and inspect activation means and standard deviations per layer. If layer 1 has std 1.0 and layer 5 has std 0.001, gradients will struggle. If layer 5 has std 200, optimization may explode. Initialization does not replace learning rate tuning, normalization, or residual connections, but it sets the starting numerical regime. Deep learning is optimization under floating-point constraints, not just drawing a graph of neurons."
-          }
-        ]
-      },
-      {
-        "id": "an-mlp-composes-affine-maps-and-activations",
-        "heading": "An MLP composes affine maps and activations",
-        "paragraphs": [
-          "A two-layer MLP computes hidden = activation(X @ W1 + b1), then output = activation(hidden @ W2 + b2). Shapes are the first debugging tool. If X has shape (4, 2) for four XOR rows and two inputs, W1 can be (2, 4), making hidden shape (4, 4). W2 can be (4, 1), making output shape (4, 1). A tiny numeric forward pass: if x=[1, 0], one hidden unit has weights [3, -2] and bias -1, its pre-activation is 3*1 + -2*0 - 1 = 2. A sigmoid turns 2 into 0.881, so this hidden unit is strongly active for x1=1. Other hidden units can specialize in other regions, and the output layer combines them.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Affine maps choose directions; activations bend the decision surface.",
-          "• Random initialization breaks symmetry so hidden units can learn different features.",
-          "• Shape checks catch many bugs before you inspect the math.",
-          "Production lens — Softmax loss gradient: For multiclass classification, logits are raw scores with shape (batch, classes). Softmax converts logits to probabilities by exponentiating and normalizing, but implementation should subtract the row maximum first to avoid overflow. Cross-entropy loss for the correct class is negative log probability. The elegant result is that gradient with respect to logits is probabilities minus one-hot labels, divided by batch size when the loss is averaged.\n\nThis result simplifies backprop. If a sample has predicted probabilities [0.7, 0.2, 0.1] and true class 1, the gradient is [0.7, -0.8, 0.1]. The model is pushed to lower class 0, raise class 1, and slightly lower class 2. Large confident mistakes produce large gradients; correct confident predictions produce small gradients. Numerical stability matters: compute log-softmax or use shifted logits rather than taking log of values that may underflow to zero."
-        ],
-        "keyTerms": [
-          {
-            "term": "Affine maps choose directions; activations bend",
-            "definition": "Affine maps choose directions; activations bend the decision surface."
-          },
-          {
-            "term": "Random initialization breaks symmetry so hidden",
-            "definition": "Random initialization breaks symmetry so hidden units can learn different features."
-          },
-          {
-            "term": "Shape checks catch many bugs before",
-            "definition": "Shape checks catch many bugs before you inspect the math."
-          }
-        ],
-        "workedExample": {
-          "title": "Run an XOR MLP forward pass",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef sigmoid(z):\n    return 1 / (1 + np.exp(-z))\n\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\nW1 = np.array([[4.0, -4.0], [4.0, -4.0]])\nb1 = np.array([[-2.0, 6.0]])\nW2 = np.array([[5.0], [5.0]])\nb2 = np.array([[-7.0]])\n\nhidden = sigmoid(X @ W1 + b1)\nout = sigmoid(hidden @ W2 + b2)\nprint(\"hidden activations:\\n\", hidden.round(3))\nprint(\"output probabilities:\", out.round(3).ravel())",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can write a tiny NumPy MLP training loop with sigmoid activations.",
-            "reveal": "For multiclass classification, logits are raw scores with shape (batch, classes). Softmax converts logits to probabilities by exponentiating and normalizing, but implementation should subtract the row maximum first to avoid overflow. Cross-entropy loss for the correct class is negative log probability. The elegant result is that gradient with respect to logits is probabilities minus one-hot labels, divided by batch size when the loss is averaged.\n\nThis result simplifies backprop. If a sample has predicted probabilities [0.7, 0.2, 0.1] and true class 1, the gradient is [0.7, -0.8, 0.1]. The model is pushed to lower class 0, raise class 1, and slightly lower class 2. Large confident mistakes produce large gradients; correct confident predictions produce small gradients. Numerical stability matters: compute log-softmax or use shifted logits rather than taking log of values that may underflow to zero."
-          }
-        ]
-      },
-      {
-        "id": "training-repeats-forward-loss-backward-update",
-        "heading": "Training repeats forward, loss, backward, update",
-        "paragraphs": [
-          "A neural-network training loop is not magic. The forward pass makes predictions. The loss measures how wrong they are. Backpropagation computes how each parameter contributed to the loss. The optimizer updates parameters in the opposite direction of the gradient. For binary cross-entropy with sigmoid output, the final pre-activation gradient simplifies to output - target. If the target is 1 and the model outputs 0.2, the gradient is -0.8, so gradient descent increases the score. If the target is 0 and the model outputs 0.9, the gradient is +0.9, so gradient descent decreases the score. The learning rate controls whether those corrections are steady, too slow, or explosive.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Track loss over epochs before trusting final predictions.",
-          "• Initialize weights randomly; all-zero hidden weights keep units identical.",
-          "• Use small deterministic datasets like XOR to debug the loop before scaling.",
-          "Production lens — Linear boundary limit: A perceptron computes y = step(w dot x + b), so its decision boundary is a hyperplane. In two dimensions, that boundary is a line. It can separate points where one class lies mostly above the line and the other below, but it cannot solve XOR because XOR needs two separated positive regions. This limitation is not a training failure; it is representational. No single linear boundary can assign (0,1) and (1,0) positive while assigning (0,0) and (1,1) negative.\n\nAn MLP adds hidden units that transform the input before the final linear decision. One hidden unit can represent a half-space; multiple units can combine half-spaces into more complex regions. Nonlinear activation is essential. If layer1 is xW1 and layer2 is hW2 with no nonlinearity, the composition is x(W1W2), still one linear map. ReLU, sigmoid, or tanh makes the network a learned feature composer rather than a deeper linear model."
-        ],
-        "keyTerms": [
-          {
-            "term": "Track loss over epochs before trusting",
-            "definition": "Track loss over epochs before trusting final predictions."
-          },
-          {
-            "term": "Initialize weights randomly; all-zero hidden …",
-            "definition": "Initialize weights randomly; all-zero hidden weights keep units identical."
-          },
-          {
-            "term": "Use small deterministic datasets like XOR",
-            "definition": "Use small deterministic datasets like XOR to debug the loop before scaling."
-          }
-        ],
-        "workedExample": {
-          "title": "Train a sigmoid MLP on XOR",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nrng = np.random.default_rng(3)\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\ny = np.array([[0], [1], [1], [0]], dtype=float)\nW1 = rng.normal(0, 1.0, size=(2, 4))\nb1 = np.zeros((1, 4))\nW2 = rng.normal(0, 1.0, size=(4, 1))\nb2 = np.zeros((1, 1))\nlr = 1.0\n\ndef sigmoid(z):\n    return 1 / (1 + np.exp(-z))\n\nfor epoch in range(5000):\n    h = sigmoid(X @ W1 + b1)\n    out = sigmoid(h @ W2 + b2)\n    dz2 = out - y\n    dW2 = h.T @ dz2 / len(X)\n    db2 = dz2.mean(axis=0, keepdims=True)\n    dz1 = (dz2 @ W2.T) * h * (1 - h)\n    dW1 = X.T @ dz1 / len(X)\n    db1 = dz1.mean(axis=0, keepdims=True)\n    W2 -= lr * dW2; b2 -= lr * db2\n    W1 -= lr * dW1; b1 -= lr * db1\n\nout = sigmoid(sigmoid(X @ W1 + b1) @ W2 + b2)\nprint(\"probabilities:\", out.round(3).ravel())\nprint(\"predictions:\", (out >= 0.5).astype(int).ravel())",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can debug stalled, exploding, or overfitting neural-network training.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to training repeats forward, loss, backward, update."
-          }
-        ]
-      },
-      {
-        "id": "evaluation-and-failure-modes-start-with-tiny-signals",
-        "heading": "Evaluation and failure modes start with tiny signals",
-        "paragraphs": [
-          "From-scratch networks fail in recognizable ways. If loss does not move at all, check that gradients are nonzero, parameters update, and activation derivatives are connected to the right cached values. If loss becomes NaN, the learning rate may be too high or exponentials may overflow. If every hidden unit has the same activation, initialization may be symmetric. If training accuracy is perfect and validation is poor, the network has too much capacity for the data or the split is leaking. Evaluation for a tiny MLP still follows supervised-learning rules: hold out data when possible, inspect train and validation curves, compare to a simpler baseline, and make sure the metric matches the task.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Print loss, gradient norms, and prediction ranges while debugging.",
-          "• Reduce learning rate when updates overshoot or loss becomes NaN.",
-          "• Compare against linear baselines to verify that the neural net earns its complexity.",
-          "Production lens — Shape calculus: From-scratch NumPy networks are mostly shape discipline. If X has shape (batch, input_dim), W1 has (input_dim, hidden_dim), and b1 has (hidden_dim,), then Z1 = X @ W1 + b1 has (batch, hidden_dim). A2 for classification might be (batch, num_classes). Gradients mirror parameters: dW1 has the same shape as W1, db1 has the same shape as b1, and dX has the same shape as X. Shape mismatches reveal algebra mistakes faster than staring at loss curves.\n\nBatching affects scale. If loss is averaged over batch size m, gradients should usually be divided by m so learning rate behavior does not change when batch size changes. Bias gradients sum over rows, not columns, because one bias value is shared across the batch for each hidden unit. Broadcasting can hide mistakes: adding b with shape (batch, 1) instead of (hidden_dim,) may run but mean the wrong thing. Write expected shapes beside equations while implementing."
-        ],
-        "keyTerms": [
-          {
-            "term": "Print loss, gradient norms, and prediction",
-            "definition": "Print loss, gradient norms, and prediction ranges while debugging."
-          },
-          {
-            "term": "Reduce learning rate when updates overshoot",
-            "definition": "Reduce learning rate when updates overshoot or loss becomes NaN."
-          },
-          {
-            "term": "Compare against linear baselines to verify",
-            "definition": "Compare against linear baselines to verify that the neural net earns its complexity."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "interview",
+          body:
+            "Describe the perceptron update geometrically: mistakes push the separating hyperplane toward a better orientation and offset."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for perceptron and mlp with numpy.",
-          "Trap: Expecting a perceptron to solve non-linearly separable data. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Initializing all neural-network weights to zero. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Changing learning rate without checking the loss curve. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Mixing up matrix shapes and silently relying on unintended broadcasting. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Judging a neural network without comparing a simpler baseline. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "hidden-layer",
+        heading: "A hidden layer learns intermediate features",
+        paragraphs: [
+          "A multilayer perceptron adds hidden units between the input and output. Each hidden unit computes its own affine score and passes it through a nonlinear activation. The final layer combines those activated features. This turns the model from one boundary into a composition of learned features and a decision rule.",
+          "Nonlinearity is essential. If the first layer computes `X @ W1` and the second computes `H @ W2` with no activation, the composition is `X @ (W1 @ W2)`, which is still a single linear map. ReLU, tanh, sigmoid, and other activations break that collapse. They let multiple layers carve input space into richer regions.",
+          "For XOR, hidden units can represent useful subconditions such as `x1 or x2` and `not both`. The final layer then combines them. In larger problems, the hidden units are not usually named so neatly, but the principle remains. The network learns a representation that makes the final prediction easier."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+        keyTerms: [
+          {
+            term: "hidden layer",
+            definition:
+              "A layer between input and output that learns intermediate representations."
+          },
+          {
+            term: "activation",
+            definition:
+              "A nonlinear function applied to layer scores so stacked layers can express nonlinear functions."
+          },
+          {
+            term: "ReLU",
+            definition:
+              "The rectified linear unit activation, `max(0, x)`, commonly used in neural networks."
+          }
+        ],
+        workedExample: {
+          title: "Forward pass through one hidden layer",
+          body:
+            "The hidden matrix has one row per example and one column per hidden unit; the output layer then reads those learned features.",
+          code:
+            "import numpy as np\n\nrng = np.random.default_rng(1)\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)\nW1 = rng.normal(scale=0.5, size=(2, 4))\nb1 = np.zeros(4)\nW2 = rng.normal(scale=0.5, size=(4, 1))\nb2 = np.zeros(1)\nH = np.maximum(0, X @ W1 + b1)\nlogits = H @ W2 + b2\nprint(H.shape, logits.shape)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Pick the most dangerous pitfall for Perceptron and MLP with NumPy and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Expecting a perceptron to solve non-linearly separable data.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Linear boundary limit. A perceptron computes y = step(w dot x + b), so its decision boundary is a hyperplane. In two dimensions, that boundary is a line. It can separate points where one class lies mostly above the line and the other below, but it cannot solve XOR because XOR needs two separated positive regions. This limitation is not a training failure; it is representational. No single linear boundary can assign (0,1) and (1,0) positive while assigning (0,0) and (1,1) negative.\n\nAn MLP adds hidden units that transform the input before the final linear decision. One hidden unit can represent a half-space; multiple units can combine half-spaces into more complex regions. Nonlinear activation is essential. If layer1 is xW1 and layer2 is hW2 with no nonlinearity, the composition is x(W1W2), still one linear map. ReLU, sigmoid, or tanh makes the network a learned feature composer rather than a deeper linear model.",
-          "Shape calculus. From-scratch NumPy networks are mostly shape discipline. If X has shape (batch, input_dim), W1 has (input_dim, hidden_dim), and b1 has (hidden_dim,), then Z1 = X @ W1 + b1 has (batch, hidden_dim). A2 for classification might be (batch, num_classes). Gradients mirror parameters: dW1 has the same shape as W1, db1 has the same shape as b1, and dX has the same shape as X. Shape mismatches reveal algebra mistakes faster than staring at loss curves.\n\nBatching affects scale. If loss is averaged over batch size m, gradients should usually be divided by m so learning rate behavior does not change when batch size changes. Bias gradients sum over rows, not columns, because one bias value is shared across the batch for each hidden unit. Broadcasting can hide mistakes: adding b with shape (batch, 1) instead of (hidden_dim,) may run but mean the wrong thing. Write expected shapes beside equations while implementing.",
-          "Initialization signal flow. Initialization controls whether signals survive depth before learning starts. If weights are too small, activations and gradients shrink toward zero layer by layer. If weights are too large, activations explode or saturate nonlinearities. Xavier initialization scales variance around 1 / fan_in or 2 / (fan_in + fan_out) for tanh-like activations. He initialization uses roughly 2 / fan_in for ReLU because about half the activations are zeroed. The goal is stable activation variance through forward and backward passes.\n\nA simple check is to pass random data through the network and inspect activation means and standard deviations per layer. If layer 1 has std 1.0 and layer 5 has std 0.001, gradients will struggle. If layer 5 has std 200, optimization may explode. Initialization does not replace learning rate tuning, normalization, or residual connections, but it sets the starting numerical regime. Deep learning is optimization under floating-point constraints, not just drawing a graph of neurons.",
-          "Softmax loss gradient. For multiclass classification, logits are raw scores with shape (batch, classes). Softmax converts logits to probabilities by exponentiating and normalizing, but implementation should subtract the row maximum first to avoid overflow. Cross-entropy loss for the correct class is negative log probability. The elegant result is that gradient with respect to logits is probabilities minus one-hot labels, divided by batch size when the loss is averaged.\n\nThis result simplifies backprop. If a sample has predicted probabilities [0.7, 0.2, 0.1] and true class 1, the gradient is [0.7, -0.8, 0.1]. The model is pushed to lower class 0, raise class 1, and slightly lower class 2. Large confident mistakes produce large gradients; correct confident predictions produce small gradients. Numerical stability matters: compute log-softmax or use shifted logits rather than taking log of values that may underflow to zero."
-        ],
-        "keyTerms": [
-          {
-            "term": "Linear boundary limit",
-            "definition": "A perceptron computes y = step(w dot x + b), so its decision boundary is a hyperplane. In two dimensions, that boundary is a line. It can separate points where one class lies mostly above the line and the other below, bu…"
-          },
-          {
-            "term": "Shape calculus",
-            "definition": "From-scratch NumPy networks are mostly shape discipline. If X has shape (batch, input_dim), W1 has (input_dim, hidden_dim), and b1 has (hidden_dim,), then Z1 = X @ W1 + b1 has (batch, hidden_dim). A2 for classification m…"
-          },
-          {
-            "term": "Initialization signal flow",
-            "definition": "Initialization controls whether signals survive depth before learning starts. If weights are too small, activations and gradients shrink toward zero layer by layer. If weights are too large, activations explode or satura…"
+            prompt: "Why does stacking linear layers without activation not help?",
+            reveal:
+              "The product of linear maps is still a linear map, so the network collapses to one equivalent linear layer."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        callout: {
+          tone: "tip",
+          body:
+            "Shape-check every layer: `(batch, input_dim) @ (input_dim, hidden_dim)` should produce `(batch, hidden_dim)`."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach perceptron and mlp with numpy as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Why can a perceptron learn AND but not XOR? | What role does a hidden layer play geometrically? | How would you debug a tiny network whose loss never changes?"
+        id: "loss-and-gradients",
+        heading: "Loss turns predictions into a trainable signal",
+        paragraphs: [
+          "A hard threshold is not convenient for gradient-based training because a tiny parameter change usually does not change the output. MLPs commonly train with differentiable losses. For binary classification, logits can pass through a sigmoid and use binary cross-entropy. The loss is high when the model assigns low probability to the true class and low when it assigns high probability.",
+          "Gradient descent asks how each parameter should change to reduce loss. The derivative of the loss with respect to a weight says the local slope: positive means increasing that weight raises loss, negative means increasing it lowers loss. The update subtracts learning rate times gradient. This local rule, repeated many times, can fit complex nonlinear functions.",
+          "Numerical stability matters even in toy NumPy code. Sigmoid can overflow for large negative logits if implemented naively, and log probabilities can hit `log(0)` if clipped poorly. A small lab should still use stable formulas where possible. Good habits formed in tiny examples transfer directly to larger frameworks."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Perceptron and MLP with NumPy as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "logit",
+            definition:
+              "A raw model score before a sigmoid or softmax converts it into a probability-like value."
+          },
+          {
+            term: "binary cross-entropy",
+            definition:
+              "A loss for binary classification that penalizes confident wrong probabilities."
+          },
+          {
+            term: "gradient descent",
+            definition:
+              "An optimization method that updates parameters in the direction that locally reduces loss."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        workedExample: {
+          title: "Binary cross-entropy from logits",
+          body:
+            "The stable expression avoids explicitly computing `log(sigmoid(z))` for large logits.",
+          code:
+            "import numpy as np\n\nz = np.array([-3.0, 0.0, 3.0])\ny = np.array([0.0, 1.0, 1.0])\nloss = np.maximum(z, 0) - z * y + np.log1p(np.exp(-np.abs(z)))\nprint(loss.round(4))\nprint('mean loss:', loss.mean().round(4))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why train on logits instead of thresholded predictions?",
+            reveal:
+              "Logits provide a smooth signal for probabilities and gradients. Thresholded predictions are mostly flat and do not reveal how to adjust parameters."
+          }
+        ],
+        callout: {
+          tone: "warning",
+          body:
+            "If loss is `nan`, inspect logits, exponentials, divisions, and learning rate before assuming the model architecture is wrong."
+        }
+      },
+      {
+        id: "training-loop",
+        heading: "A small MLP training loop is a shape ledger",
+        paragraphs: [
+          "The full loop has a rhythm: initialize parameters, run a forward pass, compute loss, compute gradients, update parameters, and repeat. In NumPy, there is no autograd safety net. That is useful for learning because every intermediate has a visible shape. The gradient of `W1` must match `W1`, the gradient of `b1` must match `b1`, and the batch dimension should disappear only where you average or sum over examples.",
+          "Initialization sets the numerical regime. If weights are too small, hidden activations can become nearly identical and gradients weak. If weights are too large, activations and logits can explode. ReLU networks often use a scale related to `sqrt(2 / fan_in)`, while tanh networks often use Xavier-style scaling. The point is to keep signal variance reasonable through layers.",
+          "A successful XOR MLP is not impressive because XOR is large; it is impressive because every neural-network concept appears in miniature. Nonlinear representation solves the geometry, loss supplies gradients, backprop computes parameter responsibility, and the optimizer improves the boundary. Once you can narrate that tiny loop, framework code becomes less opaque."
+        ],
+        keyTerms: [
+          {
+            term: "forward pass",
+            definition:
+              "Computing layer activations and predictions from inputs using current parameters."
+          },
+          {
+            term: "backward pass",
+            definition:
+              "Computing gradients of loss with respect to intermediate values and parameters."
+          },
+          {
+            term: "fan-in",
+            definition:
+              "The number of input connections to a unit or layer, used in initialization scaling."
+          }
+        ],
+        workedExample: {
+          title: "Initialize a ReLU hidden layer",
+          body:
+            "The scale uses fan-in so activations start in a reasonable range before training.",
+          code:
+            "import numpy as np\n\nrng = np.random.default_rng(3)\nfan_in, hidden = 2, 8\nW1 = rng.normal(0, np.sqrt(2 / fan_in), size=(fan_in, hidden))\nX = rng.normal(size=(16, fan_in))\nH = np.maximum(0, X @ W1)\nprint(W1.std().round(3), H.mean().round(3), H.std().round(3))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "What is the fastest way to catch many from-scratch MLP bugs?",
+            reveal:
+              "Write expected shapes beside every forward value and gradient. Shape mismatches expose transpose, reduction, and broadcasting errors early."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Use XOR as a compact story: one perceptron fails by geometry; a nonlinear hidden layer creates features that make the final decision linear."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can implement a perceptron prediction and update rule.",
-        "Can explain why XOR needs a hidden layer.",
-        "Can trace MLP matrix shapes through a forward pass.",
-        "Can write a tiny NumPy MLP training loop with sigmoid activations.",
-        "Can debug stalled, exploding, or overfitting neural-network training."
+    wrapUp: {
+      takeaways: [
+        "A perceptron is a linear decision boundary with a threshold.",
+        "Perceptron updates move weights and bias only after mistakes.",
+        "Hidden layers plus nonlinear activations let MLPs represent nonlinear patterns such as XOR.",
+        "Differentiable losses provide trainable gradients where hard thresholds do not.",
+        "From-scratch NumPy networks are mostly careful shape tracking and stable numerical habits."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Deep Learning (Goodfellow, Bengio, Courville) — https://www.deeplearningbook.org/",
-        "Optional deeper reading: Neural Networks and Deep Learning (Michael Nielsen) — https://neuralnetworksanddeeplearning.com/"
+      nextSteps: [
+        "Train the perceptron update on AND and watch how mistakes decrease.",
+        "Implement a two-layer MLP forward pass and print every intermediate shape.",
+        "Explain why removing ReLU from the MLP collapses it into a linear model."
       ]
     }
   },
   "deep-learning-from-scratch/backpropagation-by-hand": {
-    "title": "Chapter: Backpropagation by hand",
-    "readingTime": "60-75 min",
-    "premise": "Implement forward and backward passes for a tiny network and verify gradients numerically. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Backpropagation by hand",
+    readingTime: "70-85 min",
+    premise:
+      "Backpropagation is the chain rule organized over a computation graph. This chapter builds intuition for local derivatives, vector-Jacobian products, broadcasting, gradient checks, and update discipline.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Backpropagation is the chain rule organized over a computation graph. Gradient checks help you trust the math before scaling to larger models.",
-          "This chapter treats \"Backpropagation by hand\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "chain-rule-graph",
+        heading: "Backpropagation is bookkeeping for the chain rule",
+        paragraphs: [
+          "Every neural network forward pass can be seen as a computation graph. Inputs and parameters flow through operations such as matrix multiply, add, activation, loss, and reduction. Backpropagation walks that graph backward, multiplying local derivatives so each parameter receives responsibility for the final loss.",
+          "The important idea is locality. An operation does not need to know the whole model. It needs its input values and the gradient arriving from its output. A ReLU node needs to know which inputs were positive. A matrix multiply node needs the left and right operands. By composing these local rules, the network computes gradients for millions or billions of parameters.",
+          "Hand backprop is not about replacing autograd in production. It is about knowing what autograd is doing well enough to debug it. When loss does not fall, gradients are zero, shapes mismatch, or a custom layer behaves strangely, chain-rule literacy tells you where to inspect."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "computation graph",
+            definition:
+              "A graph of operations and values that produced a result such as loss."
+          },
+          {
+            term: "local derivative",
+            definition:
+              "The derivative of one operation's output with respect to its direct input."
+          },
+          {
+            term: "upstream gradient",
+            definition:
+              "The gradient arriving at a node from later operations in the computation graph."
+          }
+        ],
+        workedExample: {
+          title: "Scalar chain rule",
+          body:
+            "For `y = (wx + b)^2`, the backward pass multiplies the local derivative of the square by derivatives of the affine score.",
+          code:
+            "x, w, b = 3.0, 2.0, -1.0\nz = w * x + b\ny = z ** 2\ndy_dz = 2 * z\ndy_dw = dy_dz * x\ndy_db = dy_dz * 1.0\nprint(y, dy_dw, dy_db)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why can each operation implement a local backward rule?",
+            reveal:
+              "The chain rule lets each node multiply the upstream gradient by its local derivative. Global gradients emerge from composing local responsibilities."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Cache forward values needed by backward rules. Recomputing or forgetting them is a common source of hand-backprop bugs."
         }
       },
       {
-        "id": "backpropagation-is-bookkeeping-for-the-chain-rule",
-        "heading": "Backpropagation is bookkeeping for the chain rule",
-        "paragraphs": [
-          "The chain rule says that if loss depends on z and z depends on w, then dloss/dw = dloss/dz * dz/dw. Neural networks are large compositions of simple operations, so backpropagation stores forward values and walks backward multiplying local derivatives by upstream gradients. A scalar example: x=3, w=2, b=-1, z=w*x+b=5, loss=z^2=25. The local derivative dloss/dz is 2z=10. Since dz/dw=x=3, dloss/dw=30. Since dz/db=1, dloss/db=10. One gradient descent step with lr=0.1 gives w=2-3= -1 and b=-1-1=-2. That step is intentionally huge because the learning rate is huge for this toy; the direction is the point.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Each node receives an upstream gradient and multiplies by its local derivative.",
-          "• Forward-pass caches are required because derivatives often use intermediate values.",
-          "• Gradient descent subtracts learning_rate * gradient from each parameter.",
-          "Production lens — Adjoint accumulation: Backpropagation is dynamic programming over the chain rule. Each node in a computation graph stores its forward value and receives an upstream gradient, often called an adjoint, representing how the final loss changes with that node. The node multiplies by local derivatives and passes contributions to its inputs. If a value feeds multiple downstream nodes, gradients add. For z = x*y + x, dz/dx receives y from the multiply path and 1 from the add path, so total derivative is y + 1.\n\nThe efficiency comes from reusing downstream derivatives. Naively differentiating a million parameters independently would repeat the same suffix computations many times. Backprop visits each operation once in reverse topological order, using cached forward values. Matrix operations batch this work: dW = X.T @ dZ accumulates contributions from every example. The algorithm is not a mysterious neural-network trick; it is the chain rule organized to avoid repeated work on a directed acyclic graph."
+        id: "matrix-gradients",
+        heading: "Matrix gradients mirror parameter shapes",
+        paragraphs: [
+          "For a linear layer, `Z = X @ W + b`. If `X` has shape `(batch, input_dim)` and `W` has `(input_dim, output_dim)`, then `Z` has `(batch, output_dim)`. During backprop, the gradient `dZ` has the same shape as `Z`. The weight gradient is `X.T @ dZ`, which produces `(input_dim, output_dim)`, exactly matching `W`.",
+          "The input gradient is `dZ @ W.T`, matching `X`. The bias gradient sums `dZ` over the batch dimension because the same bias vector is broadcast to every row. If the loss averages over the batch, gradients should include the same averaging convention. Otherwise changing batch size changes gradient scale and learning-rate behavior.",
+          "These shape facts are more reliable than memorized formulas. When deriving a layer, write the forward shapes and force each gradient to match the object it updates. If `dW` does not have the same shape as `W`, the algebra is wrong. If `db` has a batch dimension, you forgot to reduce over examples."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Each node receives an upstream gradient",
-            "definition": "Each node receives an upstream gradient and multiplies by its local derivative."
+            term: "broadcasting",
+            definition:
+              "Automatic expansion of smaller arrays across compatible dimensions during vectorized operations."
           },
           {
-            "term": "Forward-pass caches are required because deri…",
-            "definition": "Forward-pass caches are required because derivatives often use intermediate values."
+            term: "parameter gradient",
+            definition:
+              "The derivative of loss with respect to a trainable parameter, matching that parameter's shape."
           },
           {
-            "term": "Gradient descent subtracts learning_rate * gr…",
-            "definition": "Gradient descent subtracts learning_rate * gradient from each parameter."
+            term: "batch dimension",
+            definition:
+              "The axis indexing examples processed together in one vectorized pass."
           }
         ],
-        "workedExample": {
-          "title": "Scalar chain rule with finite difference check",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "x = 3.0\nw = 2.0\nb = -1.0\n\ndef loss_fn(w_value):\n    z = w_value * x + b\n    return z ** 2\n\nz = w * x + b\nloss = z ** 2\nanalytic = 2 * z * x\neps = 1e-5\nnumeric = (loss_fn(w + eps) - loss_fn(w - eps)) / (2 * eps)\nprint(\"loss:\", loss)\nprint(\"analytic dloss/dw:\", analytic)\nprint(\"numeric dloss/dw:\", round(numeric, 6))",
-          "language": "python"
+        workedExample: {
+          title: "Linear layer backward shapes",
+          body:
+            "The printed shapes should match the forward objects: `dW` matches `W`, `db` matches `b`, and `dX` matches `X`.",
+          code:
+            "import numpy as np\n\nX = np.ones((5, 3))\nW = np.ones((3, 2))\nb = np.zeros(2)\ndZ = np.ones((5, 2)) / 5\n\ndW = X.T @ dZ\ndb = dZ.sum(axis=0)\ndX = dZ @ W.T\nprint(dW.shape, db.shape, dX.shape)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can compute scalar chain-rule derivatives by hand.",
-            "reveal": "Backpropagation is dynamic programming over the chain rule. Each node in a computation graph stores its forward value and receives an upstream gradient, often called an adjoint, representing how the final loss changes with that node. The node multiplies by local derivatives and passes contributions to its inputs. If a value feeds multiple downstream nodes, gradients add. For z = x*y + x, dz/dx receives y from the multiply path and 1 from the add path, so total derivative is y + 1.\n\nThe efficiency comes from reusing downstream derivatives. Naively differentiating a million parameters independently would repeat the same suffix computations many times. Backprop visits each operation once in reverse topological order, using cached forward values. Matrix operations batch this work: dW = X.T @ dZ accumulates contributions from every example. The algorithm is not a mysterious neural-network trick; it is the chain rule organized to avoid repeated work on a directed acyclic graph."
-          }
-        ]
-      },
-      {
-        "id": "forward-pass-caches-the-values-backward-pass-needs",
-        "heading": "Forward pass caches the values backward pass needs",
-        "paragraphs": [
-          "For a dense layer, z = X @ W + b and h = activation(z). The backward pass for the activation needs z or h. ReLU needs to know where z > 0. Sigmoid needs h because derivative is h*(1-h). The dense-layer weight gradient needs X, because each weight connects one input feature to one output unit. If X has shape (batch=6, features=3), W has shape (3, hidden=4), and upstream gradient dz has shape (6, 4), then dW = X.T @ dz has shape (3, 4), exactly matching W. db is dz summed or averaged over the batch, shape (1, 4). Shape matching is not a side detail; it is a correctness invariant.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Cache pre-activations and activations during forward pass.",
-          "• The gradient for a parameter should have the same shape as that parameter.",
-          "• Batch averaging keeps update magnitude comparable across batch sizes.",
-          "Production lens — Local derivative library: From-scratch backprop becomes manageable when each operation has a local derivative rule. Addition sends the upstream gradient to both inputs, with broadcasting reductions when shapes differ. Multiplication sends upstream * other_input to each side. Matrix multiply Y = X @ W gives dX = dY @ W.T and dW = X.T @ dY. ReLU passes upstream where pre-activation was positive and zeroes it where negative. Sigmoid derivative is sigmoid(x) * (1 - sigmoid(x)).\n\nComplex networks are compositions of these small rules. For a dense layer Z = X @ W + b, cache X and W. During backward, compute dW, db, and dX. For batch normalization, convolution, or attention, the local rule is longer but the same principle holds: upstream gradient in, parameter gradients and input gradients out. Keeping a table of local derivatives and expected shapes lets you debug one operation at a time rather than re-deriving the entire network for every bug."
-        ],
-        "keyTerms": [
-          {
-            "term": "Cache pre-activations and activations during …",
-            "definition": "Cache pre-activations and activations during forward pass."
-          },
-          {
-            "term": "The gradient for a parameter should",
-            "definition": "The gradient for a parameter should have the same shape as that parameter."
-          },
-          {
-            "term": "Batch averaging keeps update magnitude compar…",
-            "definition": "Batch averaging keeps update magnitude comparable across batch sizes."
+            prompt: "Why does `db` sum over rows?",
+            reveal:
+              "One bias value is shared across all examples for each output unit, so each row contributes to that same bias parameter."
           }
         ],
-        "workedExample": {
-          "title": "Check dense-layer gradient shapes",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nrng = np.random.default_rng(1)\nX = rng.normal(size=(6, 3))\nW = rng.normal(size=(3, 4))\nb = np.zeros((1, 4))\nz = X @ W + b\nh = np.maximum(0, z)\nupstream = rng.normal(size=h.shape)\ndz = upstream * (z > 0)\ndW = X.T @ dz / len(X)\ndb = dz.mean(axis=0, keepdims=True)\nprint(\"z shape:\", z.shape)\nprint(\"dW shape:\", dW.shape, \"db shape:\", db.shape)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can cache forward-pass intermediates for backward use.",
-            "reveal": "From-scratch backprop becomes manageable when each operation has a local derivative rule. Addition sends the upstream gradient to both inputs, with broadcasting reductions when shapes differ. Multiplication sends upstream * other_input to each side. Matrix multiply Y = X @ W gives dX = dY @ W.T and dW = X.T @ dY. ReLU passes upstream where pre-activation was positive and zeroes it where negative. Sigmoid derivative is sigmoid(x) * (1 - sigmoid(x)).\n\nComplex networks are compositions of these small rules. For a dense layer Z = X @ W + b, cache X and W. During backward, compute dW, db, and dX. For batch normalization, convolution, or attention, the local rule is longer but the same principle holds: upstream gradient in, parameter gradients and input gradients out. Keeping a table of local derivatives and expected shapes lets you debug one operation at a time rather than re-deriving the entire network for every bug."
-          }
-        ]
-      },
-      {
-        "id": "loss-derivatives-start-the-backward-flow",
-        "heading": "Loss derivatives start the backward flow",
-        "paragraphs": [
-          "Backpropagation starts at the loss. For mean squared error, loss = mean((pred - y)^2), so dloss/dpred = 2*(pred-y)/n. If pred=[2, 4] and y=[1, 7], errors are [1, -3], squared errors are [1, 9], and loss is 5. The derivative is [2*1/2, 2*(-3)/2] = [1, -3]. That means increasing the first prediction increases loss, while increasing the second prediction decreases loss because it is too low. For sigmoid plus binary cross-entropy, the derivative with respect to the output logit simplifies to probability - target, which is why many small MLP examples use dz = out - y at the final layer.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• MSE gradients point from target to prediction and scale with error size.",
-          "• Binary cross-entropy with sigmoid has a convenient output-layer shortcut.",
-          "• The loss derivative determines the first upstream gradient sent into the network.",
-          "Production lens — Gradient checking: Gradient checking compares analytical backprop with finite differences on a tiny problem. For parameter theta_i, estimate derivative as (L(theta_i + epsilon) - L(theta_i - epsilon)) / (2 epsilon). With epsilon around 1e-5 for double precision, this central difference should be close to the backprop gradient. Check relative error, not just absolute error, because tiny gradients naturally have tiny differences. Run on a few parameters and examples; full checks are slow.\n\nGradient checks catch transposes, missing batch division, wrong broadcasting reduction, and sign errors. They do not prove training will work, because numerical gradients can pass while learning rate, initialization, or data preprocessing is poor. Disable dropout, randomness, and data augmentation during checks. Use deterministic inputs and small networks. Once a layer passes, keep its test as a guardrail. From-scratch learning is much faster when calculus errors are separated from optimization behavior."
-        ],
-        "keyTerms": [
-          {
-            "term": "MSE gradients point from target to",
-            "definition": "MSE gradients point from target to prediction and scale with error size."
-          },
-          {
-            "term": "Binary cross-entropy with sigmoid has a",
-            "definition": "Binary cross-entropy with sigmoid has a convenient output-layer shortcut."
-          },
-          {
-            "term": "The loss derivative determines the first",
-            "definition": "The loss derivative determines the first upstream gradient sent into the network."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can derive dense-layer gradients with matrix shapes.",
-            "reveal": "Gradient checking compares analytical backprop with finite differences on a tiny problem. For parameter theta_i, estimate derivative as (L(theta_i + epsilon) - L(theta_i - epsilon)) / (2 epsilon). With epsilon around 1e-5 for double precision, this central difference should be close to the backprop gradient. Check relative error, not just absolute error, because tiny gradients naturally have tiny differences. Run on a few parameters and examples; full checks are slow.\n\nGradient checks catch transposes, missing batch division, wrong broadcasting reduction, and sign errors. They do not prove training will work, because numerical gradients can pass while learning rate, initialization, or data preprocessing is poor. Disable dropout, randomness, and data augmentation during checks. Use deterministic inputs and small networks. Once a layer passes, keep its test as a guardrail. From-scratch learning is much faster when calculus errors are separated from optimization behavior."
-          }
-        ]
-      },
-      {
-        "id": "a-two-layer-network-is-just-repeated-local-derivatives",
-        "heading": "A two-layer network is just repeated local derivatives",
-        "paragraphs": [
-          "For pred = relu(X @ W1 + b1) @ W2 + b2 with MSE, the backward path is mechanical. First compute dpred from the loss. Then dW2 = hidden.T @ dpred and db2 = sum(dpred). The gradient into hidden is dpred @ W2.T. ReLU gates that gradient: dz1 = dhidden * (z1 > 0). Then dW1 = X.T @ dz1 and db1 = sum(dz1). A tiny numeric ReLU example: if z1 values are [-2, 0.5, 3] and upstream gradients are [10, 10, 10], ReLU sends back [0, 10, 10] because the negative unit was off in the forward pass. This gate is one reason dead ReLUs can occur when units stay negative for most data.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Backward order is the reverse of forward order.",
-          "• Matrix multiplications aggregate gradients over all examples in the batch.",
-          "• Activation derivatives decide which upstream gradient components pass through.",
-          "Production lens — Vanishing and exploding gradients: Gradients multiply through layers. If many local derivatives have magnitude below 1, the product shrinks; if many exceed 1, it can explode. Sigmoid saturates near 0 or 1, where derivative is close to 0, so deep sigmoid networks can learn slowly in early layers. ReLU keeps derivative 1 on active units, helping flow, but dead ReLUs can output zero forever if weights drive them negative. Recurrent networks are especially vulnerable because the same transition multiplies through many time steps.\n\nMitigations target the multiplication chain. Good initialization keeps activation and gradient variance stable. Normalization reduces internal scale drift. Residual connections create shorter gradient paths by adding identity routes. Gradient clipping caps extreme updates, common in sequence models. Monitoring gradient norms by layer is diagnostic: if early layers have norms near zero while final layers move, learning is not reaching them. Backprop gives gradients; architecture and numerics decide whether they are useful."
-        ],
-        "keyTerms": [
-          {
-            "term": "Backward order is the reverse of",
-            "definition": "Backward order is the reverse of forward order."
-          },
-          {
-            "term": "Matrix multiplications aggregate gradients ov…",
-            "definition": "Matrix multiplications aggregate gradients over all examples in the batch."
-          },
-          {
-            "term": "Activation derivatives decide which upstream …",
-            "definition": "Activation derivatives decide which upstream gradient components pass through."
-          }
-        ],
-        "workedExample": {
-          "title": "One backward pass through a tiny ReLU network",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nrng = np.random.default_rng(5)\nX = rng.normal(size=(6, 3))\ny = rng.normal(size=(6, 1))\nW1 = rng.normal(scale=0.2, size=(3, 4)); b1 = np.zeros((1, 4))\nW2 = rng.normal(scale=0.2, size=(4, 1)); b2 = np.zeros((1, 1))\n\nz1 = X @ W1 + b1\nh = np.maximum(0, z1)\npred = h @ W2 + b2\nloss = np.mean((pred - y) ** 2)\ndpred = 2 * (pred - y) / len(X)\ndW2 = h.T @ dpred\ndb2 = dpred.sum(axis=0, keepdims=True)\ndz1 = (dpred @ W2.T) * (z1 > 0)\ndW1 = X.T @ dz1\ndb1 = dz1.sum(axis=0, keepdims=True)\nprint(\"loss:\", round(float(loss), 6))\nprint(\"gradient shapes:\", dW1.shape, db1.shape, dW2.shape, db2.shape)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement a finite-difference gradient check.",
-            "reveal": "Gradients multiply through layers. If many local derivatives have magnitude below 1, the product shrinks; if many exceed 1, it can explode. Sigmoid saturates near 0 or 1, where derivative is close to 0, so deep sigmoid networks can learn slowly in early layers. ReLU keeps derivative 1 on active units, helping flow, but dead ReLUs can output zero forever if weights drive them negative. Recurrent networks are especially vulnerable because the same transition multiplies through many time steps.\n\nMitigations target the multiplication chain. Good initialization keeps activation and gradient variance stable. Normalization reduces internal scale drift. Residual connections create shorter gradient paths by adding identity routes. Gradient clipping caps extreme updates, common in sequence models. Monitoring gradient norms by layer is diagnostic: if early layers have norms near zero while final layers move, learning is not reaching them. Backprop gives gradients; architecture and numerics decide whether they are useful."
-          }
-        ]
-      },
-      {
-        "id": "numerical-gradient-checking-catches-silent-algebra-bugs",
-        "heading": "Numerical gradient checking catches silent algebra bugs",
-        "paragraphs": [
-          "A finite-difference gradient estimates one parameter at a time: (loss(theta + eps) - loss(theta - eps)) / (2*eps). If eps is 1e-5 and changing a weight up gives loss 2.000030 while changing it down gives 1.999970, the numeric gradient is (0.000060)/(0.000020) = 3.0. If your analytic gradient says 3.000001, the backward pass is probably correct. If it says -3 or 0.3, look for sign errors, missing batch division, wrong transpose, or using the post-update parameter in the check. Gradient checking is slow because it touches each parameter separately, so use it on tiny deterministic networks, not full training runs.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Use central difference rather than one-sided difference for better accuracy.",
-          "• Freeze randomness and dropout while checking gradients.",
-          "• Compare absolute or relative error with tolerance, not exact equality.",
-          "Production lens — Adjoint accumulation: Backpropagation is dynamic programming over the chain rule. Each node in a computation graph stores its forward value and receives an upstream gradient, often called an adjoint, representing how the final loss changes with that node. The node multiplies by local derivatives and passes contributions to its inputs. If a value feeds multiple downstream nodes, gradients add. For z = x*y + x, dz/dx receives y from the multiply path and 1 from the add path, so total derivative is y + 1.\n\nThe efficiency comes from reusing downstream derivatives. Naively differentiating a million parameters independently would repeat the same suffix computations many times. Backprop visits each operation once in reverse topological order, using cached forward values. Matrix operations batch this work: dW = X.T @ dZ accumulates contributions from every example. The algorithm is not a mysterious neural-network trick; it is the chain rule organized to avoid repeated work on a directed acyclic graph."
-        ],
-        "keyTerms": [
-          {
-            "term": "Use central difference rather than one-sided",
-            "definition": "Use central difference rather than one-sided difference for better accuracy."
-          },
-          {
-            "term": "Freeze randomness and dropout while checking",
-            "definition": "Freeze randomness and dropout while checking gradients."
-          },
-          {
-            "term": "Compare absolute or relative error with",
-            "definition": "Compare absolute or relative error with tolerance, not exact equality."
-          }
-        ],
-        "workedExample": {
-          "title": "Finite-difference check for linear regression",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nrng = np.random.default_rng(9)\nX = rng.normal(size=(8, 2))\ny = rng.normal(size=(8, 1))\nW = rng.normal(size=(2, 1))\neps = 1e-5\n\ndef loss_fn(W_value):\n    pred = X @ W_value\n    return np.mean((pred - y) ** 2)\n\npred = X @ W\nanalytic = X.T @ (2 * (pred - y) / len(X))\nnumeric = np.zeros_like(W)\nfor i in range(W.shape[0]):\n    plus = W.copy(); minus = W.copy()\n    plus[i, 0] += eps; minus[i, 0] -= eps\n    numeric[i, 0] = (loss_fn(plus) - loss_fn(minus)) / (2 * eps)\nprint(\"analytic:\", analytic.ravel().round(6))\nprint(\"numeric :\", numeric.ravel().round(6))\nprint(\"max error:\", np.max(np.abs(analytic - numeric)))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can name common backprop bugs and the evidence that reveals them.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to numerical gradient checking catches silent algebra bugs."
-          }
-        ]
-      },
-      {
-        "id": "gradient-debugging-is-evidence-driven",
-        "heading": "Gradient debugging is evidence-driven",
-        "paragraphs": [
-          "When training fails, inspect the smallest reproducible case. If gradients are all zero, activations may be saturated or disconnected from the loss. Sigmoid saturates near 0 or 1; at h=0.99, h*(1-h)=0.0099, so gradients shrink. If gradients explode, update norms may dwarf parameter norms; a weight of 0.1 receiving a gradient of 100 with lr=0.1 jumps by 10, likely destabilizing the next forward pass. If only one layer learns, a transpose or broadcasting error may be blocking the earlier layer. The best debugging loop is: print shapes, print loss before and after one update, compare analytic gradients to finite differences, then train for several steps and verify the loss trend.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Start with deterministic data, tiny dimensions, and no randomness during checks.",
-          "• Print gradient norms and parameter update norms.",
-          "• Remove temporary debug prints after the issue is understood.",
-          "Production lens — Local derivative library: From-scratch backprop becomes manageable when each operation has a local derivative rule. Addition sends the upstream gradient to both inputs, with broadcasting reductions when shapes differ. Multiplication sends upstream * other_input to each side. Matrix multiply Y = X @ W gives dX = dY @ W.T and dW = X.T @ dY. ReLU passes upstream where pre-activation was positive and zeroes it where negative. Sigmoid derivative is sigmoid(x) * (1 - sigmoid(x)).\n\nComplex networks are compositions of these small rules. For a dense layer Z = X @ W + b, cache X and W. During backward, compute dW, db, and dX. For batch normalization, convolution, or attention, the local rule is longer but the same principle holds: upstream gradient in, parameter gradients and input gradients out. Keeping a table of local derivatives and expected shapes lets you debug one operation at a time rather than re-deriving the entire network for every bug."
-        ],
-        "keyTerms": [
-          {
-            "term": "Start with deterministic data, tiny dimensions,",
-            "definition": "Start with deterministic data, tiny dimensions, and no randomness during checks."
-          },
-          {
-            "term": "Print gradient norms and parameter update",
-            "definition": "Print gradient norms and parameter update norms."
-          },
-          {
-            "term": "Remove temporary debug prints after the",
-            "definition": "Remove temporary debug prints after the issue is understood."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "interview",
+          body:
+            "When explaining backprop, say gradients mirror the shapes of the values they update. It is a concise correctness check."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for backpropagation by hand.",
-          "Trap: Mixing row-vector and column-vector conventions mid-derivation. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Forgetting to average or sum gradients consistently over the batch. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Using too large or too small an epsilon for numerical checks. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Checking gradients while randomness or parameter updates are still changing values. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Trusting loss curves without verifying shape and gradient invariants. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "activation-backward",
+        heading: "Activation derivatives gate gradient flow",
+        paragraphs: [
+          "Activations decide how signals and gradients pass through layers. ReLU is simple: the forward output is zero for negative inputs and equal to input for positive inputs. Its backward rule passes the upstream gradient where the cached input was positive and blocks it where the input was negative. This creates sparse gradients and efficient computation.",
+          "Sigmoid and tanh are smooth but can saturate. When their inputs are very positive or very negative, derivatives become small. Stacked many times, those small factors can shrink gradients until early layers learn slowly. This is one reason modern deep networks rely heavily on ReLU-like activations, normalization, residual paths, and careful initialization.",
+          "Activation choice is not only a mathematical preference. It affects optimization speed, numerical stability, initialization, and dead-unit behavior. A ReLU unit can become inactive for all examples if its weights push scores negative; then its gradient may remain zero. Leaky ReLU and GELU variants soften that behavior, but the core lesson remains: nonlinearities are gradient gates as well as expressive tools."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+        keyTerms: [
+          {
+            term: "vanishing gradient",
+            definition:
+              "A training problem where gradients become extremely small as they propagate backward through layers."
+          },
+          {
+            term: "saturation",
+            definition:
+              "A regime where an activation's output changes little as input changes, yielding small derivatives."
+          },
+          {
+            term: "dead ReLU",
+            definition:
+              "A ReLU unit that outputs zero for all relevant inputs and receives no gradient to recover."
+          }
+        ],
+        workedExample: {
+          title: "ReLU backward mask",
+          body:
+            "Only positions with positive forward pre-activation pass the upstream gradient.",
+          code:
+            "import numpy as np\n\nz = np.array([[-2.0, 0.5, 3.0]])\ndout = np.array([[10.0, 10.0, 10.0]])\ndz = dout * (z > 0)\nprint(np.maximum(0, z))\nprint(dz)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Pick the most dangerous pitfall for Backpropagation by hand and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Mixing row-vector and column-vector conventions mid-derivation.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Adjoint accumulation. Backpropagation is dynamic programming over the chain rule. Each node in a computation graph stores its forward value and receives an upstream gradient, often called an adjoint, representing how the final loss changes with that node. The node multiplies by local derivatives and passes contributions to its inputs. If a value feeds multiple downstream nodes, gradients add. For z = x*y + x, dz/dx receives y from the multiply path and 1 from the add path, so total derivative is y + 1.\n\nThe efficiency comes from reusing downstream derivatives. Naively differentiating a million parameters independently would repeat the same suffix computations many times. Backprop visits each operation once in reverse topological order, using cached forward values. Matrix operations batch this work: dW = X.T @ dZ accumulates contributions from every example. The algorithm is not a mysterious neural-network trick; it is the chain rule organized to avoid repeated work on a directed acyclic graph.",
-          "Local derivative library. From-scratch backprop becomes manageable when each operation has a local derivative rule. Addition sends the upstream gradient to both inputs, with broadcasting reductions when shapes differ. Multiplication sends upstream * other_input to each side. Matrix multiply Y = X @ W gives dX = dY @ W.T and dW = X.T @ dY. ReLU passes upstream where pre-activation was positive and zeroes it where negative. Sigmoid derivative is sigmoid(x) * (1 - sigmoid(x)).\n\nComplex networks are compositions of these small rules. For a dense layer Z = X @ W + b, cache X and W. During backward, compute dW, db, and dX. For batch normalization, convolution, or attention, the local rule is longer but the same principle holds: upstream gradient in, parameter gradients and input gradients out. Keeping a table of local derivatives and expected shapes lets you debug one operation at a time rather than re-deriving the entire network for every bug.",
-          "Gradient checking. Gradient checking compares analytical backprop with finite differences on a tiny problem. For parameter theta_i, estimate derivative as (L(theta_i + epsilon) - L(theta_i - epsilon)) / (2 epsilon). With epsilon around 1e-5 for double precision, this central difference should be close to the backprop gradient. Check relative error, not just absolute error, because tiny gradients naturally have tiny differences. Run on a few parameters and examples; full checks are slow.\n\nGradient checks catch transposes, missing batch division, wrong broadcasting reduction, and sign errors. They do not prove training will work, because numerical gradients can pass while learning rate, initialization, or data preprocessing is poor. Disable dropout, randomness, and data augmentation during checks. Use deterministic inputs and small networks. Once a layer passes, keep its test as a guardrail. From-scratch learning is much faster when calculus errors are separated from optimization behavior.",
-          "Vanishing and exploding gradients. Gradients multiply through layers. If many local derivatives have magnitude below 1, the product shrinks; if many exceed 1, it can explode. Sigmoid saturates near 0 or 1, where derivative is close to 0, so deep sigmoid networks can learn slowly in early layers. ReLU keeps derivative 1 on active units, helping flow, but dead ReLUs can output zero forever if weights drive them negative. Recurrent networks are especially vulnerable because the same transition multiplies through many time steps.\n\nMitigations target the multiplication chain. Good initialization keeps activation and gradient variance stable. Normalization reduces internal scale drift. Residual connections create shorter gradient paths by adding identity routes. Gradient clipping caps extreme updates, common in sequence models. Monitoring gradient norms by layer is diagnostic: if early layers have norms near zero while final layers move, learning is not reaching them. Backprop gives gradients; architecture and numerics decide whether they are useful."
-        ],
-        "keyTerms": [
-          {
-            "term": "Adjoint accumulation",
-            "definition": "Backpropagation is dynamic programming over the chain rule. Each node in a computation graph stores its forward value and receives an upstream gradient, often called an adjoint, representing how the final loss changes wi…"
-          },
-          {
-            "term": "Local derivative library",
-            "definition": "From-scratch backprop becomes manageable when each operation has a local derivative rule. Addition sends the upstream gradient to both inputs, with broadcasting reductions when shapes differ. Multiplication sends upstrea…"
-          },
-          {
-            "term": "Gradient checking",
-            "definition": "Gradient checking compares analytical backprop with finite differences on a tiny problem. For parameter theta_i, estimate derivative as (L(theta_i + epsilon) - L(theta_i - epsilon)) / (2 epsilon). With epsilon around 1e-…"
+            prompt: "Why can sigmoid networks learn slowly when inputs are large in magnitude?",
+            reveal:
+              "Sigmoid saturates near 0 or 1, where its derivative is small. Backprop multiplies by that small derivative, reducing gradient flow."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        callout: {
+          tone: "warning",
+          body:
+            "If many ReLU activations are exactly zero for all examples, inspect initialization, learning rate, and input scaling."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach backpropagation by hand as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Walk through backpropagation for one dense layer with sigmoid activation. | How do you know a hand-coded gradient is correct? | What shape should dW have if X is batch-by-features and W is features-by-hidden?"
+        id: "loss-softmax",
+        heading: "Softmax with cross-entropy has a clean gradient",
+        paragraphs: [
+          "For multiclass classification, the final layer often emits one logit per class. Softmax converts logits into probabilities by exponentiating each shifted logit and normalizing by the row sum. Subtracting the row maximum before exponentiation keeps the calculation stable without changing the probabilities.",
+          "Cross-entropy compares the predicted probability assigned to the true class with the ideal distribution. When combined with softmax, the gradient with respect to logits is pleasantly simple: `(probabilities - one_hot_targets) / batch_size` for averaged loss. The true class receives a negative push if its probability is too low, and other classes receive positive pushes proportional to their probabilities.",
+          "This simplicity is why many from-scratch implementations fuse softmax and cross-entropy in one function. It reduces numerical mistakes and avoids forming large Jacobian matrices. You still need to understand the shape contract: logits, probabilities, and gradient all have shape `(batch, num_classes)`."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Backpropagation by hand as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "softmax",
+            definition:
+              "A function that converts a vector of logits into nonnegative probabilities summing to one."
+          },
+          {
+            term: "cross-entropy",
+            definition:
+              "A loss that penalizes low predicted probability on the correct class."
+          },
+          {
+            term: "one-hot target",
+            definition:
+              "A vector with one at the correct class index and zero elsewhere."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        workedExample: {
+          title: "Softmax cross-entropy gradient",
+          body:
+            "After subtracting one from the true class probabilities and dividing by batch size, the gradient matches logits shape.",
+          code:
+            "import numpy as np\n\nlogits = np.array([[2.0, 1.0, 0.0], [0.5, 1.5, -1.0]])\ny = np.array([0, 2])\nshifted = logits - logits.max(axis=1, keepdims=True)\nprobs = np.exp(shifted) / np.exp(shifted).sum(axis=1, keepdims=True)\ndlogits = probs.copy()\ndlogits[np.arange(len(y)), y] -= 1\ndlogits /= len(y)\nprint(probs.round(3))\nprint(dlogits.round(3))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why subtract the row maximum before softmax?",
+            reveal:
+              "It prevents exponential overflow while preserving probabilities because adding or subtracting the same constant from all logits in a row does not change softmax."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "For hand implementations, fuse softmax and cross-entropy rather than building the full softmax Jacobian."
+        }
+      },
+      {
+        id: "gradient-checking",
+        heading: "Gradient checking catches algebra mistakes before training does",
+        paragraphs: [
+          "A gradient check compares analytical gradients from backprop with numerical gradients from finite differences. Perturb one parameter by a small epsilon, evaluate the loss, perturb it in the other direction, and estimate the slope. If the numerical slope and backprop slope disagree, the backward rule is wrong or the loss is nondeterministic.",
+          "Gradient checks are slow because they require extra forward passes for many parameters, so they are used on tiny models and small batches. They are especially useful for custom layers, broadcasting-heavy code, regularization terms, and indexing operations. The check should run in double precision when possible, with randomness fixed and dropout disabled.",
+          "Do not expect exact equality. Epsilon that is too large estimates a crude slope; epsilon that is too small suffers floating-point cancellation. Relative error is more informative than absolute error. Once gradients pass on a tiny problem, training curves become a meaningful debugging signal rather than a mixture of optimization behavior and algebra bugs."
+        ],
+        keyTerms: [
+          {
+            term: "finite difference",
+            definition:
+              "A numerical derivative estimate computed from loss changes after small parameter perturbations."
+          },
+          {
+            term: "relative error",
+            definition:
+              "A scaled difference between two quantities, often used to compare numerical and analytical gradients."
+          },
+          {
+            term: "determinism",
+            definition:
+              "The property that repeated runs with the same inputs and parameters produce the same outputs."
+          }
+        ],
+        workedExample: {
+          title: "One-parameter finite difference",
+          body:
+            "The finite-difference slope for `w` should match the analytical derivative of `(w*x + b)^2`.",
+          code:
+            "x, w, b = 4.0, 1.5, -2.0\neps = 1e-5\n\ndef loss(weight):\n    return (weight * x + b) ** 2\n\nnum = (loss(w + eps) - loss(w - eps)) / (2 * eps)\nana = 2 * (w * x + b) * x\nprint(round(num, 6), round(ana, 6))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why run gradient checks on tiny deterministic examples?",
+            reveal:
+              "Finite differences are expensive and noise-sensitive. Tiny deterministic cases isolate algebra mistakes without stochastic training behavior."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "If asked how to debug a custom backward pass, answer: shape checks, finite-difference gradient checks, deterministic small batches, and then training curves."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can compute scalar chain-rule derivatives by hand.",
-        "Can cache forward-pass intermediates for backward use.",
-        "Can derive dense-layer gradients with matrix shapes.",
-        "Can implement a finite-difference gradient check.",
-        "Can name common backprop bugs and the evidence that reveals them."
+    wrapUp: {
+      takeaways: [
+        "Backpropagation is the chain rule applied systematically over a computation graph.",
+        "Linear-layer gradients have predictable shapes: `dW`, `db`, and `dX` mirror their forward objects.",
+        "Activation derivatives control gradient flow and can saturate or zero out learning signals.",
+        "Softmax plus cross-entropy gives a stable and simple logits gradient.",
+        "Gradient checking validates custom backward rules before optimization behavior is interpreted."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Calculus on Computational Graphs: Backpropagation (CS231n) — https://cs231n.github.io/optimization-2/",
-        "Optional deeper reading: Backpropagation (3Blue1Brown) — https://www.3blue1brown.com/lessons/backpropagation"
+      nextSteps: [
+        "Write backward functions for affine, ReLU, and softmax-cross-entropy layers.",
+        "Run a finite-difference check on one weight and one bias.",
+        "Explain why batch averaging changes gradient scale."
       ]
     }
   },
   "deep-learning-from-scratch/cnn-building-blocks-numpy": {
-    "title": "Chapter: CNN building blocks with NumPy",
-    "readingTime": "60-75 min",
-    "premise": "Implement simple 2D convolution and max pooling on small arrays, then compare hand-crafted image features with an sklearn MLP on synthetic image data. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: CNN building blocks with NumPy",
+    readingTime: "70-85 min",
+    premise:
+      "Convolutional neural networks exploit locality, weight sharing, and spatial hierarchy. This chapter builds convolution, padding, stride, pooling, channels, and flattening from NumPy-level concepts.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "CNNs are easier to understand when you can see filters sliding over arrays. Convolution, pooling, and flattening are structured NumPy operations before they become deep-learning layers.",
-          "This chapter treats \"CNN building blocks with NumPy\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "why-convolution",
+        heading: "Convolution uses local patterns and shared weights",
+        paragraphs: [
+          "Images and many signals have local structure. Nearby pixels form edges, corners, textures, and shapes. A fully connected layer ignores that structure by giving every input location separate weights. Convolution instead slides a small kernel across the input, applying the same weights at each location. This expresses the assumption that a useful local pattern can appear in many places.",
+          "Weight sharing reduces parameters dramatically. A 3 by 3 filter over one channel has nine weights no matter how wide the image is. The same filter can detect a vertical edge on the left or right side. Multiple filters learn different patterns, and later layers combine earlier local features into more abstract ones.",
+          "The output is a feature map. Each spatial location in the map reports how strongly the filter matched a local patch of the input. In a trained CNN, early filters often respond to simple edges or color contrasts, while deeper filters respond to compositions of earlier features. The architecture is useful because it builds hierarchy while preserving spatial layout."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "kernel",
+            definition:
+              "A small set of weights slid over an input to compute local dot products."
+          },
+          {
+            term: "weight sharing",
+            definition:
+              "Reusing the same kernel weights at multiple spatial locations."
+          },
+          {
+            term: "feature map",
+            definition:
+              "The spatial output produced by applying a filter across an input."
+          }
+        ],
+        workedExample: {
+          title: "One 2D filter over a tiny image",
+          body:
+            "The output location is a dot product between a local image patch and the kernel.",
+          code:
+            "import numpy as np\n\nx = np.array([[1, 2, 0], [0, 1, 3], [2, 1, 0]], dtype=float)\nk = np.array([[1, 0], [0, -1]], dtype=float)\nout = np.zeros((2, 2))\nfor i in range(2):\n    for j in range(2):\n        patch = x[i:i+2, j:j+2]\n        out[i, j] = np.sum(patch * k)\nprint(out)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why does convolution use fewer parameters than a fully connected layer on images?",
+            reveal:
+              "A small kernel is reused at every spatial location, so parameter count depends on kernel size and channels rather than image width times height times outputs."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Think of a convolution output value as `how much this local patch matches this learned pattern`."
         }
       },
       {
-        "id": "images-are-tensors-with-local-structure",
-        "heading": "Images are tensors with local structure",
-        "paragraphs": [
-          "A grayscale image can be represented as a 2D matrix of pixel intensities. A color image is often height by width by channels. Fully connected layers ignore locality: pixel (10, 10) and pixel (10, 11) are just two unrelated inputs unless the data teaches otherwise. Convolution builds in the assumption that nearby pixels form useful patterns and that the same pattern can appear in many locations. If a 3x3 edge detector works in the top-left corner, the same weights can scan the center and bottom-right. This weight sharing reduces parameters and improves generalization for image-like data. A 28x28 image flattened into a dense layer with 100 hidden units needs 78,400 weights; one 3x3 filter needs only 9 weights plus a bias and can be applied everywhere.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Convolution preserves spatial locality while sharing weights across positions.",
-          "• Small filters detect local patterns that deeper layers can combine.",
-          "• CNN assumptions help image, audio spectrogram, and grid-like data more than arbitrary tabular columns.",
-          "Production lens — Local receptive fields: Convolution assumes local patterns matter. A 3x3 filter over an RGB image has 3 * 3 * 3 = 27 weights plus bias and slides across height and width. The same weights detect the same pattern in many positions, creating translation equivariance: shifting the input shifts the feature map. A dense layer over a 224x224x3 image to 64 outputs would need over 9.6 million weights; a convolution with 64 filters of size 3x3 needs only 1,792 weights including biases.\n\nReceptive fields grow with depth. One 3x3 convolution sees a 3x3 patch. Two stacked 3x3 convolutions with stride 1 let the second layer combine information from a 5x5 area. Three see 7x7. This stacking adds nonlinearities and fewer parameters than one huge filter. CNNs therefore learn edges and textures early, parts in middle layers, and task-specific arrangements later. Implementing convolution in NumPy makes these locality and sharing assumptions visible."
+        id: "padding-stride-shape",
+        heading: "Padding and stride define output geometry",
+        paragraphs: [
+          "Padding adds border values, usually zeros, around the input. Without padding, a 3 by 3 kernel cannot be centered on edge pixels and the output shrinks. With one pixel of padding, a stride-one 3 by 3 convolution can preserve height and width. Padding is therefore both a shape choice and an information choice because border behavior is artificial.",
+          "Stride controls how far the kernel moves between output locations. Stride one inspects every neighboring patch. Stride two skips positions and reduces spatial resolution. Larger strides reduce compute and memory but may discard detail. Downsampling is useful, but it should be deliberate because later layers cannot recover spatial information that was never computed.",
+          "The common output-size formula for one dimension is `floor((input + 2*padding - kernel) / stride) + 1`. Memorizing the formula is less useful than understanding why it counts valid kernel placements. In NumPy labs, compute shapes by hand before writing loops. Most convolution bugs are off-by-one errors around padding, stride, and channel axes."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Convolution preserves spatial locality while …",
-            "definition": "Convolution preserves spatial locality while sharing weights across positions."
+            term: "padding",
+            definition:
+              "Extra border values added around an input before convolution."
           },
           {
-            "term": "Small filters detect local patterns that",
-            "definition": "Small filters detect local patterns that deeper layers can combine."
+            term: "stride",
+            definition:
+              "The number of input positions the kernel moves between adjacent output locations."
           },
           {
-            "term": "CNN assumptions help image, audio spectrogram,",
-            "definition": "CNN assumptions help image, audio spectrogram, and grid-like data more than arbitrary tabular columns."
+            term: "downsampling",
+            definition:
+              "Reducing spatial resolution, often to lower compute or build larger receptive fields."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Can compute one convolution output cell from a patch and kernel.",
-            "reveal": "Convolution assumes local patterns matter. A 3x3 filter over an RGB image has 3 * 3 * 3 = 27 weights plus bias and slides across height and width. The same weights detect the same pattern in many positions, creating translation equivariance: shifting the input shifts the feature map. A dense layer over a 224x224x3 image to 64 outputs would need over 9.6 million weights; a convolution with 64 filters of size 3x3 needs only 1,792 weights including biases.\n\nReceptive fields grow with depth. One 3x3 convolution sees a 3x3 patch. Two stacked 3x3 convolutions with stride 1 let the second layer combine information from a 5x5 area. Three see 7x7. This stacking adds nonlinearities and fewer parameters than one huge filter. CNNs therefore learn edges and textures early, parts in middle layers, and task-specific arrangements later. Implementing convolution in NumPy makes these locality and sharing assumptions visible."
-          }
-        ]
-      },
-      {
-        "id": "a-convolution-output-cell-is-a-weighted-patch-sum",
-        "heading": "A convolution output cell is a weighted patch sum",
-        "paragraphs": [
-          "For valid 2D convolution, place the kernel over an image patch with the same shape, multiply elementwise, and sum. Suppose the patch is [[1, 2], [3, 4]] and the kernel is [[1, 0], [-1, 1]]. The output is 1*1 + 2*0 + 3*(-1) + 4*1 = 2. Then the kernel slides one column or row and repeats. With a 4x4 image and a 2x2 kernel, valid convolution has output size (4-2+1) by (4-2+1), so 3x3. Edge filters use positive weights on one side and negative weights on the other, producing large magnitude where intensities change sharply.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Kernel size controls the local receptive field.",
-          "• Each output value summarizes one neighborhood.",
-          "• Valid convolution uses only patches fully inside the image.",
-          "Production lens — Output shape arithmetic: Convolution output size follows a concrete formula. For input size W, filter size F, padding P, and stride S, output size is floor((W - F + 2P) / S) + 1. A 32x32 image with 3x3 filters, padding 1, stride 1 stays 32x32. Without padding it becomes 30x30. With stride 2 and padding 1 it becomes 16x16. Shape arithmetic is not bookkeeping; it controls memory, compute, and whether later layers receive the expected dimensions.\n\nChannels add another dimension. A convolution filter spans all input channels, so for input (N, H, W, C_in) and C_out filters of size KxK, weights have shape (K, K, C_in, C_out) in one common convention. Output is (N, H_out, W_out, C_out). During backprop, dWeights has the same shape as weights, and dInput has the same shape as input. Most CNN bugs are wrong padding, stride, channel order, or off-by-one output dimensions."
-        ],
-        "keyTerms": [
-          {
-            "term": "Kernel size controls the local receptive",
-            "definition": "Kernel size controls the local receptive field."
-          },
-          {
-            "term": "Each output value summarizes one neighborhood.",
-            "definition": "Each output value summarizes one neighborhood."
-          },
-          {
-            "term": "Valid convolution uses only patches fully",
-            "definition": "Valid convolution uses only patches fully inside the image."
-          }
-        ],
-        "workedExample": {
-          "title": "Apply a vertical edge filter",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nimage = np.array([\n    [0, 0, 1, 1],\n    [0, 0, 1, 1],\n    [0, 0, 1, 1],\n    [0, 0, 1, 1]\n], dtype=float)\nkernel = np.array([[-1, 1], [-1, 1]], dtype=float)\nout = np.zeros((3, 3))\n\nfor r in range(3):\n    for c in range(3):\n        patch = image[r:r+2, c:c+2]\n        out[r, c] = np.sum(patch * kernel)\n\nprint(out)",
-          "language": "python"
+        workedExample: {
+          title: "Compute convolution output length",
+          body:
+            "The formula counts how many valid kernel starts fit after padding and stepping by stride.",
+          code:
+            "def conv_out(n, kernel, padding=0, stride=1):\n    return (n + 2 * padding - kernel) // stride + 1\n\nfor params in [(5, 3, 0, 1), (5, 3, 1, 1), (7, 3, 1, 2)]:\n    print(params, '->', conv_out(*params))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can derive output sizes from input size, kernel, stride, and padding.",
-            "reveal": "Convolution output size follows a concrete formula. For input size W, filter size F, padding P, and stride S, output size is floor((W - F + 2P) / S) + 1. A 32x32 image with 3x3 filters, padding 1, stride 1 stays 32x32. Without padding it becomes 30x30. With stride 2 and padding 1 it becomes 16x16. Shape arithmetic is not bookkeeping; it controls memory, compute, and whether later layers receive the expected dimensions.\n\nChannels add another dimension. A convolution filter spans all input channels, so for input (N, H, W, C_in) and C_out filters of size KxK, weights have shape (K, K, C_in, C_out) in one common convention. Output is (N, H_out, W_out, C_out). During backprop, dWeights has the same shape as weights, and dInput has the same shape as input. Most CNN bugs are wrong padding, stride, channel order, or off-by-one output dimensions."
-          }
-        ]
-      },
-      {
-        "id": "stride-and-padding-decide-the-output-grid",
-        "heading": "Stride and padding decide the output grid",
-        "paragraphs": [
-          "Stride is how far the kernel moves between outputs. With stride 1, a 5x5 image and 3x3 kernel produce a 3x3 valid output. With stride 2, the output becomes floor((5-3)/2) + 1 = 2 positions per axis, so 2x2. Padding adds zeros around the image so filters can cover border pixels and sometimes preserve size. For same padding with stride 1 and a 3x3 kernel, one pixel of padding turns 5x5 into 7x7 before convolution, and the output returns to 5x5. The tradeoff is context: padding lets edges produce outputs, but those outputs partially see artificial zeros. In interviews, state the formula and then talk about why preserving spatial size may help deeper networks.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Valid output size is floor((input - kernel) / stride) + 1.",
-          "• Padding increases effective input size and changes border behavior.",
-          "• Stride reduces spatial resolution and computation.",
-          "Production lens — Pooling information tradeoff: Pooling reduces spatial resolution and compute while adding tolerance to small shifts. Max pooling with 2x2 window and stride 2 halves height and width, keeping the strongest activation in each window. This can help classification because a cat ear detected one pixel left should still count. The cost is lost detail. For segmentation, detection of tiny objects, or precise localization, aggressive pooling can remove information the task needs.\n\nStrided convolution is a learnable alternative to fixed pooling. Average pooling summarizes smooth presence; max pooling captures strongest evidence. Modern networks often combine downsampling with residual blocks and normalization to control information flow. When building from scratch, inspect activation maps before and after pooling. If a 28x28 digit becomes 7x7 too quickly, the model may lose stroke details. Downsampling is not free compression; it is an architectural decision about invariance versus precision."
-        ],
-        "keyTerms": [
-          {
-            "term": "Valid output size is floor((input -",
-            "definition": "Valid output size is floor((input - kernel) / stride) + 1."
-          },
-          {
-            "term": "Padding increases effective input size and",
-            "definition": "Padding increases effective input size and changes border behavior."
-          },
-          {
-            "term": "Stride reduces spatial resolution and computa…",
-            "definition": "Stride reduces spatial resolution and computation."
+            prompt: "Why does same-padding with a 3 by 3 stride-one convolution use padding one?",
+            reveal:
+              "Adding one border pixel on each side lets the 3 by 3 kernel produce one output for each original input position, preserving spatial size."
           }
         ],
-        "workedExample": {
-          "title": "Compute convolution output sizes",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def conv_out_size(input_size, kernel_size, stride=1, padding=0):\n    return (input_size + 2 * padding - kernel_size) // stride + 1\n\nfor stride in [1, 2]:\n    print(\"5x5, 3x3, stride\", stride, \"valid ->\", conv_out_size(5, 3, stride=stride))\nprint(\"5x5, 3x3, stride 1, padding 1 ->\", conv_out_size(5, 3, stride=1, padding=1))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement valid 2D convolution over a single-channel image.",
-            "reveal": "Pooling reduces spatial resolution and compute while adding tolerance to small shifts. Max pooling with 2x2 window and stride 2 halves height and width, keeping the strongest activation in each window. This can help classification because a cat ear detected one pixel left should still count. The cost is lost detail. For segmentation, detection of tiny objects, or precise localization, aggressive pooling can remove information the task needs.\n\nStrided convolution is a learnable alternative to fixed pooling. Average pooling summarizes smooth presence; max pooling captures strongest evidence. Modern networks often combine downsampling with residual blocks and normalization to control information flow. When building from scratch, inspect activation maps before and after pooling. If a 28x28 digit becomes 7x7 too quickly, the model may lose stroke details. Downsampling is not free compression; it is an architectural decision about invariance versus precision."
-          }
-        ]
-      },
-      {
-        "id": "pooling-trades-precise-location-for-robustness",
-        "heading": "Pooling trades precise location for robustness",
-        "paragraphs": [
-          "Max pooling takes the largest value in each window. For a 2x2 patch [[0.1, 0.7], [0.2, 0.4]], max pooling outputs 0.7. If a detector fires one pixel to the left in another image, a 2x2 max pool may still keep a similar activation, giving small translation tolerance. Pooling also reduces computation: an 8x8 activation map pooled with size 2 and stride 2 becomes 4x4, reducing 64 values to 16. The cost is lost detail. If the task depends on exact location, aggressive pooling can hurt. Average pooling keeps broader intensity information, while max pooling emphasizes strongest local evidence.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Max pooling keeps the strongest local response.",
-          "• Pooling lowers spatial resolution and downstream computation.",
-          "• Translation tolerance is useful only when exact location is not the label.",
-          "Production lens — Im2col compute trick: Naive convolution uses many nested loops over batch, output height, output width, filters, kernel rows, kernel columns, and channels. That is clear but slow in Python. The im2col trick extracts every sliding window into rows of a matrix, reshapes filters into columns, and turns convolution into matrix multiplication. For input patches shaped (N * H_out * W_out, K * K * C_in) and filters shaped (K * K * C_in, C_out), one matrix multiply produces all output activations.\n\nThe trick trades memory for speed. im2col duplicates input values because overlapping windows share pixels, so the temporary matrix can be much larger than the original image. Libraries use optimized variants, tiling, and GPU kernels to avoid worst-case overhead. For learning, im2col is valuable because it connects convolution to linear algebra and makes backward pass easier to reason about: gradients through the matrix multiply are computed, then col2im scatters overlapping patch gradients back into the input shape by summing contributions."
-        ],
-        "keyTerms": [
-          {
-            "term": "Max pooling keeps the strongest local",
-            "definition": "Max pooling keeps the strongest local response."
-          },
-          {
-            "term": "Pooling lowers spatial resolution and downstream",
-            "definition": "Pooling lowers spatial resolution and downstream computation."
-          },
-          {
-            "term": "Translation tolerance is useful only when",
-            "definition": "Translation tolerance is useful only when exact location is not the label."
-          }
-        ],
-        "workedExample": {
-          "title": "Max pool a small activation map",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nactivation = np.array([\n    [0.1, 0.7, 0.2, 0.3],\n    [0.2, 0.4, 0.9, 0.1],\n    [0.0, 0.5, 0.8, 0.6],\n    [0.3, 0.2, 0.4, 0.9]\n])\npooled = np.zeros((2, 2))\nfor r in range(2):\n    for c in range(2):\n        patch = activation[r*2:r*2+2, c*2:c*2+2]\n        pooled[r, c] = np.max(patch)\nprint(pooled)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement max pooling with a fixed window and stride.",
-            "reveal": "Naive convolution uses many nested loops over batch, output height, output width, filters, kernel rows, kernel columns, and channels. That is clear but slow in Python. The im2col trick extracts every sliding window into rows of a matrix, reshapes filters into columns, and turns convolution into matrix multiplication. For input patches shaped (N * H_out * W_out, K * K * C_in) and filters shaped (K * K * C_in, C_out), one matrix multiply produces all output activations.\n\nThe trick trades memory for speed. im2col duplicates input values because overlapping windows share pixels, so the temporary matrix can be much larger than the original image. Libraries use optimized variants, tiling, and GPU kernels to avoid worst-case overhead. For learning, im2col is valuable because it connects convolution to linear algebra and makes backward pass easier to reason about: gradients through the matrix multiply are computed, then col2im scatters overlapping patch gradients back into the input shape by summing contributions."
-          }
-        ]
-      },
-      {
-        "id": "from-convolutional-features-to-classifiers",
-        "heading": "From convolutional features to classifiers",
-        "paragraphs": [
-          "A full CNN learns filters during training, applies nonlinear activations, pools or strides, then flattens or globally pools features for classification. In this browser-friendly lesson, we implement the array operations explicitly and use scikit-learn for small classifiers. A useful baseline is flattened pixels. On synthetic 8x8 images with vertical bars and horizontal bars, flattened pixels are enough because the pattern is simple. Convolutional features become more valuable when objects shift location, local edges combine into shapes, and weight sharing reduces the number of examples needed. Evaluation still follows the supervised workflow: hold out test images, compare to baselines, inspect errors, and watch for shortcuts such as a noise pattern that correlates with the label.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Flattened pixels are a baseline, not a CNN.",
-          "• Convolutional features help when local patterns repeat across positions.",
-          "• Synthetic image tasks are useful for understanding operations but do not prove real-world robustness.",
-          "Production lens — Local receptive fields: Convolution assumes local patterns matter. A 3x3 filter over an RGB image has 3 * 3 * 3 = 27 weights plus bias and slides across height and width. The same weights detect the same pattern in many positions, creating translation equivariance: shifting the input shifts the feature map. A dense layer over a 224x224x3 image to 64 outputs would need over 9.6 million weights; a convolution with 64 filters of size 3x3 needs only 1,792 weights including biases.\n\nReceptive fields grow with depth. One 3x3 convolution sees a 3x3 patch. Two stacked 3x3 convolutions with stride 1 let the second layer combine information from a 5x5 area. Three see 7x7. This stacking adds nonlinearities and fewer parameters than one huge filter. CNNs therefore learn edges and textures early, parts in middle layers, and task-specific arrangements later. Implementing convolution in NumPy makes these locality and sharing assumptions visible."
-        ],
-        "keyTerms": [
-          {
-            "term": "Flattened pixels are a baseline, not",
-            "definition": "Flattened pixels are a baseline, not a CNN."
-          },
-          {
-            "term": "Convolutional features help when local patterns",
-            "definition": "Convolutional features help when local patterns repeat across positions."
-          },
-          {
-            "term": "Synthetic image tasks are useful for",
-            "definition": "Synthetic image tasks are useful for understanding operations but do not prove real-world robustness."
-          }
-        ],
-        "workedExample": {
-          "title": "Classify synthetic bar images with sklearn",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\nfrom sklearn.metrics import accuracy_score\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.neural_network import MLPClassifier\n\ndef make_bar_images(n=120, size=8, seed=2):\n    rng = np.random.default_rng(seed)\n    images, labels = [], []\n    for i in range(n):\n        img = rng.normal(0, 0.05, size=(size, size))\n        if i % 2 == 0:\n            img[:, 3:5] += 1.0; labels.append(0)\n        else:\n            img[3:5, :] += 1.0; labels.append(1)\n        images.append(img)\n    return np.array(images), np.array(labels)\n\nimages, y = make_bar_images()\nX = images.reshape(len(images), -1)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, stratify=y, random_state=2)\nclf = MLPClassifier(hidden_layer_sizes=(12,), max_iter=500, random_state=2)\nclf.fit(X_train, y_train)\nprint(\"accuracy:\", round(accuracy_score(y_test, clf.predict(X_test)), 3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain how convolutional features become classifier inputs and how to evaluate them.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to from convolutional features to classifiers."
-          }
-        ]
-      },
-      {
-        "id": "cnn-block-failure-modes-are-often-shape-or-shortcut-bugs",
-        "heading": "CNN block failure modes are often shape or shortcut bugs",
-        "paragraphs": [
-          "Hand-written convolution code fails when output dimensions are off by one, patches and kernels have mismatched shapes, stride indexes skip the wrong pixels, or pooling windows overlap unintentionally. Model-level failures are more subtle. A classifier may learn a border artifact from padding instead of the object. Pooling may erase a small object. A synthetic dataset may put every vertical bar at columns 3 and 4, so the classifier learns position rather than verticality. Good tests include tiny matrices with hand-computed outputs, translated examples, noise stress tests, and confusion-matrix review. If an edge filter should return a strong response at one boundary, write that expected array before optimizing anything.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Test convolution and pooling on small matrices with known outputs.",
-          "• Check translated inputs to see whether the feature is robust or position-specific.",
-          "• Inspect false positives and false negatives before claiming the feature works.",
-          "Production lens — Output shape arithmetic: Convolution output size follows a concrete formula. For input size W, filter size F, padding P, and stride S, output size is floor((W - F + 2P) / S) + 1. A 32x32 image with 3x3 filters, padding 1, stride 1 stays 32x32. Without padding it becomes 30x30. With stride 2 and padding 1 it becomes 16x16. Shape arithmetic is not bookkeeping; it controls memory, compute, and whether later layers receive the expected dimensions.\n\nChannels add another dimension. A convolution filter spans all input channels, so for input (N, H, W, C_in) and C_out filters of size KxK, weights have shape (K, K, C_in, C_out) in one common convention. Output is (N, H_out, W_out, C_out). During backprop, dWeights has the same shape as weights, and dInput has the same shape as input. Most CNN bugs are wrong padding, stride, channel order, or off-by-one output dimensions."
-        ],
-        "keyTerms": [
-          {
-            "term": "Test convolution and pooling on small",
-            "definition": "Test convolution and pooling on small matrices with known outputs."
-          },
-          {
-            "term": "Check translated inputs to see whether",
-            "definition": "Check translated inputs to see whether the feature is robust or position-specific."
-          },
-          {
-            "term": "Inspect false positives and false negatives",
-            "definition": "Inspect false positives and false negatives before claiming the feature works."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "interview",
+          body:
+            "When deriving CNN shapes, state the formula and then explain it as valid kernel placements."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for cnn building blocks with numpy.",
-          "Trap: Mixing up output height/width calculations. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Forgetting that convolution kernels and image patches must have matching shapes. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Assuming pooling improves every task instead of checking lost detail. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Training on synthetic images with a position shortcut and calling it shape learning. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring border behavior introduced by padding. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "channels-and-filters",
+        heading: "Channels turn filters into small 3D tensors",
+        paragraphs: [
+          "Real CNN inputs have channels. An RGB image has height, width, and three color channels. A convolution filter spans all input channels for a local spatial patch. A 3 by 3 filter over RGB has shape `(3, 3, 3)` and produces one output map. If the layer has 32 filters, it produces 32 output channels.",
+          "This channel mixing is what lets filters detect patterns across color or previous feature maps. In deeper layers, channels no longer mean red, green, and blue. They are learned feature responses. A filter can combine edge maps, texture maps, and shape hints from the previous layer into a new pattern at each location.",
+          "Frameworks differ in axis order, commonly channels-last `(batch, height, width, channels)` or channels-first `(batch, channels, height, width)`. NumPy code should choose one order and stick to it. Many shape bugs come from treating a channel axis like a spatial axis or forgetting that each output channel has its own filter and bias."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+        keyTerms: [
+          {
+            term: "input channel",
+            definition:
+              "A separate feature plane in the input, such as a color channel or previous layer feature map."
+          },
+          {
+            term: "output channel",
+            definition:
+              "One feature map produced by one learned filter in a convolution layer."
+          },
+          {
+            term: "channels-last",
+            definition:
+              "An array layout where the channel dimension follows height and width."
+          }
+        ],
+        workedExample: {
+          title: "Parameter count with channels",
+          body:
+            "Each output channel owns a full spatial-by-input-channel filter plus one bias.",
+          code:
+            "kernel_h, kernel_w = 3, 3\nin_channels = 3\nout_channels = 32\nweights = kernel_h * kernel_w * in_channels * out_channels\nbiases = out_channels\nprint(weights + biases)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Pick the most dangerous pitfall for CNN building blocks with NumPy and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Mixing up output height/width calculations.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Local receptive fields. Convolution assumes local patterns matter. A 3x3 filter over an RGB image has 3 * 3 * 3 = 27 weights plus bias and slides across height and width. The same weights detect the same pattern in many positions, creating translation equivariance: shifting the input shifts the feature map. A dense layer over a 224x224x3 image to 64 outputs would need over 9.6 million weights; a convolution with 64 filters of size 3x3 needs only 1,792 weights including biases.\n\nReceptive fields grow with depth. One 3x3 convolution sees a 3x3 patch. Two stacked 3x3 convolutions with stride 1 let the second layer combine information from a 5x5 area. Three see 7x7. This stacking adds nonlinearities and fewer parameters than one huge filter. CNNs therefore learn edges and textures early, parts in middle layers, and task-specific arrangements later. Implementing convolution in NumPy makes these locality and sharing assumptions visible.",
-          "Output shape arithmetic. Convolution output size follows a concrete formula. For input size W, filter size F, padding P, and stride S, output size is floor((W - F + 2P) / S) + 1. A 32x32 image with 3x3 filters, padding 1, stride 1 stays 32x32. Without padding it becomes 30x30. With stride 2 and padding 1 it becomes 16x16. Shape arithmetic is not bookkeeping; it controls memory, compute, and whether later layers receive the expected dimensions.\n\nChannels add another dimension. A convolution filter spans all input channels, so for input (N, H, W, C_in) and C_out filters of size KxK, weights have shape (K, K, C_in, C_out) in one common convention. Output is (N, H_out, W_out, C_out). During backprop, dWeights has the same shape as weights, and dInput has the same shape as input. Most CNN bugs are wrong padding, stride, channel order, or off-by-one output dimensions.",
-          "Pooling information tradeoff. Pooling reduces spatial resolution and compute while adding tolerance to small shifts. Max pooling with 2x2 window and stride 2 halves height and width, keeping the strongest activation in each window. This can help classification because a cat ear detected one pixel left should still count. The cost is lost detail. For segmentation, detection of tiny objects, or precise localization, aggressive pooling can remove information the task needs.\n\nStrided convolution is a learnable alternative to fixed pooling. Average pooling summarizes smooth presence; max pooling captures strongest evidence. Modern networks often combine downsampling with residual blocks and normalization to control information flow. When building from scratch, inspect activation maps before and after pooling. If a 28x28 digit becomes 7x7 too quickly, the model may lose stroke details. Downsampling is not free compression; it is an architectural decision about invariance versus precision.",
-          "Im2col compute trick. Naive convolution uses many nested loops over batch, output height, output width, filters, kernel rows, kernel columns, and channels. That is clear but slow in Python. The im2col trick extracts every sliding window into rows of a matrix, reshapes filters into columns, and turns convolution into matrix multiplication. For input patches shaped (N * H_out * W_out, K * K * C_in) and filters shaped (K * K * C_in, C_out), one matrix multiply produces all output activations.\n\nThe trick trades memory for speed. im2col duplicates input values because overlapping windows share pixels, so the temporary matrix can be much larger than the original image. Libraries use optimized variants, tiling, and GPU kernels to avoid worst-case overhead. For learning, im2col is valuable because it connects convolution to linear algebra and makes backward pass easier to reason about: gradients through the matrix multiply are computed, then col2im scatters overlapping patch gradients back into the input shape by summing contributions."
-        ],
-        "keyTerms": [
-          {
-            "term": "Local receptive fields",
-            "definition": "Convolution assumes local patterns matter. A 3x3 filter over an RGB image has 3 * 3 * 3 = 27 weights plus bias and slides across height and width. The same weights detect the same pattern in many positions, creating tran…"
-          },
-          {
-            "term": "Output shape arithmetic",
-            "definition": "Convolution output size follows a concrete formula. For input size W, filter size F, padding P, and stride S, output size is floor((W - F + 2P) / S) + 1. A 32x32 image with 3x3 filters, padding 1, stride 1 stays 32x32. W…"
-          },
-          {
-            "term": "Pooling information tradeoff",
-            "definition": "Pooling reduces spatial resolution and compute while adding tolerance to small shifts. Max pooling with 2x2 window and stride 2 halves height and width, keeping the strongest activation in each window. This can help clas…"
+            prompt: "Why does one filter span all input channels?",
+            reveal:
+              "The filter computes one local pattern by combining information from every input channel at the same spatial neighborhood."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
+        callout: {
+          tone: "warning",
+          body:
+            "Always name your tensor layout in notes. Silent channels-first versus channels-last confusion can make correct-looking code wrong."
         }
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach cnn building blocks with numpy as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: What does a convolution filter compute at one output location? | How do stride and padding change output size? | Why does max pooling provide some translation tolerance?"
+        id: "pooling-and-receptive-fields",
+        heading: "Pooling and depth grow receptive fields",
+        paragraphs: [
+          "Pooling summarizes local neighborhoods, commonly by maximum or average. Max pooling keeps the strongest activation in a window, giving small translation tolerance and reducing spatial resolution. Average pooling keeps a smoother summary. Pooling has no learned weights, but it changes geometry and information flow.",
+          "A receptive field is the region of the original input that can affect a later activation. Stacking convolutions grows receptive fields because each layer reads neighborhoods of the previous layer. Downsampling through stride or pooling grows the effective view faster. This is how CNNs progress from local edges to larger shapes without connecting every pixel to every output immediately.",
+          "Pooling is not mandatory in modern CNNs; strided convolutions and global average pooling are common alternatives. The design choice depends on compute, invariance, and task. Classification often benefits from gradually discarding exact location, while segmentation and detection need more spatial precision. A CNN block should match the output task, not just copy an old architecture."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of CNN building blocks with NumPy as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "max pooling",
+            definition:
+              "A downsampling operation that keeps the maximum value in each local window."
+          },
+          {
+            term: "receptive field",
+            definition:
+              "The region of the input that can influence a particular activation."
+          },
+          {
+            term: "global average pooling",
+            definition:
+              "A layer that averages each channel over all spatial locations before prediction."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        workedExample: {
+          title: "Tiny max pool",
+          body:
+            "Each 2 by 2 window contributes its largest value to the downsampled output.",
+          code:
+            "import numpy as np\n\nx = np.array([[1, 4, 2, 0], [3, 2, 5, 1], [0, 1, 2, 3], [6, 1, 0, 2]])\nout = np.zeros((2, 2), dtype=int)\nfor i in range(2):\n    for j in range(2):\n        out[i, j] = x[2*i:2*i+2, 2*j:2*j+2].max()\nprint(out)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why might segmentation use less aggressive downsampling than classification?",
+            reveal:
+              "Segmentation needs spatially precise output for each region or pixel, while classification can often discard exact location after enough features are extracted."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Receptive field explains why deep CNN layers can reason about larger objects even though each convolution is local."
+        }
+      },
+      {
+        id: "flattening-and-classification",
+        heading: "CNN blocks become predictions through heads",
+        paragraphs: [
+          "After convolutional blocks extract spatial features, a prediction head converts those features into task outputs. The older pattern flattens all feature maps and feeds dense layers. This works but can create many parameters if spatial dimensions remain large. Global average pooling reduces each channel to one number, often producing smaller and more regularized classifiers.",
+          "For classification, the final layer emits one logit per class and trains with softmax cross-entropy. For binary tasks, it may emit one logit with sigmoid loss. For detection or segmentation, the head is more specialized because outputs need boxes, masks, or per-pixel classes. The convolutional backbone supplies features; the head defines the task.",
+          "From-scratch labs should keep the first implementation tiny. Use one image, one channel, one or two filters, explicit loops, and printed shapes. Then vectorize with `im2col` or batched operations only after the simple version is correct. The point is to own the mechanics before hiding them behind optimized kernels."
+        ],
+        keyTerms: [
+          {
+            term: "backbone",
+            definition:
+              "The feature-extraction portion of a neural network before task-specific heads."
+          },
+          {
+            term: "classification head",
+            definition:
+              "Layers that convert learned features into class logits or probabilities."
+          },
+          {
+            term: "flatten",
+            definition:
+              "Reshaping spatial feature maps into one vector per example for dense layers."
+          }
+        ],
+        workedExample: {
+          title: "Flatten feature maps for a dense head",
+          body:
+            "The batch dimension stays first; all spatial and channel dimensions become one feature dimension.",
+          code:
+            "import numpy as np\n\nfeatures = np.zeros((4, 6, 6, 8))  # batch, height, width, channels\nflat = features.reshape(features.shape[0], -1)\nW = np.zeros((flat.shape[1], 10))\nlogits = flat @ W\nprint(flat.shape, logits.shape)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt: "Why can flattening too early create many parameters?",
+            reveal:
+              "Flattening preserves every spatial location as a separate dense input, so parameter count grows with height times width times channels times output units."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Describe a CNN as local filters plus weight sharing, stacked to grow receptive fields, followed by a task-specific head."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can compute one convolution output cell from a patch and kernel.",
-        "Can derive output sizes from input size, kernel, stride, and padding.",
-        "Can implement valid 2D convolution over a single-channel image.",
-        "Can implement max pooling with a fixed window and stride.",
-        "Can explain how convolutional features become classifier inputs and how to evaluate them."
+    wrapUp: {
+      takeaways: [
+        "Convolution applies shared local filters to exploit spatial structure.",
+        "Padding, stride, and kernel size determine output geometry.",
+        "Filters span input channels and produce output channels.",
+        "Pooling and depth trade spatial precision for larger receptive fields and lower compute.",
+        "Prediction heads convert convolutional features into task-specific outputs."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Convolutional Neural Networks (CS231n) — https://cs231n.github.io/convolutional-networks/",
-        "Optional deeper reading: A Guide to Convolution Arithmetic for Deep Learning (arXiv) — https://arxiv.org/abs/1603.07285"
+      nextSteps: [
+        "Implement one-channel convolution with explicit loops and verify output shape by hand.",
+        "Compare parameter counts for flattening versus global average pooling.",
+        "Explain how a 3 by 3 kernel in deep layers can still support object-level recognition."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const deepLearningFromScratchChapters = JSON.parse(JSON.stringify(chapters));
