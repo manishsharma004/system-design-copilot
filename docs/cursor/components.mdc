@@ -8,7 +8,7 @@ Major Svelte UI under `src/lib/components/`. Prefer extending these over new par
 |-----------|----------|
 | `LessonSectionNav.svelte` | Sticky sub-nav: Read · Topic lab · Simulate · Practice · Solutions |
 | `LessonCodeSnippet.svelte` | Read/run Python samples in lesson body + Learn reader (`lessonPythonRunner.js` → ML Pyodide worker) |
-| `LessonLearnReader.svelte` | Book-style Learn modal (AI detailed chapters + fallback); see `docs/learn-chapter-reader.md` |
+| `LessonLearnReader.svelte` | Book-style Learn modal (HLD/LLD/DSA/AI chapters + question-bank fallback); see `docs/learn-chapter-reader.md` |
 | `SelectionSearchPopup.svelte` | Text-selection Search with AI popup inside Learn reader |
 | `MermaidDiagram.svelte` | Mermaid in topic labs |
 
