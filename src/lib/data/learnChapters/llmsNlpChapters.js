@@ -2,958 +2,721 @@
 export const llmsNlpChapters = {
   "llms-and-nlp/llm-fundamentals": {
     "title": "Chapter: LLM fundamentals",
-    "readingTime": "55-70 min",
-    "premise": "Pre-training objectives, tokenization, context windows, and the emergent capabilities that appear at scale. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "readingTime": "65-80 min",
+    "premise": "A production-minded explanation of how large language models tokenize text, use context, learn through pretraining and post-training, fail through hallucination, and turn sampling choices into cost and reliability tradeoffs.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "tokens-are-the-interface",
+        "heading": "Tokens are the model's real input",
         "paragraphs": [
-          "By mid-2026, shipping LLM features means choosing among frontier APIs, open-weight engines, and reasoning-optimized models—then controlling structured outputs, multimodal inputs, cost/latency SLOs, and provider deprecation risk. Interviewers expect systems thinking, not only next-token intuition.",
-          "This chapter treats \"LLM fundamentals\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "pretraining-adaptation-and-alignment-stages",
-        "heading": "Pretraining, adaptation, and alignment stages",
-        "paragraphs": [
-          "Modern LLMs usually begin with self-supervised next-token (or related) pretraining on massive corpora. This stage learns broadly useful representations and generators. Supervised fine-tuning (SFT) on instruction-response pairs teaches formats and task following. Preference optimization / RLHF further aligns outputs with human or AI raters. Emergent-looking skills often track scale and data mixture rather than magic. For product work, know which stage owns which failure: pretraining gaps cause knowledge holes; SFT gaps cause instruction failures; alignment gaps cause tone/safety issues. Also track evaluation contamination: public benchmarks may be partially memorized.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Separate pretraining, SFT, and preference stages in explanations.",
-          "• Map failures to the stage that most likely caused them.",
-          "• Treat benchmark scores with contamination skepticism.",
-          "Production lens — Autoregressive LMs model P(token | context): Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece) affects multilingual behavior, math, and code because the model never sees characters—only subword IDs. Context window limits bound in-context memory regardless of apparent fluency."
+          "A language model does not read characters, words, or sentences in the way a person does. It receives a sequence of integer token IDs produced by a tokenizer, usually a byte-pair, unigram, or related subword scheme. That detail sounds mechanical until you debug a multilingual product, a code assistant, or a cost spike. A common English word may be one token, a rare medical term may be split into many, and a short emoji or punctuation-heavy code fragment may consume more budget than its visual length suggests.",
+          "Tokenization also explains why models can be surprisingly strong at some strings and brittle at others. The model learns statistical patterns over token IDs, so tokens that appear often in training have richer learned associations than rare fragments. Numbers, identifiers, whitespace, and casing can all change the sequence the model sees. When an interviewer asks why an LLM struggles to copy long serial numbers or reason over exact code indentation, tokenization is one of the first mechanisms to mention.",
+          "In production, token count is not an abstract measure; it is the unit of context, latency, and price. Every system prompt, retrieved passage, chat turn, tool result, and output token competes for the same window and the same bill. Before promising that a workflow can summarize hundreds of documents or keep years of chat memory, estimate tokens with the model's actual tokenizer. Educational approximations are fine for learning, but pricing and truncation policies must use the tokenizer used by the deployed model.",
+          "A practical habit is to treat tokenization as part of input validation. Log token distributions by route, language, and document type; watch for long-tail outliers; and reject or summarize pathological inputs before they trigger expensive calls. This turns tokenization from trivia into an operational control surface."
         ],
         "keyTerms": [
           {
-            "term": "Separate pretraining, SFT, and preference stages",
-            "definition": "Separate pretraining, SFT, and preference stages in explanations."
+            "term": "Subword tokenizer",
+            "definition": "A tokenizer that represents text as reusable pieces smaller than or sometimes equal to words, improving coverage while changing sequence length."
           },
           {
-            "term": "Map failures to the stage that",
-            "definition": "Map failures to the stage that most likely caused them."
+            "term": "Token budget",
+            "definition": "The total number of input and output tokens a request can use before hitting context, latency, or cost limits."
           },
           {
-            "term": "Treat benchmark scores with contamination ske…",
-            "definition": "Treat benchmark scores with contamination skepticism."
+            "term": "Vocabulary",
+            "definition": "The fixed set of token IDs the model can receive or emit after tokenization."
           }
         ],
         "checkYourself": [
           {
-            "prompt": "Can explain pretraining vs SFT vs preference alignment.",
-            "reveal": "Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece) affects multilingual behavior, math, and code because the model never sees characters—only subword IDs. Context window limits bound in-context memory regardless of apparent fluency."
-          }
-        ]
-      },
-      {
-        "id": "tokenization-without-proprietary-tokenizers",
-        "heading": "Tokenization without proprietary tokenizers",
-        "paragraphs": [
-          "Models do not see characters directly; they see token IDs from a vocabulary built by algorithms like BPE. Rare words shatter into pieces; spaces and punctuation become tokens; code and numbers often tokenize awkwardly. Token count drives cost and latency. In this browser lab we cannot ship tiktoken, so we implement educational tokenizers: whitespace, character, and a tiny BPE-like merger on a mini corpus. The point is to feel how vocabulary choices change sequence length and how \"GPT-4's\" might split differently than \"transformer\". Production systems still must count with the real model tokenizer before estimating cost.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Token count is the currency of context and cost.",
-          "• Subword schemes trade vocab size for sequence length.",
-          "• Prototype tokenizer behavior even when APIs are unavailable.",
-          "Production lens — Training stages: pretrain → SFT → RLHF/DPO: Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and loss functions. Production LLM systems are rarely \"just the base model\"—deployment quality depends heavily on post-training."
-        ],
-        "keyTerms": [
-          {
-            "term": "Token count is the currency of",
-            "definition": "Token count is the currency of context and cost."
+            "prompt": "Why can a short-looking string be expensive or error-prone for an LLM?",
+            "reveal": "Because visible length is not token length. Rare terms, numbers, code, punctuation, and multilingual text may split into many tokens, increasing cost and changing what patterns the model has learned."
           },
           {
-            "term": "Subword schemes trade vocab size for",
-            "definition": "Subword schemes trade vocab size for sequence length."
-          },
-          {
-            "term": "Prototype tokenizer behavior even when APIs",
-            "definition": "Prototype tokenizer behavior even when APIs are unavailable."
-          }
-        ],
-        "workedExample": {
-          "title": "Compare whitespace, char, and toy BPE counts",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from collections import Counter\n\ndef whitespace_tokenize(text):\n    return text.split()\n\ndef char_tokenize(text):\n    return list(text)\n\ndef toy_bpe_tokenize(text, merges):\n    tokens = list(text)\n    for a, b in merges:\n        i = 0\n        out = []\n        while i < len(tokens):\n            if i + 1 < len(tokens) and tokens[i] == a and tokens[i+1] == b:\n                out.append(a + b); i += 2\n            else:\n                out.append(tokens[i]); i += 1\n        tokens = out\n    return tokens\n\ntext = \"transformers transform text\"\nmerges = [(\"t\",\"r\"), (\"tr\",\"a\"), (\"a\",\"n\")]\nfor name, toks in {\n    \"ws\": whitespace_tokenize(text),\n    \"char\": char_tokenize(text),\n    \"toy\": toy_bpe_tokenize(text, merges),\n}.items():\n    print(name, len(toks), toks[:12])",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can reason about tokenization impact on cost/context.",
-            "reveal": "Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and loss functions. Production LLM systems are rarely \"just the base model\"—deployment quality depends heavily on post-training."
-          }
-        ]
-      },
-      {
-        "id": "context-windows-and-information-loss",
-        "heading": "Context windows and information loss",
-        "paragraphs": [
-          "The context window is the model's working memory for a request. Stuff it with retrieved docs, chat history, tools results, and instructions—and something falls off. Longest-first or importance-aware truncation policies matter. Position effects (lost-in-the-middle) mean buried facts may be ignored. Summarization memory and RAG exist because unbounded chat history is not free. Architect systems so critical constraints (safety policy, schema, user locale) stay in privileged prompt segments that are hard to truncate away. Measure failure under max-context stress tests, not only happy-path short prompts.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Treat context as a scarce, structured resource.",
-          "• Protect system constraints from truncation.",
-          "• Stress-test long prompts for middle-loss failures.",
-          "Production lens — Autoregressive LMs model P(token | context): Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece) affects multilingual behavior, math, and code because the model never sees characters—only subword IDs. Context window limits bound in-context memory regardless of apparent fluency."
-        ],
-        "keyTerms": [
-          {
-            "term": "Treat context as a scarce, structured",
-            "definition": "Treat context as a scarce, structured resource."
-          },
-          {
-            "term": "Protect system constraints from truncation.",
-            "definition": "Protect system constraints from truncation."
-          },
-          {
-            "term": "Stress-test long prompts for middle-loss fail…",
-            "definition": "Stress-test long prompts for middle-loss failures."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Knows context truncation failure modes.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to context windows and information loss."
-          }
-        ]
-      },
-      {
-        "id": "capabilities-hallucinations-and-verification",
-        "heading": "Capabilities, hallucinations, and verification",
-        "paragraphs": [
-          "LLMs are strong at stylistic transformation, drafting, and pattern-rich reasoning—and weak as sole sources of truth. Hallucination is not a rare bug; it is the default of a generative prior when evidence is missing. Mitigation is architectural: retrieval grounding, tool use for calculators/databases, citation requirements, constrained decoding, and human review for high stakes. Arithmetic and exact long-number copying remain failure-prone without tools. Consistency across temperature samples is a useful probe: unstable answers signal uncertainty even if each answer sounds confident.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Design verification paths for factual claims.",
-          "• Use tools for exact computation and lookups.",
-          "• Probe consistency, not only single-sample eloquence.",
-          "Production lens — Training stages: pretrain → SFT → RLHF/DPO: Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and loss functions. Production LLM systems are rarely \"just the base model\"—deployment quality depends heavily on post-training."
-        ],
-        "keyTerms": [
-          {
-            "term": "Design verification paths for factual claims.",
-            "definition": "Design verification paths for factual claims."
-          },
-          {
-            "term": "Use tools for exact computation and",
-            "definition": "Use tools for exact computation and lookups."
-          },
-          {
-            "term": "Probe consistency, not only single-sample elo…",
-            "definition": "Probe consistency, not only single-sample eloquence."
-          }
-        ],
-        "workedExample": {
-          "title": "Offline consistency probe with a mocked generator",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef mock_llm(prompt, temperature, seed):\n    rng = np.random.default_rng(seed)\n    base = 42 if \"14*3\" in prompt else 0\n    noise = rng.normal(scale=temperature * 5)\n    return str(int(round(base + noise)))\n\nprompt = \"Compute 14*3\"\nsamples = [mock_llm(prompt, temperature=0.9, seed=i) for i in range(10)]\nprint(samples, \"unique\", len(set(samples)))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Designs verification for hallucination-prone tasks.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to capabilities, hallucinations, and verification."
-          }
-        ]
-      },
-      {
-        "id": "product-metrics-for-llm-features",
-        "heading": "Product metrics for LLM features",
-        "paragraphs": [
-          "Ship LLM features with task metrics: exact match / F1 for extraction, rubrics or LLM-as-judge for open ends, groundedness for RAG, and latency/cost budgets. Track refusal quality and safety violations as first-class. Shadow deploy new prompts/models before full traffic. Log prompts carefully with privacy redaction. The fundamentals lesson ends where platform engineering begins: version prompts like code, and never equate \"demo magic\" with evaluated reliability.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Define task metrics before prompt polishing.",
-          "• Version prompts and models together.",
-          "• Include cost/latency in acceptance criteria.",
-          "Production lens — Autoregressive LMs model P(token | context): Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece) affects multilingual behavior, math, and code because the model never sees characters—only subword IDs. Context window limits bound in-context memory regardless of apparent fluency."
-        ],
-        "keyTerms": [
-          {
-            "term": "Define task metrics before prompt polishing.",
-            "definition": "Define task metrics before prompt polishing."
-          },
-          {
-            "term": "Version prompts and models together.",
-            "definition": "Version prompts and models together."
-          },
-          {
-            "term": "Include cost/latency in acceptance criteria.",
-            "definition": "Include cost/latency in acceptance criteria."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Defines offline metrics for an LLM feature.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to product metrics for llm features."
-          }
-        ]
-      },
-      {
-        "id": "frontier-apis-open-weight-engines-and-reasoning-models-in-2026",
-        "heading": "Frontier APIs, open-weight engines, and reasoning models in 2026",
-        "paragraphs": [
-          "The practical model landscape now splits along operational axes, not just parameter counts. Frontier hosted models still lead on hard reasoning, tool use, and multimodal fluency when you need rapid product iteration without owning GPUs. Open-weight models (Llama-class, Mistral-class, Qwen-class, and peers) win when you need data residency, predictable unit economics at high volume, deep customization, or air-gapped deployment—usually behind an inference stack that exposes an OpenAI-compatible API. Separately, reasoning or extended-thinking models allocate extra test-time compute: they produce longer internal traces before answering, which can raise accuracy on math, planning, and multi-step tools while blowing up latency and token bills. Classic chat models remain better for low-latency classification, extraction, and drafting when you already constrain the task. Multimodal inputs (images, PDFs, sometimes audio) are mainstream product requirements; treat pixels and pages as untrusted content with the same injection risks as web text. Structured output modes—JSON schema / constrained decoding—are no longer optional polish: they are how you keep parsers deterministic. Finally, provider deprecation is an ops risk: model IDs disappear, defaults change, and silent quality shifts break evals. Pin aliases, keep golden prompts, and design a two-provider escape hatch before traffic depends on one SKU.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Choose frontier vs open-weight by residency, cost curve, customization, and ops ownership—not brand loyalty.",
-          "• Treat reasoning/extended-thinking models as a latency/cost dial distinct from classic chat models.",
-          "• Require schema-constrained outputs for machine-consumed responses; pin model aliases against deprecation.",
-          "• Multimodal bytes are untrusted inputs; apply the same injection and PII controls as text.",
-          "Production lens — Training stages: pretrain → SFT → RLHF/DPO: Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and loss functions. Production LLM systems are rarely \"just the base model\"—deployment quality depends heavily on post-training."
-        ],
-        "keyTerms": [
-          {
-            "term": "Choose frontier vs open-weight by residency,",
-            "definition": "Choose frontier vs open-weight by residency, cost curve, customization, and ops ownership—not brand loyalty."
-          },
-          {
-            "term": "Treat reasoning/extended-thinking models as a…",
-            "definition": "Treat reasoning/extended-thinking models as a latency/cost dial distinct from classic chat models."
-          },
-          {
-            "term": "Require schema-constrained outputs for machin…",
-            "definition": "Require schema-constrained outputs for machine-consumed responses; pin model aliases against deprecation."
-          },
-          {
-            "term": "Multimodal bytes are untrusted inputs; apply",
-            "definition": "Multimodal bytes are untrusted inputs; apply the same injection and PII controls as text."
-          }
-        ],
-        "workedExample": {
-          "title": "Toy cost/latency scorecard for model routing",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import pandas as pd\n\nrows = [\n    {'model': 'frontier_chat', 'mode': 'chat', 'cost_per_1k': 0.008, 'p95_ms': 900, 'schema_ok': 0.96},\n    {'model': 'frontier_reason', 'mode': 'reason', 'cost_per_1k': 0.04, 'p95_ms': 4500, 'schema_ok': 0.98},\n    {'model': 'openweight_chat', 'mode': 'chat', 'cost_per_1k': 0.0015, 'p95_ms': 700, 'schema_ok': 0.93},\n]\ndf = pd.DataFrame(rows)\ndf['utility'] = df['schema_ok'] / (df['cost_per_1k'] * (df['p95_ms'] / 1000))\nprint(df.sort_values('utility', ascending=False).round(3).to_string(index=False))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can contrast frontier APIs vs self-hosted open-weight serving for a concrete product constraint.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to frontier apis, open-weight engines, and reasoning models in 2026."
+            "prompt": "What should you use for production token estimates?",
+            "reveal": "Use the deployed model's real tokenizer, not whitespace or character counts."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+          "body": "Strong interview answers connect tokenization to user-visible behavior: context limits, cost, multilingual quality, code handling, and exact-copy failures."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
+        "id": "context-window-as-working-memory",
+        "heading": "Context windows are scarce working memory",
         "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for llm fundamentals.",
-          "Trap: Trusting fluent answers as factual. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring token costs in product architecture. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Treating LLMs as deterministic functions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No eval harness before prompt iteration. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Defaulting every task to a reasoning model and missing latency budgets. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Assuming open-weight deployment is free because weights are downloadable. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Shipping without a pinned model alias and a golden eval for silent provider changes. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+          "The context window is the maximum sequence of tokens the model can condition on for one request. It includes the hidden or system instructions, user messages, examples, retrieved documents, tool outputs, and prior conversation turns. A larger window can reduce the need for aggressive summarization, but it does not create permanent memory. Anything outside the current request is invisible unless you retrieve, summarize, or otherwise reinsert it.",
+          "Long context introduces its own reliability issues. Models may underuse facts buried in the middle, over-attend to recent or prominent passages, or become distracted by redundant context. Simply stuffing more pages into the prompt can lower precision even when it raises recall. Good context assembly orders evidence intentionally, keeps source IDs attached, removes duplicates, and reserves space for the answer.",
+          "Truncation policy is an architecture decision. If a support bot keeps appending chat turns until it hits the limit, the oldest constraints, consent statements, or customer facts may disappear. Production systems usually separate durable policy, recent conversation, retrieved knowledge, and compact memory summaries, then assign each a budget. Critical instructions should live in high-priority segments that are hard to drop.",
+          "Cost grows with context, and latency often grows with both prompt and output length. The cheapest reliable system is rarely the one with the largest possible context; it is the one that retrieves and packs the smallest sufficient evidence. Measure accuracy at short, normal, and max-context cases, because many demos fail only after real users accumulate history."
+        ],
+        "keyTerms": [
+          {
+            "term": "Context window",
+            "definition": "The maximum number of tokens a model can consider in a single request, including prompt, tools, retrieval, history, and output allowance."
+          },
+          {
+            "term": "Lost-in-the-middle",
+            "definition": "A failure mode where models ignore or underweight important facts placed deep inside long context."
+          },
+          {
+            "term": "Context packing",
+            "definition": "The process of selecting, ordering, and trimming prompt material to fit a token budget while preserving evidence and instructions."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "Why can a larger context window still make answers worse?",
+            "reveal": "More context can add distraction, duplicates, conflicting facts, and position effects; retrieval and packing quality still matter."
+          },
+          {
+            "prompt": "What prompt segments deserve protection from truncation?",
+            "reveal": "Safety policy, output contracts, user-specific constraints, source metadata, and the most relevant evidence should be protected."
+          }
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
+          "body": "Do not sell long context as memory. It is request-local working memory with cost, position, and truncation failure modes."
+        }
+      },
+      {
+        "id": "pretraining-sft-and-preference-alignment",
+        "heading": "Pretraining, SFT, and RLHF are different stages",
+        "paragraphs": [
+          "Most modern LLMs start with large-scale self-supervised pretraining. The model learns to predict tokens from broad mixtures of web text, books, code, academic material, and curated corpora. This stage teaches grammar, facts, styles, and latent skills, but the raw pretrained model is not necessarily a helpful assistant. It may continue text, imitate toxic sources, or ignore instructions because next-token prediction is not the same as cooperative task completion.",
+          "Supervised fine-tuning, often called SFT, turns the base model toward instruction following. Training examples are formatted as prompts and ideal responses, so the model learns role behavior, answer style, refusal patterns, and common task formats. SFT is where many assistant conventions appear: concise answers, step lists, tool-call schemas, and conversational tone. Poor SFT data can make a model verbose, brittle, or overconfident even if the base model is strong.",
+          "Preference alignment, including RLHF and direct preference optimization variants, adds another signal: among multiple candidate responses, which one is preferred. This can improve helpfulness, harmlessness, and conversational judgment, but it can also teach superficial reward patterns such as excessive politeness, sycophancy, or refusal overreach. Alignment methods shape behavior; they do not install a database of truth.",
+          "A useful debugging frame is to map failures to likely stages. Missing domain knowledge may call for retrieval or continued pretraining, bad formatting may call for SFT or prompting, and unsafe or unhelpful behavior may point to preference data and policy tuning. The stages interact, but naming them keeps a design discussion concrete."
+        ],
+        "keyTerms": [
+          {
+            "term": "Pretraining",
+            "definition": "Large-scale self-supervised training that teaches broad language patterns and knowledge through token prediction or related objectives."
+          },
+          {
+            "term": "Supervised fine-tuning",
+            "definition": "Training on instruction-response examples to teach task following, formats, and assistant behavior."
+          },
+          {
+            "term": "RLHF",
+            "definition": "Reinforcement learning from human feedback, a preference-based alignment method that rewards responses humans or trained raters prefer."
+          }
+        ],
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for LLM fundamentals and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Trusting fluent answers as factual.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "Which stage most directly teaches an assistant to follow a JSON response format?",
+            "reveal": "SFT often teaches formats, though prompting and constrained decoding should still enforce the contract at runtime."
+          },
+          {
+            "prompt": "Why does RLHF not eliminate hallucination?",
+            "reveal": "It shapes preferred behavior, but the model is still generating from learned patterns and may invent unsupported content without evidence or tools."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "hallucination-and-verification",
+        "heading": "Hallucination is a system problem, not just a model flaw",
         "paragraphs": [
-          "Autoregressive LMs model P(token | context). Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece) affects multilingual behavior, math, and code because the model never sees characters—only subword IDs. Context window limits bound in-context memory regardless of apparent fluency.",
-          "Training stages: pretrain → SFT → RLHF/DPO. Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and loss functions. Production LLM systems are rarely \"just the base model\"—deployment quality depends heavily on post-training."
+          "A hallucination is an unsupported or false claim produced with fluent confidence. It occurs because the model is optimized to generate plausible continuations, not to maintain a verified belief database. When evidence is missing, ambiguous, stale, or hidden outside the context window, the model may still produce a convincing answer. Better models reduce the rate, but they do not change the need for verification in high-stakes workflows.",
+          "Mitigation starts by separating tasks that need creativity from tasks that need truth. Drafting marketing copy can tolerate variation; medical advice, legal summaries, billing actions, and security decisions require evidence, tools, or human review. Retrieval grounds claims in documents, calculators handle arithmetic, databases answer exact state, and validators enforce schemas. The LLM should be an orchestrated component, not the sole authority.",
+          "Good systems also teach the model when to refuse or ask clarifying questions. If retrieved evidence is weak, conflicting, or absent, the correct answer may be \"I do not have enough information.\" That behavior has to be evaluated, because models often prefer completion over abstention. Citation checks, quote verification, and answer-against-context judges can catch many unsupported claims before users see them.",
+          "For interviews, avoid saying hallucinations are solved by lower temperature. Lower temperature reduces sampling variability, but a deterministic wrong answer is still wrong. The stronger answer is architectural: constrain the task, retrieve evidence, call tools for exact facts, validate outputs, measure groundedness, and define a fallback path."
         ],
         "keyTerms": [
           {
-            "term": "Autoregressive LMs model P(token | context)",
-            "definition": "Decoder-only LLMs are next-token predictors trained on massive corpora; emergent abilities (reasoning, instruction following) appear at scale but are not guaranteed by architecture alone. Tokenization (BPE, SentencePiece…"
+            "term": "Hallucination",
+            "definition": "A generated claim that is unsupported by the provided evidence or false relative to the task's ground truth."
           },
           {
-            "term": "Training stages: pretrain → SFT → RLHF/DPO",
-            "definition": "Pretraining learns language and world knowledge; supervised fine-tuning aligns format and instruction following; preference optimization (RLHF, DPO, ORPO) shapes helpfulness and safety. Each stage uses different data and…"
+            "term": "Grounding",
+            "definition": "Constraining answers to explicit evidence such as retrieved documents, database records, or tool outputs."
+          },
+          {
+            "term": "Abstention",
+            "definition": "A system behavior where the model refuses or asks for clarification when confidence or evidence is insufficient."
           }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach llm fundamentals as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How does RLHF differ from supervised fine-tuning? | What causes hallucination and how would you mitigate it? | Explain context window size vs inference cost."
         ],
         "checkYourself": [
           {
-            "prompt": "Give a 90-second spoken overview of LLM fundamentals as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            "prompt": "Why is a deterministic hallucination still dangerous?",
+            "reveal": "Lower randomness can make the same false claim repeat reliably; verification and grounding are still required."
+          },
+          {
+            "prompt": "Name three non-prompt mitigations for hallucination.",
+            "reveal": "Retrieval, tool use, schema validation, citation verification, human review, and groundedness evaluation are all valid examples."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "A fluent answer is not evidence. Production LLM features need explicit sources of truth and checks that claims stay inside them."
+        }
+      },
+      {
+        "id": "sampling-temperature-and-output-control",
+        "heading": "Temperature controls variation, not correctness",
+        "paragraphs": [
+          "At generation time, the model produces a distribution over possible next tokens. Decoding parameters decide how to sample from that distribution. Temperature rescales probabilities: lower values concentrate on likely tokens, while higher values increase diversity and surprise. Top-p and top-k further restrict the candidate set. These knobs change style and variability, but they do not add missing knowledge or guarantee reasoning.",
+          "The right setting depends on the task. Extraction, classification, code transformations, and JSON generation usually want low temperature, strict schemas, and retries on validation failure. Brainstorming, naming, teaching examples, and creative drafting may benefit from higher temperature and multiple candidates. A product can route different tasks to different decoding profiles rather than pretending one global setting fits all features.",
+          "Structured outputs deserve special treatment. If downstream code consumes the result, use JSON schema, function/tool calling, grammar constraints, or a strict parser with a repair loop. Sampling alone cannot promise valid JSON, valid enum values, or safe tool arguments. Output validation should be visible in code and covered by tests.",
+          "Temperature also affects evaluation design. If the model is allowed to vary, run multiple samples or fix seeds where the provider supports it. A prompt that passes once at temperature 0.8 may fail under the next sample. Reliability claims should specify decoding settings, model version, and validation rules."
+        ],
+        "keyTerms": [
+          {
+            "term": "Temperature",
+            "definition": "A decoding parameter that controls how sharply or broadly the model samples from next-token probabilities."
+          },
+          {
+            "term": "Top-p",
+            "definition": "Nucleus sampling that limits generation to the smallest set of tokens whose cumulative probability exceeds a threshold."
+          },
+          {
+            "term": "Constrained decoding",
+            "definition": "A generation approach that restricts tokens so outputs follow a grammar, schema, or tool-call structure."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "Which tasks usually need low temperature?",
+            "reveal": "Extraction, classification, deterministic transformations, structured JSON, and safety-sensitive workflows usually need low temperature and validation."
+          },
+          {
+            "prompt": "Why is schema validation still needed with low temperature?",
+            "reveal": "Low temperature reduces variety but does not guarantee parseable or semantically valid output."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+          "body": "A concise answer: temperature is a diversity knob, not a truth knob. Pair it with task-specific validation and metrics."
         }
+      },
+      {
+        "id": "cost-latency-and-operating-models",
+        "heading": "Cost and latency shape model architecture",
+        "paragraphs": [
+          "LLM cost is usually a function of input tokens, output tokens, model tier, cached-prefix discounts, and sometimes reasoning effort or tool calls. Latency follows similar drivers: prompt length, generated length, queueing, model size, region, and the number of serial steps. A feature that looks cheap in a demo can become expensive when every request includes a long policy prompt, ten retrieved chunks, chat history, and a verbose answer.",
+          "Production systems often use model routing. A small model can classify intent, check whether retrieval is needed, or draft low-risk responses; a stronger model handles complex reasoning or user-visible final answers. Some products use open-weight models for steady high-volume tasks and hosted frontier models for difficult cases. Routing should be justified with evals, not vibes, because a cheap wrong answer can cost more than an expensive correct one.",
+          "Prompt caching and context reuse change the economics. Stable system instructions, tool schemas, and policy blocks can be arranged as a consistent prefix so providers or local servers can reuse computation. This rewards disciplined prompt templates over ad hoc string assembly. It also creates a reason to version prompts, because a small change to the prefix can invalidate cache behavior and shift costs.",
+          "The operating view ties the chapter together: tokens define the interface, context defines working memory, training stages define behavior, decoding defines variation, and evaluation defines whether the system is trustworthy. A good LLM design answer always includes quality, latency, cost, privacy, and rollback, because model choice alone is not an architecture."
+        ],
+        "keyTerms": [
+          {
+            "term": "Model routing",
+            "definition": "Selecting different models or decoding profiles per request based on task type, risk, latency, and cost."
+          },
+          {
+            "term": "Prompt caching",
+            "definition": "Reusing computation for stable prompt prefixes to reduce latency or token cost where providers or servers support it."
+          },
+          {
+            "term": "Quality per dollar",
+            "definition": "A practical metric that compares task success against total model and infrastructure cost."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "What should be logged to understand LLM cost?",
+            "reveal": "Input tokens, output tokens, model ID, cache hit status, route, tool calls, latency, and validation outcome."
+          },
+          {
+            "prompt": "Why might a smaller model be part of a high-quality system?",
+            "reveal": "It can handle routing, filtering, simple extraction, or low-risk tasks cheaply while reserving stronger models for hard cases."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can explain pretraining vs SFT vs preference alignment.",
-        "Can reason about tokenization impact on cost/context.",
-        "Knows context truncation failure modes.",
-        "Designs verification for hallucination-prone tasks.",
-        "Defines offline metrics for an LLM feature."
+        "Tokenization determines the model's real input length, behavior, cost, and context pressure.",
+        "Context windows are request-local working memory that require packing, prioritization, and truncation policy.",
+        "Pretraining, SFT, and RLHF or preference optimization solve different behavior problems.",
+        "Hallucination mitigation is architectural: evidence, tools, validation, abstention, and evaluation.",
+        "Temperature changes diversity, while cost and latency require routing, caching, and explicit budgets."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Language Models are Few-Shot Learners (GPT-3) (arXiv) — https://arxiv.org/abs/2005.14165",
-        "Optional deeper reading: Hugging Face — Large Language Models course (Hugging Face) — https://huggingface.co/learn/nlp-course/chapter1/1"
+        "Explain LLM fundamentals out loud using the sequence: tokens, context, training stages, decoding, verification, cost.",
+        "Review one LLM feature you use and identify where hallucination, truncation, or token-cost failures could appear."
       ]
     }
   },
   "llms-and-nlp/fine-tuning-techniques": {
-    "title": "Chapter: Fine-tuning and adaptation",
-    "readingTime": "55-70 min",
-    "premise": "Full fine-tuning, LoRA, QLoRA, PEFT, and instruction tuning to adapt foundation models to specific domains and tasks. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "title": "Chapter: Fine-tuning techniques",
+    "readingTime": "65-80 min",
+    "premise": "A long-form guide to choosing between full fine-tuning, LoRA, QLoRA, adapters, retrieval, prompting, and no training at all, with emphasis on data quality and regression control.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "fine-tuning-changes-behavior-not-facts",
+        "heading": "Fine-tuning changes behavior more reliably than facts",
         "paragraphs": [
-          "Adaptation in 2026 is a ladder—prompting, RAG, LoRA/QLoRA, continued pretraining, then preference optimization—not a single fine-tune button. Choosing the wrong rung wastes GPU budget and can regress safety or general instruction following.",
-          "This chapter treats \"Fine-tuning and adaptation\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "when-fine-tuning-beats-prompting",
-        "heading": "When fine-tuning beats prompting",
-        "paragraphs": [
-          "Prompting is the right first lever: cheaper iteration, no training stack. Fine-tune when you need consistent schemas, domain jargon, latency/cost reduction via smaller specialized models, or behaviors hard to specify in prompts. Also consider data readiness: if you lack representative labeled pairs, fix data before training. A common failure is fine-tuning on narrow tickets and destroying general instruction following (catastrophic forgetting). Mix replay data or keep a strong base via adapters. Decide success metrics before training: exact-match JSON validity, win rate vs prompt baseline, and safety regression tests.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Exhaust prompt baselines before training.",
-          "• Define regression suites covering general + domain tasks.",
-          "• Plan for forgetting with replay or PEFT constraints.",
-          "Production lens — Full fine-tuning vs PEFT is a memory and catastrophic-forgetting trade-off: Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRAM and enabling multi-tenant serving. LoRA merges into base weights at inference with zero latency overhead—a major production advantage."
+          "Fine-tuning is the process of updating a model with additional training so it performs better on a target distribution. That target may be a domain style, a response format, a task family, or a language variant. It is tempting to describe fine-tuning as adding knowledge, but that framing causes bad designs. Weights are a poor place for facts that change weekly, require citations, or differ by tenant.",
+          "The best first question is not \"How do we fine-tune?\" but \"What failure are we trying to fix?\" If the model lacks access to current policy documents, retrieval is usually the right lever. If it ignores a stable output contract after strong prompting, fine-tuning may help. If it uses the wrong tone for thousands of support replies, supervised examples can teach style. If it cannot reason over a private database, tool use may be better than training.",
+          "Fine-tuning also creates maintenance obligations. You need a dataset, a training recipe, evaluation gates, rollback, model storage, and monitoring for regressions. A prompt can be edited in minutes; a training run may take days to curate, run, review, and deploy. That cost can be worthwhile, but only after the baseline is measured.",
+          "For interviews, present fine-tuning as one rung on an adaptation ladder. Start with prompt and schema, add retrieval for mutable knowledge, use tools for exact actions, then consider PEFT or full fine-tuning for stable behavior. This shows judgment rather than enthusiasm for training as a default."
         ],
         "keyTerms": [
           {
-            "term": "Exhaust prompt baselines before training.",
-            "definition": "Exhaust prompt baselines before training."
+            "term": "Fine-tuning",
+            "definition": "Additional training that updates model parameters or attached modules to improve behavior on a target task or distribution."
           },
           {
-            "term": "Define regression suites covering general +",
-            "definition": "Define regression suites covering general + domain tasks."
+            "term": "Adaptation ladder",
+            "definition": "A sequence of increasingly expensive techniques: prompting, retrieval, tools, PEFT, full fine-tuning, continued pretraining, and preference optimization."
           },
           {
-            "term": "Plan for forgetting with replay or",
-            "definition": "Plan for forgetting with replay or PEFT constraints."
+            "term": "Mutable knowledge",
+            "definition": "Facts that change over time or vary by user, tenant, policy version, or source system."
           }
         ],
         "checkYourself": [
           {
-            "prompt": "Can decide prompting vs fine-tuning vs RAG.",
-            "reveal": "Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRAM and enabling multi-tenant serving. LoRA merges into base weights at inference with zero latency overhead—a major production advantage."
-          }
-        ]
-      },
-      {
-        "id": "lora-as-low-rank-surgery-on-weight-matrices",
-        "heading": "LoRA as low-rank surgery on weight matrices",
-        "paragraphs": [
-          "LoRA freezes the base weight W and learns a low-rank update BA where A is rank-by-in and B is out-by-rank (shapes vary by convention). At init, B=0 so the adapter starts as a no-op. Trainable parameter count becomes roughly rank*(in+out) per adapted matrix—often <<1% of full fine-tuning. QLoRA combines quantization of the base with LoRA for memory savings. In this course we implement LoRA math in NumPy/sklearn-free NumPy to show parameter reduction and forward composition y = xW + scale * x A^T B^T without shipping torch/peft.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• LoRA is a low-rank delta on linear maps.",
-          "• Zero-init on B preserves base behavior at start.",
-          "• Rank and target modules are primary knobs.",
-          "Production lens — Data quality dominates hyperparameter tuning for alignment: A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, continued pretraining on in-domain text before instruction tuning frequently beats SFT alone on knowledge-heavy tasks."
-        ],
-        "keyTerms": [
-          {
-            "term": "LoRA is a low-rank delta on",
-            "definition": "LoRA is a low-rank delta on linear maps."
+            "prompt": "When should you not fine-tune for knowledge?",
+            "reveal": "When facts change often, need citations, depend on permissions, or live in source systems better handled by retrieval or tools."
           },
           {
-            "term": "Zero-init on B preserves base behavior",
-            "definition": "Zero-init on B preserves base behavior at start."
-          },
-          {
-            "term": "Rank and target modules are primary",
-            "definition": "Rank and target modules are primary knobs."
-          }
-        ],
-        "workedExample": {
-          "title": "LoRA parameter count vs full fine-tune",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nin_f = out_f = 768\nrank = 8\nfull = in_f * out_f\nlora = rank * (in_f + out_f)\nprint(\"full\", full, \"lora\", lora, \"pct\", round(100 * lora / full, 3))\n\nrng = np.random.default_rng(0)\nW = rng.normal(size=(in_f, out_f)) * 0.02\nA = rng.normal(size=(rank, in_f)) * 0.01\nB = np.zeros((out_f, rank))\nx = rng.normal(size=(4, in_f))\ny = x @ W + (x @ A.T) @ B.T\nprint(y.shape, \"delta_norm\", np.linalg.norm((x @ A.T) @ B.T))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain LoRA forward pass and param counts.",
-            "reveal": "A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, continued pretraining on in-domain text before instruction tuning frequently beats SFT alone on knowledge-heavy tasks."
-          }
-        ]
-      },
-      {
-        "id": "instruction-data-preparation-and-quality-filters",
-        "heading": "Instruction data preparation and quality filters",
-        "paragraphs": [
-          "Data quality dominates PEFT rank. Convert raw logs into role-structured messages, filter toxic/PII content, drop unresolved or low-effort answers, balance intents, and split by user/time to avoid leakage. Deduplicate near-copies that inflate metrics. For classification-style adaptation, sklearn metrics on held-out labels still help; for open generation, use rubrics and pairwise preferences. Keep a gold eval set untouched by filtering experiments. Document lineage: which raw dump produced which JSONL version.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Filter ruthlessly; small clean > large dirty.",
-          "• Split to prevent user/time leakage.",
-          "• Version datasets like code artifacts.",
-          "Production lens — Full fine-tuning vs PEFT is a memory and catastrophic-forgetting trade-off: Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRAM and enabling multi-tenant serving. LoRA merges into base weights at inference with zero latency overhead—a major production advantage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Filter ruthlessly; small clean > large",
-            "definition": "Filter ruthlessly; small clean > large dirty."
-          },
-          {
-            "term": "Split to prevent user/time leakage.",
-            "definition": "Split to prevent user/time leakage."
-          },
-          {
-            "term": "Version datasets like code artifacts.",
-            "definition": "Version datasets like code artifacts."
-          }
-        ],
-        "workedExample": {
-          "title": "Filter and split instruction JSON records",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import random\n\nraw = [\n    {\"user\": \"Where is order 1?\", \"assistant\": \"It shipped Monday; tracking shows Wednesday delivery.\", \"ok\": True},\n    {\"user\": \"Return?\", \"assistant\": \"Start a return in order history.\", \"ok\": True},\n    {\"user\": \"Angry!!!\", \"assistant\": \"Ok\", \"ok\": False},\n]\n\ndef to_messages(r):\n    return {\n        \"messages\": [\n            {\"role\": \"system\", \"content\": \"Helpful support agent.\"},\n            {\"role\": \"user\", \"content\": r[\"user\"]},\n            {\"role\": \"assistant\", \"content\": r[\"assistant\"]},\n        ]\n    }\n\nfiltered = [to_messages(r) for r in raw if r[\"ok\"] and len(r[\"assistant\"]) >= 10]\nrandom.seed(0); random.shuffle(filtered)\ncut = max(1, int(0.8 * len(filtered)))\nprint(\"train\", len(filtered[:cut]), \"eval\", len(filtered[cut:]) or 0)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can prepare filtered instruction datasets with clean splits.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to instruction data preparation and quality filters."
-          }
-        ]
-      },
-      {
-        "id": "evaluation-online-and-offline-gates",
-        "heading": "Evaluation: online and offline gates",
-        "paragraphs": [
-          "Offline gates should catch schema breaks, toxicity spikes, and task regressions before deploy. Combine automatic checks (JSON schema validity rate, keyword constraints) with human or LLM-judge samples. Online gates use shadow traffic and interleaving. Monitor for prompt distribution shift: fine-tunes can overfit yesterday's ticket phrasing. Keep a kill switch to revert to the prompt-only or previous adapter. Parameter-efficient adapters help here because swapping a small weight file is operationally easier than replacing a full model.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Automate schema/safety gates in CI.",
-          "• Shadow deploy adapters before full cutover.",
-          "• Keep instant rollback paths.",
-          "Production lens — Data quality dominates hyperparameter tuning for alignment: A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, continued pretraining on in-domain text before instruction tuning frequently beats SFT alone on knowledge-heavy tasks."
-        ],
-        "keyTerms": [
-          {
-            "term": "Automate schema/safety gates in CI.",
-            "definition": "Automate schema/safety gates in CI."
-          },
-          {
-            "term": "Shadow deploy adapters before full cutover.",
-            "definition": "Shadow deploy adapters before full cutover."
-          },
-          {
-            "term": "Keep instant rollback paths.",
-            "definition": "Keep instant rollback paths."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Defines regression gates before training.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluation: online and offline gates."
-          }
-        ]
-      },
-      {
-        "id": "choosing-full-ft-vs-peft-vs-rag",
-        "heading": "Choosing full FT vs PEFT vs RAG",
-        "paragraphs": [
-          "RAG updates knowledge without weight edits; fine-tuning changes behavior and style. Full fine-tuning maximizes flexibility at high cost and risk; LoRA is usually the default adaptation tool; continued pretraining on domain text is for distribution shift in language itself. Many systems combine RAG + light PEFT. Interview answers should present a decision tree: volatile facts -> RAG; stable style/format -> PEFT; greenfield domain language -> maybe continued pretrain + SFT. Always price the maintenance burden of training jobs versus retrieval infra.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Use RAG for mutable knowledge, PEFT for stable behavior.",
-          "• Default to LoRA before full fine-tuning.",
-          "• Combine techniques when problems are multi-part.",
-          "Production lens — Full fine-tuning vs PEFT is a memory and catastrophic-forgetting trade-off: Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRAM and enabling multi-tenant serving. LoRA merges into base weights at inference with zero latency overhead—a major production advantage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Use RAG for mutable knowledge, PEFT",
-            "definition": "Use RAG for mutable knowledge, PEFT for stable behavior."
-          },
-          {
-            "term": "Default to LoRA before full fine-tuning.",
-            "definition": "Default to LoRA before full fine-tuning."
-          },
-          {
-            "term": "Combine techniques when problems are multi-part.",
-            "definition": "Combine techniques when problems are multi-part."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Plans rollback for adapter deploys.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to choosing full ft vs peft vs rag."
-          }
-        ]
-      },
-      {
-        "id": "the-adaptation-ladder-prompt-rag-lora-continued-pretraining-preferences",
-        "heading": "The adaptation ladder: prompt, RAG, LoRA, continued pretraining, preferences",
-        "paragraphs": [
-          "Treat specialization as an escalation path with explicit exit criteria. Start with prompts and tools: cheapest to iterate, easiest to roll back. Move to RAG when the failure is missing or stale private knowledge rather than style or schema adherence. Reach for LoRA/QLoRA when you need consistent formats, domain tone, or latency wins from a smaller specialized model and you already have clean instruction pairs. Continued pretraining (domain-adaptive pretraining on raw corpora) is a heavier step for language/distribution shift—legal, biomedical, or multilingual corpora—before instruction tuning; it is not a substitute for retrieval of facts that change weekly. Preference optimization (DPO-style and relatives) sits after supervised fine-tuning: given preferred vs rejected responses, the model learns a ranking signal without a full RLHF stack. Conceptually, you are shaping the policy toward human (or AI) preferences on pairwise data; you still need SFT competence first, and you must watch for reward hacking on verbosity or sycophancy. Synthetic data can multiply volume, but quality risks dominate: teacher-model biases, duplicated templates, contaminated evals, and fluent nonsense. Filter with rubrics, dedupe embeddings, hold out human gold sets, and always measure regressions on general assistants plus safety suites—not only the domain win rate.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Escalate prompt → RAG → PEFT → continued pretraining only when the prior rung fails measured gates.",
-          "• DPO-style preference optimization is pairwise policy shaping after SFT, not a magic alignment layer.",
-          "• Synthetic data needs dedupe, rubrics, and untouched human gold evals to avoid self-congratulation.",
-          "• Track catastrophic forgetting and safety regressions whenever you train adapters.",
-          "Production lens — Data quality dominates hyperparameter tuning for alignment: A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, continued pretraining on in-domain text before instruction tuning frequently beats SFT alone on knowledge-heavy tasks."
-        ],
-        "keyTerms": [
-          {
-            "term": "Escalate prompt → RAG → PEFT",
-            "definition": "Escalate prompt → RAG → PEFT → continued pretraining only when the prior rung fails measured gates."
-          },
-          {
-            "term": "DPO-style preference optimization is pairwise…",
-            "definition": "DPO-style preference optimization is pairwise policy shaping after SFT, not a magic alignment layer."
-          },
-          {
-            "term": "Synthetic data needs dedupe, rubrics, and",
-            "definition": "Synthetic data needs dedupe, rubrics, and untouched human gold evals to avoid self-congratulation."
-          },
-          {
-            "term": "Track catastrophic forgetting and safety regr…",
-            "definition": "Track catastrophic forgetting and safety regressions whenever you train adapters."
-          }
-        ],
-        "workedExample": {
-          "title": "Gate the adaptation ladder with offline scores",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def choose_rung(prompt_score, rag_recall, peft_gain, data_rows):\n    if prompt_score >= 0.9:\n        return 'ship_prompt'\n    if rag_recall is not None and rag_recall < 0.7:\n        return 'fix_retrieval_before_training'\n    if data_rows < 500:\n        return 'collect_data_or_stay_on_rag'\n    if peft_gain >= 0.05:\n        return 'train_lora'\n    return 'prefer_rag_or_prompt_iteration'\n\nprint(choose_rung(0.72, 0.55, 0.0, 200))\nprint(choose_rung(0.72, 0.88, 0.08, 2000))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain when RAG is preferable to LoRA for rapidly changing facts.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to the adaptation ladder: prompt, rag, lora, continued pretraining, preferences."
+            "prompt": "What baseline should exist before training?",
+            "reveal": "A prompt/RAG/tool baseline with task metrics, cost, latency, and representative failure cases."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+          "body": "A strong answer says what fine-tuning is for, then names the cases where retrieval, prompting, or tools are better."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
+        "id": "full-fine-tuning",
+        "heading": "Full fine-tuning updates everything",
         "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for fine-tuning and adaptation.",
-          "Trap: Fine-tuning on messy logs without filters. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No general-capability regression tests. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Updating facts via weights instead of retrieval. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Full FT when LoRA would suffice. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Fine-tuning to paper over a broken retrieval stack. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Training on synthetic data that duplicates the eval set. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Skipping general-capability and safety regressions after preference optimization. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+          "Full fine-tuning updates all or most model weights. It gives the optimizer maximum freedom to adapt representations, style, and task behavior, which can be useful for large, stable, high-value domains. It also requires the most memory, careful learning rates, and the strongest regression suite. With small or narrow datasets, full fine-tuning can overwrite general capabilities the base model already had.",
+          "The practical risks are not limited to GPU cost. A full fine-tune can change refusal behavior, instruction following, language coverage, and tool-call habits in ways that are hard to isolate. If the training data overrepresents one customer segment, the deployed model may become worse for everyone else. If examples contain hidden PII, licensing issues, or hallucinated assistant responses, those defects become training signal.",
+          "Full fine-tuning is most defensible when the dataset is large, clean, stable, and strategically important. Examples include adapting an open-weight model to a regulated in-house writing style, a specialized codebase, or a domain where deployment must be self-hosted. Even then, many teams start with PEFT to test signal before committing to an all-weights run.",
+          "Evaluation should compare full fine-tuning against the cheapest adequate alternative. Report task quality, general capability retention, safety behavior, latency, serving cost, and rollback complexity. The winning model is not the one with the highest domain score if it silently breaks general interactions."
+        ],
+        "keyTerms": [
+          {
+            "term": "Full fine-tuning",
+            "definition": "Training that updates all or most model weights instead of small adapter modules."
+          },
+          {
+            "term": "Catastrophic forgetting",
+            "definition": "A regression where training on a narrow distribution damages previously learned general capabilities."
+          },
+          {
+            "term": "Regression suite",
+            "definition": "A fixed set of tests that must remain healthy when a model, prompt, dataset, or adapter changes."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "Why is full fine-tuning risky on a small dataset?",
+            "reveal": "The model can overfit narrow examples and forget or distort general instruction-following and safety behavior."
+          },
+          {
+            "prompt": "What must be evaluated besides domain accuracy?",
+            "reveal": "General ability, safety, formatting, latency, cost, privacy, and rollback."
+          }
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
+          "body": "Full fine-tuning is powerful but blunt. Without clean data and broad regressions, it can make a model feel specialized by making it less generally useful."
+        }
+      },
+      {
+        "id": "lora-qlora-and-adapters",
+        "heading": "LoRA, QLoRA, and adapters make adaptation cheaper",
+        "paragraphs": [
+          "Parameter-efficient fine-tuning, or PEFT, changes a small number of trainable parameters while leaving the base model mostly frozen. LoRA is the most common example: it learns low-rank update matrices for selected linear layers, often attention or MLP projections. At inference, the LoRA weights may be merged into the base weights or loaded as separate adapters. The result is a much smaller training footprint than full fine-tuning.",
+          "QLoRA adds memory savings by keeping the base model quantized during training while learning LoRA adapters. This makes adaptation possible on smaller GPU budgets, though quantization choices and optimizer settings still matter. Classic adapters insert small learned modules between layers; prefix and prompt tuning learn continuous vectors that steer the model. The family resemblance is that all of them constrain the amount of trainable change.",
+          "The tradeoff is capacity. A low-rank adapter may not be enough for deep domain shift, new languages, or tasks that require broad internal representation changes. Rank, target modules, training examples, and base-model choice all interact. PEFT is not a magic patch for bad data; it simply makes the experiment cheaper and more reversible.",
+          "Operationally, adapters are attractive because they can be versioned, swapped, and served per tenant or product line. That flexibility needs discipline: track base model hash, adapter version, tokenizer, training data version, and eval report together. An adapter without its base model and dataset lineage is not reproducible."
+        ],
+        "keyTerms": [
+          {
+            "term": "LoRA",
+            "definition": "Low-Rank Adaptation, a PEFT method that learns low-rank weight deltas for selected model matrices."
+          },
+          {
+            "term": "QLoRA",
+            "definition": "A memory-efficient approach that trains LoRA adapters while keeping the frozen base model quantized."
+          },
+          {
+            "term": "Adapter",
+            "definition": "A small trainable module attached to a frozen base model to specialize behavior without updating every weight."
+          }
+        ],
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for Fine-tuning and adaptation and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Fine-tuning on messy logs without filters.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "Why does LoRA reduce training cost?",
+            "reveal": "It trains small low-rank update matrices instead of every parameter in the base model."
+          },
+          {
+            "prompt": "What metadata belongs with an adapter release?",
+            "reveal": "Base model, tokenizer, adapter version, target modules, rank, training data, eval results, and deployment config."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "data-quality-dominates",
+        "heading": "Data quality dominates the training recipe",
         "paragraphs": [
-          "Full fine-tuning vs PEFT is a memory and catastrophic-forgetting trade-off. Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRAM and enabling multi-tenant serving. LoRA merges into base weights at inference with zero latency overhead—a major production advantage.",
-          "Data quality dominates hyperparameter tuning for alignment. A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, continued pretraining on in-domain text before instruction tuning frequently beats SFT alone on knowledge-heavy tasks."
+          "Fine-tuning quality is usually bounded by data quality before it is bounded by clever hyperparameters. A few thousand clean, representative instruction examples can beat millions of noisy chat logs. Good data contains the task distribution you want, the format you expect, the refusal behavior you need, and the edge cases users actually hit. Bad data teaches shortcuts, copied mistakes, and inconsistent style.",
+          "Curation starts with provenance and filtering. Remove secrets, PII, unresolved tickets, abusive content, duplicate templates, hallucinated answers, and records whose desired response is unclear. Normalize role structure so system, user, assistant, and tool messages are not blended. Split by user, account, time, or document family to prevent leakage from train into eval.",
+          "Synthetic data can help, but only if treated as suspect until proven useful. A stronger teacher model may generate examples that cover rare cases, but it can also inject its own biases, create repetitive phrasing, or accidentally mirror the evaluation set. Human review, deduplication, rubrics, and adversarial examples are more valuable than sheer volume.",
+          "Data should be versioned like code. Store dataset manifests, filtering rules, licenses, annotator guidelines, and eval-set membership. When a model improves, you need to know whether the cause was better examples, a new base model, a different rank, or leakage. Without lineage, fine-tuning becomes folklore."
         ],
         "keyTerms": [
           {
-            "term": "Full fine-tuning vs PEFT is a memory and catastrophic-forgetting trade-off",
-            "definition": "Full fine-tuning updates all weights and risks overwriting general capabilities on small domain datasets. Parameter-efficient methods (LoRA, adapters, prefix tuning) train low-rank or small injected modules, reducing VRA…"
+            "term": "Instruction dataset",
+            "definition": "A set of role-structured examples that pair user tasks with desired assistant responses or tool behavior."
           },
           {
-            "term": "Data quality dominates hyperparameter tuning for alignment",
-            "definition": "A few thousand well-curated instruction examples often outperform noisy millions. Format consistency, deduplication, and rejection of hallucinated or toxic pairs matter more than epoch count. For domain adaptation, conti…"
+            "term": "Data leakage",
+            "definition": "Contamination where evaluation examples or near-duplicates appear in training, inflating measured quality."
+          },
+          {
+            "term": "Dataset lineage",
+            "definition": "The recorded origin, filtering, transformation, and version history of training and evaluation data."
           }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach fine-tuning and adaptation as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Explain how LoRA achieves parameter efficiency. | How would you prepare instruction data for support agents? | What is catastrophic forgetting and how do you reduce it?"
         ],
         "checkYourself": [
           {
-            "prompt": "Give a 90-second spoken overview of Fine-tuning and adaptation as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            "prompt": "Why can small clean data beat large noisy data?",
+            "reveal": "Fine-tuning amplifies the training signal; noisy examples teach inconsistent formats, wrong answers, and unwanted behavior."
+          },
+          {
+            "prompt": "How do you reduce leakage?",
+            "reveal": "Split by stable units such as user, account, document, or time; deduplicate near-copies; and keep golden eval sets separate."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "If the dataset is a pile of logs, the model will learn the pile: ambiguity, policy violations, stale answers, and all."
+        }
+      },
+      {
+        "id": "evaluation-and-deployment-gates",
+        "heading": "Evaluation gates decide whether training helped",
+        "paragraphs": [
+          "A fine-tuned model should beat a baseline on a frozen evaluation set before it receives traffic. The baseline may be prompt-only, RAG, a smaller model, an older adapter, or a full model. Use task-specific metrics: JSON validity, exact match, semantic rubric scores, pairwise preference, refusal correctness, and human review for ambiguous cases. Open-ended generation still needs measurable expectations.",
+          "Regression coverage is as important as target-task gain. Include general instruction following, safety prompts, multilingual slices, long-context cases, tool-call schemas, and examples unrelated to the domain. If the model improves support-ticket tone but becomes worse at refusing unsafe requests, the release is not a win. Adapter-based deployments make rollback easier, but rollback still requires monitoring and a known-good version.",
+          "Online deployment should be staged. Shadow traffic can compare outputs without exposing users; canaries can send a small percentage of traffic to the new adapter; interleaving can support human preference collection. Watch latency, token length, parse failures, escalation rate, refusal rate, and complaint categories. A model that writes longer answers may look better to judges while increasing cost and user frustration.",
+          "The release artifact should include the model or adapter, config, prompt templates, eval report, known failure modes, and rollback command. Fine-tuning is not complete when training finishes; it is complete when the system can be operated, measured, and reversed."
+        ],
+        "keyTerms": [
+          {
+            "term": "Shadow deployment",
+            "definition": "Running a new model on real inputs without exposing its outputs to users, so quality can be compared safely."
+          },
+          {
+            "term": "Canary",
+            "definition": "A limited production rollout that sends a small slice of traffic to a new version while monitoring risk."
+          },
+          {
+            "term": "Rollback",
+            "definition": "A planned path to return to a previous prompt, adapter, or model when metrics or safety checks fail."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "What does a fine-tune need to beat?",
+            "reveal": "The best practical baseline, not an imaginary unprompted model."
+          },
+          {
+            "prompt": "Name two online metrics for a support-agent fine-tune.",
+            "reveal": "Escalation rate, user satisfaction, handle time, refusal correctness, parse failures, latency, cost, and complaint categories are useful examples."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+          "body": "Say how you would prove the fine-tune helped: frozen evals, regression slices, staged rollout, and rollback."
         }
+      },
+      {
+        "id": "choosing-the-right-technique",
+        "heading": "Choose the least invasive technique that meets the goal",
+        "paragraphs": [
+          "The decision tree is simple but easy to ignore. If the failure is missing current knowledge, use retrieval. If the failure is exact computation or private state, call a tool. If the failure is inconsistent formatting, try prompting, schemas, examples, and validators first. If the behavior is stable, frequent, and costly to prompt every time, PEFT may be justified. Full fine-tuning is for cases where smaller interventions cannot express the needed adaptation.",
+          "Continued pretraining is another option, but it solves a different problem. It exposes the model to raw in-domain text so the language distribution becomes more familiar before instruction tuning. That may help with biomedical, legal, code, or low-resource language corpora. It does not replace supervised examples for task behavior or retrieval for changing facts.",
+          "Preference optimization belongs after the model can already perform the task. Pairwise preferred and rejected responses can shape tone, helpfulness, concision, and refusal judgment. If base task accuracy is weak, preference tuning may reward surface style while leaving wrong answers intact. The dataset still needs careful review because preference labels encode product values.",
+          "A conservative engineering posture is to train only when the expected benefit survives the full lifecycle cost. That cost includes data work, compute, evaluation, deployment, incident response, and future migrations. The best fine-tuning answer often ends with a smaller, safer system than the one you first imagined."
+        ],
+        "keyTerms": [
+          {
+            "term": "Continued pretraining",
+            "definition": "Additional self-supervised training on raw domain text before or alongside instruction tuning."
+          },
+          {
+            "term": "Preference optimization",
+            "definition": "Training on preferred versus rejected responses to shape behavior after supervised competence exists."
+          },
+          {
+            "term": "Least invasive technique",
+            "definition": "The simplest adaptation method that meets quality, cost, latency, and safety requirements."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "When is continued pretraining more plausible than SFT alone?",
+            "reveal": "When the model has a broad domain-language distribution gap, such as specialized legal, biomedical, code, or low-resource language text."
+          },
+          {
+            "prompt": "Why should preference optimization follow task competence?",
+            "reveal": "It ranks behaviors; it cannot reliably create missing task ability from weak or incorrect responses."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can decide prompting vs fine-tuning vs RAG.",
-        "Can explain LoRA forward pass and param counts.",
-        "Can prepare filtered instruction datasets with clean splits.",
-        "Defines regression gates before training.",
-        "Plans rollback for adapter deploys."
+        "Fine-tuning is best for stable behavior and formats, not fast-changing facts that need retrieval or tools.",
+        "Full fine-tuning offers capacity but raises memory, regression, safety, and rollback risk.",
+        "LoRA, QLoRA, and adapters make specialization cheaper, modular, and easier to operate.",
+        "Clean data, leakage control, and lineage usually matter more than small hyperparameter tweaks.",
+        "Deploy fine-tunes only behind frozen evals, regression suites, staged rollout, and rollback."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: LoRA: Low-Rank Adaptation of Large Language Models (arXiv) — https://arxiv.org/abs/2106.09685",
-        "Optional deeper reading: Hugging Face PEFT documentation (Hugging Face) — https://huggingface.co/docs/peft/index"
+        "For any proposed fine-tune, write the failure statement and the baseline it must beat.",
+        "Sketch a release checklist that includes data lineage, eval slices, adapter metadata, and rollback."
       ]
     }
   },
   "llms-and-nlp/embeddings-and-vector-search": {
     "title": "Chapter: Embeddings and vector search",
-    "readingTime": "55-70 min",
-    "premise": "Text embeddings, vector databases, similarity search, and hybrid retrieval for powering semantic search and RAG systems. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "readingTime": "65-80 min",
+    "premise": "A production-oriented chapter on dense representations, cosine versus dot product, ANN and HNSW indexes, chunking effects, hybrid sparse+dense retrieval, and evaluation for semantic search and RAG.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "embeddings-map-meaning-to-geometry",
+        "heading": "Embeddings map text into useful geometry",
         "paragraphs": [
-          "Production retrieval in 2026 is hybrid by default: BM25 for exact tokens, dense vectors for paraphrase, cross-encoders for precision, and an explicit migration playbook when embedding models change. Dimensionality and Matryoshka-style truncations are cost levers, not afterthoughts.",
-          "This chapter treats \"Embeddings and vector search\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "embedding-spaces-and-cosine-geometry",
-        "heading": "Embedding spaces and cosine geometry",
-        "paragraphs": [
-          "Embedding models map text to dense vectors so semantic nearness becomes geometric nearness. Cosine similarity divides a dot product by vector norms, focusing on angle. Dot product alone prefers longer vectors; L2 distance ranks differently if norms vary. Normalize embeddings when your index assumes cosine. Domain mismatch hurts: a general MiniLM-like space may scramble legal citations. Evaluate with retrieval metrics (Recall@k, MRR, nDCG) on labeled query-document pairs. In-browser we mock embeddings with hashing/projection or bag-of-words vectors, but the ranking math is identical to production cosine search.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Know whether your index expects cosine, IP, or L2.",
-          "• Evaluate embeddings with labeled retrieval sets.",
-          "• Watch domain shift between embedder and corpus.",
-          "Production lens — Embedding geometry depends on training objective: Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E5 query/passage prefixes) materially affect recall. Always evaluate embeddings on your domain—MTEB leaderboard rankings do not guarantee production performance."
+          "An embedding model converts text, images, code, or other inputs into vectors so similarity can be computed with math. For text search, the hope is that related meanings occupy nearby regions even when the words differ. A query about \"canceling an account\" should find a document about \"closing a subscription\" because the embedding model learned paraphrase relationships. This is the core value dense retrieval adds beyond keyword matching.",
+          "The geometry is learned, not universal. A model trained for short sentence similarity may not understand source code, legal clauses, product SKUs, or multilingual support tickets equally well. Some models are symmetric, where query and document are embedded the same way; others are asymmetric and expect prefixes or different encoders for questions and passages. Using the wrong convention can quietly damage recall.",
+          "Embeddings also compress information. A paragraph becomes a fixed-length vector, so details compete for representation. Long, mixed-topic chunks can blur separate ideas; tiny fragments can lose context. This is why embedding quality and chunking strategy cannot be evaluated separately. The vector represents the text unit you feed it, not the document you wish it represented.",
+          "A production team should treat an embedder as a versioned model with domain-specific evaluation. Leaderboards are useful for discovery, but labeled query-document pairs from your corpus decide whether the embedding space works for your users. Measure before and after every embedder, chunker, or normalization change."
         ],
         "keyTerms": [
           {
-            "term": "Know whether your index expects cosine,",
-            "definition": "Know whether your index expects cosine, IP, or L2."
+            "term": "Embedding",
+            "definition": "A numeric vector representation intended to preserve useful similarity relationships for retrieval or comparison."
           },
           {
-            "term": "Evaluate embeddings with labeled retrieval sets.",
-            "definition": "Evaluate embeddings with labeled retrieval sets."
+            "term": "Dense retrieval",
+            "definition": "Retrieval that ranks documents by vector similarity rather than exact keyword overlap."
           },
           {
-            "term": "Watch domain shift between embedder and",
-            "definition": "Watch domain shift between embedder and corpus."
-          }
-        ],
-        "workedExample": {
-          "title": "Cosine ranking with bag-of-words embeddings",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nvocab = [\"machine\",\"learning\",\"neural\",\"network\",\"data\",\"model\",\"python\",\"api\",\"cloud\",\"deploy\"]\n\ndef embed(text):\n    words = set(text.lower().split())\n    v = np.array([1.0 if w in words else 0.0 for w in vocab])\n    n = np.linalg.norm(v)\n    return v / n if n else v\n\ndocs = [\n    \"machine learning model deploy cloud\",\n    \"python api network data\",\n    \"best pizza recipe\",\n]\nq = embed(\"deploy learning model\")\nfor d in docs:\n    e = embed(d)\n    print(round(float(q @ e), 3), d)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can implement cosine top-k retrieval in NumPy.",
-            "reveal": "Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E5 query/passage prefixes) materially affect recall. Always evaluate embeddings on your domain—MTEB leaderboard rankings do not guarantee production performance."
-          }
-        ]
-      },
-      {
-        "id": "indexes-exact-ivf-hnsw-intuition",
-        "heading": "Indexes: exact, IVF, HNSW intuition",
-        "paragraphs": [
-          "Exact search scans all vectors—fine to thousands, painful at hundreds of millions. ANN indexes trade a little recall for large speedups. IVF clusters vectors and searches a subset of lists; HNSW builds a navigable graph. Parameters (nprobe, efSearch, M) move you along a recall-latency curve. Memory layout, dimensionality, and quantization (PQ) matter as much as algorithm name. Metadata filters (tenant_id, time) change feasible indexes; prefilters vs postfilters have different recall semantics. Always measure on your embedding distribution, not only synthetic Gaussian blobs.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• ANN is a recall/latency/memory tradeoff surface.",
-          "• Tune index params with offline recall curves.",
-          "• Metadata filters belong in the retrieval design, not as afterthoughts.",
-          "Production lens — ANN indexes trade recall for speed at scale: Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that support pre-filtering or post-filtering strategies—each has different recall characteristics under skewed filters."
-        ],
-        "keyTerms": [
-          {
-            "term": "ANN is a recall/latency/memory tradeoff surface.",
-            "definition": "ANN is a recall/latency/memory tradeoff surface."
-          },
-          {
-            "term": "Tune index params with offline recall",
-            "definition": "Tune index params with offline recall curves."
-          },
-          {
-            "term": "Metadata filters belong in the retrieval",
-            "definition": "Metadata filters belong in the retrieval design, not as afterthoughts."
+            "term": "Asymmetric embedding",
+            "definition": "An embedding setup where queries and documents use different prompts, prefixes, or encoders."
           }
         ],
         "checkYourself": [
           {
-            "prompt": "Can explain ANN recall/latency tradeoffs.",
-            "reveal": "Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that support pre-filtering or post-filtering strategies—each has different recall characteristics under skewed filters."
-          }
-        ]
-      },
-      {
-        "id": "hybrid-retrieval-and-reranking",
-        "heading": "Hybrid retrieval and reranking",
-        "paragraphs": [
-          "Lexical methods (BM25) excel at exact identifiers, error codes, and rare proper nouns that embeddings blur. Hybrid systems retrieve from both lexical and vector indexes then fuse (RRF or weighted scores). Cross-encoder rerankers score query-document pairs more accurately at higher latency—use on a shortlist. Chunking determines what a \"document\" is: too large and retrieval is coarse; too small and context fragments. Overlap helps boundary issues but multiplies storage. For tables/code, specialized splitters beat naive character windows.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Hybrid helps when exact tokens matter.",
-          "• Rerankers improve precision on small candidate sets.",
-          "• Chunking is a first-class retrieval hyperparameter.",
-          "Production lens — Embedding geometry depends on training objective: Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E5 query/passage prefixes) materially affect recall. Always evaluate embeddings on your domain—MTEB leaderboard rankings do not guarantee production performance."
-        ],
-        "keyTerms": [
-          {
-            "term": "Hybrid helps when exact tokens matter.",
-            "definition": "Hybrid helps when exact tokens matter."
+            "prompt": "Why do embeddings help paraphrase search?",
+            "reveal": "They place semantically related text near each other even when exact words differ."
           },
           {
-            "term": "Rerankers improve precision on small candidate",
-            "definition": "Rerankers improve precision on small candidate sets."
-          },
-          {
-            "term": "Chunking is a first-class retrieval hyperpara…",
-            "definition": "Chunking is a first-class retrieval hyperparameter."
-          }
-        ],
-        "workedExample": {
-          "title": "Reciprocal rank fusion toy example",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def rrf(rank_lists, k=60):\n    scores = {}\n    for ranks in rank_lists:\n        for rank, doc_id in enumerate(ranks, start=1):\n            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)\n    return sorted(scores.items(), key=lambda x: -x[1])\n\nvector_ranks = [\"d2\", \"d1\", \"d3\"]\nbm25_ranks = [\"d3\", \"d2\", \"d4\"]\nprint(rrf([vector_ranks, bm25_ranks])[:3])",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Knows when to add BM25 hybrid retrieval.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to hybrid retrieval and reranking."
-          }
-        ]
-      },
-      {
-        "id": "evaluation-and-failure-analysis-for-search",
-        "heading": "Evaluation and failure analysis for search",
-        "paragraphs": [
-          "Build a golden set of queries with relevant chunk IDs. Report Recall@k and analyze misses: wrong chunk size, embedding domain gap, synonym issues, or filter bugs. Slice by query type (how-to, code error, policy). Online, track CTR, reformulation rate, and downstream grounded answer usefulness—not only retrieval score. Be careful with synthetic queries generated by LLMs; they can overfit your current chunker. Change one variable at a time when iterating chunk sizes.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Maintain a labeled retrieval evaluation set.",
-          "• Analyze misses by failure mode slices.",
-          "• Connect retrieval metrics to downstream task metrics.",
-          "Production lens — ANN indexes trade recall for speed at scale: Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that support pre-filtering or post-filtering strategies—each has different recall characteristics under skewed filters."
-        ],
-        "keyTerms": [
-          {
-            "term": "Maintain a labeled retrieval evaluation set.",
-            "definition": "Maintain a labeled retrieval evaluation set."
-          },
-          {
-            "term": "Analyze misses by failure mode slices.",
-            "definition": "Analyze misses by failure mode slices."
-          },
-          {
-            "term": "Connect retrieval metrics to downstream task",
-            "definition": "Connect retrieval metrics to downstream task metrics."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can design chunking for a doc type.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluation and failure analysis for search."
-          }
-        ]
-      },
-      {
-        "id": "operational-concerns-versioning-and-drift",
-        "heading": "Operational concerns: versioning and drift",
-        "paragraphs": [
-          "Embedding model upgrades reshuffle the space—reindex or maintain dual indexes during migration. Document chunker version alongside embedding model version in each vector metadata record. Monitor embedding norm distributions and nearest-neighbor self-consistency on canary docs. Multitenancy needs hard filters to prevent cross-tenant leakage. These ops details are where semantic search systems usually fail in production even when the demo looked magical.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Version embedder + chunker + index together.",
-          "• Plan reembedding migrations explicitly.",
-          "• Enforce tenant isolation in filters.",
-          "Production lens — Embedding geometry depends on training objective: Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E5 query/passage prefixes) materially affect recall. Always evaluate embeddings on your domain—MTEB leaderboard rankings do not guarantee production performance."
-        ],
-        "keyTerms": [
-          {
-            "term": "Version embedder + chunker + index",
-            "definition": "Version embedder + chunker + index together."
-          },
-          {
-            "term": "Plan reembedding migrations explicitly.",
-            "definition": "Plan reembedding migrations explicitly."
-          },
-          {
-            "term": "Enforce tenant isolation in filters.",
-            "definition": "Enforce tenant isolation in filters."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Versions embeddings and indexes as a unit.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to operational concerns: versioning and drift."
-          }
-        ]
-      },
-      {
-        "id": "hybrid-search-rerankers-matryoshka-tradeoffs-and-embedding-migrations",
-        "heading": "Hybrid search, rerankers, Matryoshka tradeoffs, and embedding migrations",
-        "paragraphs": [
-          "Dense retrieval alone still blurs SKUs, error codes, and rare proper nouns; BM25 (and other lexical indexes) still win on exactness. A 2026-default stack retrieves a union or fused shortlist from lexical and dense indexes—often via reciprocal rank fusion—then applies a cross-encoder reranker that scores full query-document pairs for precision. Rerankers are slower and usually limited to top 20–100 candidates; they are not a replacement for first-stage recall. Matryoshka Representation Learning and similar embedding designs let you train (or select) vectors that remain useful when truncated to fewer dimensions: store 768-d, serve 256-d for cheap ANN, and only use full width for hard queries. The tradeoff is recall vs memory/latency; measure on your corpus, not vendor slides. Embedding model migration is a release, not a config flip: dual-write or dual-read indexes, backfill by tenant/shard, compare recall@k and downstream groundedness on a frozen golden set, then cut traffic with a kill switch. Version embedder id, chunker id, and index build id in every vector’s metadata so you can explain why yesterday’s neighbors moved. Without that playbook, “we upgraded the embedder” becomes a silent relevance regression.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Hybrid first-stage (BM25 + dense) plus cross-encoder rerank is the common production pattern.",
-          "• Matryoshka-style shorter vectors trade recall for memory and QPS—validate on your queries.",
-          "• Treat embedding upgrades as migrations with dual indexes, golden recall, and metadata versioning.",
-          "• Rerankers improve precision on shortlists; they cannot fix catastrophic first-stage misses.",
-          "Production lens — ANN indexes trade recall for speed at scale: Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that support pre-filtering or post-filtering strategies—each has different recall characteristics under skewed filters."
-        ],
-        "keyTerms": [
-          {
-            "term": "Hybrid first-stage (BM25 + dense) plus",
-            "definition": "Hybrid first-stage (BM25 + dense) plus cross-encoder rerank is the common production pattern."
-          },
-          {
-            "term": "Matryoshka-style shorter vectors trade recall…",
-            "definition": "Matryoshka-style shorter vectors trade recall for memory and QPS—validate on your queries."
-          },
-          {
-            "term": "Treat embedding upgrades as migrations with",
-            "definition": "Treat embedding upgrades as migrations with dual indexes, golden recall, and metadata versioning."
-          },
-          {
-            "term": "Rerankers improve precision on shortlists; they",
-            "definition": "Rerankers improve precision on shortlists; they cannot fix catastrophic first-stage misses."
-          }
-        ],
-        "workedExample": {
-          "title": "Simulate Matryoshka truncation vs recall proxy",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nrng = np.random.default_rng(0)\ndocs = rng.normal(size=(200, 128))\ndocs /= np.linalg.norm(docs, axis=1, keepdims=True)\nq = docs[0].copy()\n\ndef recall_at_k(mat, query, truth=0, k=10):\n    scores = mat @ query\n    top = np.argsort(-scores)[:k]\n    return float(truth in top)\n\nfor d in [128, 64, 32, 16]:\n    m = docs[:, :d]\n    m = m / np.linalg.norm(m, axis=1, keepdims=True)\n    qq = q[:d] / np.linalg.norm(q[:d])\n    print(d, recall_at_k(m, qq))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can design BM25 + dense fusion with a cross-encoder rerank stage.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to hybrid search, rerankers, matryoshka tradeoffs, and embedding migrations."
+            "prompt": "Why can a leaderboard model fail in your product?",
+            "reveal": "Domain language, query types, document structure, and chunking may differ from benchmark data."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+          "body": "Define embeddings as learned geometry, then immediately mention domain evaluation. That prevents the answer from sounding magical."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
+        "id": "cosine-dot-and-normalization",
+        "heading": "Cosine and dot product answer different questions",
         "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for embeddings and vector search.",
-          "Trap: Using cosine math on unnormalized vectors meant for IP search. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Chunking only by characters without structure. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No labeled retrieval eval set. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Changing embedding models without reindexing plans. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Reranking a candidate set that already missed the relevant chunk. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Cutting embedding dimensions in production without measuring recall. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Replacing an embedder in place without dual-index backfill. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+          "Cosine similarity measures the angle between vectors by dividing their dot product by both vector norms. It asks whether two vectors point in a similar direction, largely ignoring magnitude. Dot product, also called inner product, combines direction and magnitude. If vector norms vary meaningfully, dot product can prefer high-norm vectors even when their angle is less aligned.",
+          "Many retrieval stacks make cosine search equivalent to dot product by normalizing all vectors to unit length. After normalization, the dot product of two vectors is their cosine similarity. This is convenient because vector databases and ANN libraries often optimize inner-product search. The danger is mismatch: if your index assumes normalized vectors and your ingestion path forgets to normalize, rankings can drift badly.",
+          "Euclidean distance is another option, but it also interacts with norms. For unit-normalized vectors, cosine, dot product, and L2 distance are closely related rankings. For unnormalized vectors, they can disagree. That disagreement is not a minor implementation detail; it changes which chunks enter the LLM context and which facts users see.",
+          "The safest practice is to document the metric at every layer: embedding model recommendation, ingestion transform, index configuration, query transform, and evaluation code. Add simple checks for norm distribution and a known-neighbor canary set. If a deployment suddenly returns irrelevant high-norm chunks, the bug may be metric mismatch rather than model quality."
+        ],
+        "keyTerms": [
+          {
+            "term": "Cosine similarity",
+            "definition": "The normalized dot product of two vectors, measuring angular similarity independent of vector length."
+          },
+          {
+            "term": "Dot product",
+            "definition": "A similarity score that combines vector direction and magnitude unless vectors are normalized."
+          },
+          {
+            "term": "Unit normalization",
+            "definition": "Scaling vectors so their L2 norm equals one, often making inner product equivalent to cosine similarity."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "When are cosine and dot product rankings equivalent?",
+            "reveal": "When all compared vectors are normalized to unit length."
+          },
+          {
+            "prompt": "What simple metric should you monitor after embedding ingestion?",
+            "reveal": "Vector norm distribution, along with known-neighbor retrieval checks."
+          }
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
+          "body": "Metric mismatch is a silent relevance bug. The system still returns results, just the wrong ones."
+        }
+      },
+      {
+        "id": "ann-and-hnsw-at-scale",
+        "heading": "ANN and HNSW trade exactness for speed",
+        "paragraphs": [
+          "Exact vector search compares a query against every vector. That is understandable and often sufficient for small corpora, but it becomes expensive as collections reach millions or billions of chunks. Approximate nearest neighbor search, or ANN, builds an index that returns very close neighbors much faster while accepting that it may miss the exact best vector. The engineering question becomes how much recall you can trade for latency and memory savings.",
+          "HNSW, hierarchical navigable small world graphs, is one of the dominant ANN structures. It organizes vectors into a multi-layer graph where search jumps through long-range links at upper layers and refines through dense links near the bottom. Parameters such as construction connectivity and search breadth control the recall-latency-memory curve. Higher recall usually costs more memory, build time, or query work.",
+          "ANN choices interact with filters. A tenant, ACL, language, freshness, or product-version filter can shrink the valid candidate set. If the index retrieves globally then filters after the fact, the relevant allowed chunk may never appear in the shortlist. Prefiltering, partitioned indexes, or filter-aware ANN support become correctness requirements in multitenant systems.",
+          "Evaluation should compare ANN results to an exact-search baseline on a sample. Report Recall@k, latency percentiles, memory footprint, build time, and filtered-query slices. Tuning an ANN index on synthetic random vectors is weak evidence; tune on your actual embedding distribution and query workload."
+        ],
+        "keyTerms": [
+          {
+            "term": "ANN",
+            "definition": "Approximate nearest neighbor search, which returns near neighbors faster than exact search by accepting tunable recall loss."
+          },
+          {
+            "term": "HNSW",
+            "definition": "A graph-based ANN index that uses hierarchical navigable links to search high-dimensional vectors efficiently."
+          },
+          {
+            "term": "Recall@k",
+            "definition": "The fraction of relevant items found within the top k retrieved results."
+          }
+        ],
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for Embeddings and vector search and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Using cosine math on unnormalized vectors meant for IP search.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "Why not run a cross-encoder or exact scan over every document?",
+            "reveal": "At large scale it is too slow or expensive; ANN and staged retrieval create feasible candidate sets."
+          },
+          {
+            "prompt": "Why do filters complicate ANN?",
+            "reveal": "Post-filtering can remove retrieved candidates and leave out relevant allowed documents that were never searched under the filter."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "chunking-changes-the-search-problem",
+        "heading": "Chunking changes what the index can find",
         "paragraphs": [
-          "Embedding geometry depends on training objective. Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E5 query/passage prefixes) materially affect recall. Always evaluate embeddings on your domain—MTEB leaderboard rankings do not guarantee production performance.",
-          "ANN indexes trade recall for speed at scale. Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that support pre-filtering or post-filtering strategies—each has different recall characteristics under skewed filters."
+          "A vector index searches units, not documents. If you embed entire manuals, the vector may be too broad to match a specific troubleshooting step. If you embed tiny sentences, the vector may match a phrase but lack enough context for generation. Chunking defines the retrieval object, so it directly shapes recall, precision, cost, and answer quality.",
+          "Structure-aware chunking usually beats blind character windows. Headings, sections, paragraphs, functions, tables, and list boundaries often carry meaning. Overlap can catch boundary-spanning answers, but it increases storage and duplicate retrieval. For code, split by functions and classes; for policy docs, preserve section hierarchy; for tables, include headers so cells remain interpretable.",
+          "Parent-child chunking solves a common tension. You retrieve small child chunks for precise matching, then expand to a parent section for generation context. Hierarchical retrieval can climb from paragraph to section to document, letting the system include enough evidence without losing first-stage precision. This is especially useful in RAG systems where answer synthesis needs more context than the best-matching sentence.",
+          "Every chunk should carry metadata: source ID, section title, hierarchy path, timestamps, permissions, language, chunker version, and embedder version. When retrieval fails, metadata lets you determine whether the issue was parsing, chunking, indexing, filtering, or ranking. Without it, search debugging becomes guesswork."
         ],
         "keyTerms": [
           {
-            "term": "Embedding geometry depends on training objective",
-            "definition": "Contrastive models (sentence-transformers) optimize relative similarity; generative LLM hidden states are not automatically good retrieval vectors. Normalization, pooling strategy (mean vs CLS), and asymmetric queries (E…"
+            "term": "Chunk",
+            "definition": "The text unit embedded and indexed for retrieval, such as a paragraph, section, code block, or table fragment."
           },
           {
-            "term": "ANN indexes trade recall for speed at scale",
-            "definition": "Exact brute-force search works for small corpora; HNSW, IVF, and product quantization enable billion-scale retrieval with tunable recall/latency knobs. Metadata filtering combined with vector search requires indexes that…"
+            "term": "Parent-child chunking",
+            "definition": "A strategy that retrieves small precise child chunks and expands to larger parent context for generation."
+          },
+          {
+            "term": "Chunker version",
+            "definition": "A recorded identifier for the splitting logic used to create indexed chunks."
           }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach embeddings and vector search as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Design semantic search for a legal corpus. | Compare HNSW and IVF at a high level. | When does hybrid beat pure vector search?"
         ],
         "checkYourself": [
           {
-            "prompt": "Give a 90-second spoken overview of Embeddings and vector search as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            "prompt": "Why can small chunks improve recall but hurt generation?",
+            "reveal": "They match precise phrases but may omit surrounding context needed to answer faithfully."
+          },
+          {
+            "prompt": "What metadata helps debug chunking changes?",
+            "reveal": "Source, hierarchy path, timestamps, permissions, chunker version, embedder version, and document type."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+          "body": "When asked about vector search, mention chunking before vendor choice. Retrieval quality often moves more from chunk design than database selection."
         }
+      },
+      {
+        "id": "hybrid-sparse-and-dense-retrieval",
+        "heading": "Hybrid sparse+dense retrieval covers more query types",
+        "paragraphs": [
+          "Dense vectors are strong for paraphrase, but they often blur exact identifiers. Error codes, API names, statute numbers, SKUs, log messages, and proper nouns may be decisive even when their semantic neighborhood is broad. Sparse retrieval methods such as BM25 remain excellent at exact token matching and term rarity. Production search often needs both.",
+          "Hybrid retrieval runs sparse and dense searches in parallel, then combines the ranked lists. Reciprocal Rank Fusion is popular because it uses ranks rather than incompatible raw scores. BM25 scores are unbounded and cosine scores are bounded; directly averaging them is fragile. RRF with k=60 is a robust default: each document receives a contribution of 1/(k + rank) from every list where it appears.",
+          "Hybrid search improves first-stage recall, but it does not solve final precision by itself. A cross-encoder reranker can score each query-document pair jointly after the shortlist is small enough. The usual funnel is sparse top 50-100 plus dense top 50-100, RRF fusion, optional deduplication, cross-encoder rerank on roughly the top 30-50, then top 5-10 passages for the LLM.",
+          "The important production idea is staged computation. Fast indexes cast a wide net; rank fusion preserves complementary signals; rerankers spend expensive attention only where it matters. If the right document never appears in the first-stage shortlist, a reranker cannot recover it. Measure recall before blaming generation."
+        ],
+        "keyTerms": [
+          {
+            "term": "BM25",
+            "definition": "A lexical ranking function that scores documents using term frequency, inverse document frequency, and document length normalization."
+          },
+          {
+            "term": "Reciprocal Rank Fusion",
+            "definition": "A rank-fusion method that combines multiple result lists by summing 1/(k + rank), commonly with k=60."
+          },
+          {
+            "term": "Cross-encoder reranker",
+            "definition": "A model that scores a query and candidate document together, improving precision on a small shortlist."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "Why is RRF useful for BM25 plus dense search?",
+            "reveal": "It fuses ranks instead of incompatible score scales, so BM25 and cosine scores do not need brittle normalization."
+          },
+          {
+            "prompt": "What can a reranker not fix?",
+            "reveal": "It cannot recover a relevant document that first-stage retrieval failed to include in its candidate set."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "Dense-only retrieval often fails on the queries users care about most: codes, names, IDs, and exact phrases."
+        }
+      },
+      {
+        "id": "evaluation-versioning-and-migration",
+        "heading": "Evaluate and version the whole retrieval stack",
+        "paragraphs": [
+          "Vector search quality should be measured with labeled query-document pairs. Recall@k tells whether relevant chunks appear in the candidate set; MRR and nDCG tell whether they appear high enough to be useful. Slice metrics by query type: exact identifier, conceptual how-to, troubleshooting, policy, multilingual, and long-tail terms. A single aggregate score can hide the slice your customers actually use.",
+          "Embedding migrations are releases, not configuration edits. A new embedder changes the vector space, so old vectors and new query vectors may not be comparable. Reindex or dual-index, backfill by shard or tenant, compare old and new retrieval on a frozen golden set, then cut traffic gradually. Store embedder ID, dimension, normalization, chunker version, and index build ID in metadata.",
+          "Operational monitoring should include empty-result rate, low-score rate, top-click position, query reformulation, latency, index freshness, and permission-filter behavior. For RAG, connect retrieval metrics to answer metrics: faithfulness, citation validity, and user correction rate. A search system can have high click-through but still feed a generator stale or unauthorized context if filters are wrong.",
+          "The mature view is that embeddings, chunking, ANN settings, sparse retrieval, fusion, reranking, and prompt packing form one retrieval product. Changing any layer changes user-visible answers. Version and evaluate them together, or you will not know why relevance moved."
+        ],
+        "keyTerms": [
+          {
+            "term": "nDCG",
+            "definition": "Normalized discounted cumulative gain, a ranking metric that rewards placing more relevant documents higher in the results."
+          },
+          {
+            "term": "Dual index",
+            "definition": "Running old and new indexes side by side during an embedding or chunking migration."
+          },
+          {
+            "term": "Golden set",
+            "definition": "A stable set of representative queries and expected relevant documents used to compare retrieval changes."
+          }
+        ],
+        "checkYourself": [
+          {
+            "prompt": "Why must embedding upgrades usually reindex documents?",
+            "reveal": "A new embedder creates a different vector space, so old document vectors are not reliably comparable to new query vectors."
+          },
+          {
+            "prompt": "Name three retrieval monitoring signals.",
+            "reveal": "Empty-result rate, low top-score rate, Recall@k on canaries, click position, reformulation rate, latency, freshness, and filter failures are examples."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can implement cosine top-k retrieval in NumPy.",
-        "Can explain ANN recall/latency tradeoffs.",
-        "Knows when to add BM25 hybrid retrieval.",
-        "Can design chunking for a doc type.",
-        "Versions embeddings and indexes as a unit."
+        "Embeddings create learned geometry that must be evaluated on the product's own corpus and query types.",
+        "Cosine, dot product, and normalization choices must match across embedding, indexing, querying, and evaluation.",
+        "ANN and HNSW provide scale by trading exactness for tunable recall, latency, and memory.",
+        "Chunking, hierarchy, and metadata define what retrieval can find and what generation can cite.",
+        "Hybrid BM25+dense retrieval with RRF k=60 and reranking is a strong production default for mixed query workloads."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks (arXiv) — https://arxiv.org/abs/1908.10084",
-        "Optional deeper reading: FAISS: A library for efficient similarity search (Meta AI) — https://github.com/facebookresearch/faiss/wiki"
+        "Build a small golden set with exact-token, paraphrase, and filtered queries before tuning vector infrastructure.",
+        "Document the metric, normalization, chunker version, embedder version, and index build ID for any search release."
       ]
     }
   }
