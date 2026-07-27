@@ -1,9 +1,13 @@
 <svelte:options runes={false} />
 <script>
-  import { buildSearchEngineUrls } from '$lib/llm/providers.js';
+  import { buildLearnSelectionSearchPrompt, buildSearchEngineUrls } from '$lib/llm/providers.js';
 
   /** @type {HTMLElement | undefined} */
   export let rootEl;
+  /** Optional lesson/chapter title for richer search prompts */
+  export let lessonTitle = '';
+  /** Optional module title for richer search prompts */
+  export let moduleTitle = '';
 
   const STORAGE_KEY = 'system-design-copilot-learn-search-engine';
   const engines = [
@@ -119,7 +123,11 @@
 
   function searchSelection() {
     if (!selectedText.trim()) return;
-    const urls = buildSearchEngineUrls(selectedText.trim());
+    const prompt = buildLearnSelectionSearchPrompt(selectedText.trim(), {
+      lessonTitle,
+      moduleTitle
+    });
+    const urls = buildSearchEngineUrls(prompt);
     const url = urls[engine] || urls.perplexity;
     window.open(url, '_blank', 'noopener,noreferrer');
     open = false;

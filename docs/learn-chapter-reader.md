@@ -54,7 +54,7 @@ Providers:
 - Google
 - DuckDuckGo
 
-URLs are built with `buildSearchEngineUrls()` from `src/lib/llm/providers.js` and opened in a new tab. The last-chosen provider is stored in `localStorage` under `system-design-copilot-learn-search-engine`.
+Queries are wrapped with a default **system prompt** (interview coaching instructions) plus a structured user request around the selection, using `buildLearnSelectionSearchPrompt()` in `src/lib/llm/providers.js`. URLs are built with `buildSearchEngineUrls()` and opened in a new tab. The last-chosen provider is stored in `localStorage` under `system-design-copilot-learn-search-engine`.
 
 ## Design notes
 
