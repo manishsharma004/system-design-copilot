@@ -18,9 +18,9 @@ Book-style lesson study UI opened from the lesson hero **Learn** button.
 ## Chapter content
 
 - Hub: `src/lib/data/learnChapters.js` → `getLessonLearnChapter(lessonId)`
-- Chapter bodies: `src/lib/data/learnChapters/*.js` (one file per module family; AI/ML plus DSA practice modules)
+- Chapter bodies: `src/lib/data/learnChapters/*.js` (one file per module)
 - Lesson load attaches `learnChapter` in `src/routes/module/[module]/lesson/[lesson]/+page.js`
-- **All 41 AI Engineer lessons** ship researched long-form chapters (math/ML foundations, DL, LLMs, RAG production patterns, agents, MLOps, safety, labs). Content is authored for the Learn reader and is separate from the short on-page lesson summaries.
+- Dedicated researched long-form chapters ship for **AI/ML (41)**, **HLD (63)**, **LLD (26)**, and **DSA (27)** — separate from short on-page lesson summaries
 - Module overview cards and the lesson runway show a **Learn chapter** deep link (`?learn=1`) when a dedicated chapter exists
 - The reader shows **Part X of Y** progress, highlights the active outline item while scrolling, marks visited sections, and resumes the last section from `localStorage`
 - Worked-example Python snippets are **runnable in place** (Run / Reset) through the shared ML Pyodide worker (`numpy` and friends)
@@ -39,8 +39,8 @@ A part may include:
 
 ### Coverage
 
-- **AI Engineer flow:** dedicated detailed chapters for all modules / lessons
-- **Other flows:** Learn still opens; the reader falls back to framing, lesson sections, deep knowledge, checklist, and pitfalls
+- **AI Engineer, HLD, LLD, DSA:** dedicated detailed chapters for all modules / lessons
+- **Question-bank flow:** Learn still opens; the reader falls back to framing, lesson sections, deep knowledge, checklist, and pitfalls
 
 ## Search with AI (selection popup)
 
