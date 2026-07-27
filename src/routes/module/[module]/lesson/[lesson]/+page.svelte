@@ -95,13 +95,18 @@
   <h1>{data.lesson.title}</h1>
   <p class="hero-subtitle">{data.lesson.summary}</p>
   <div class="action-row">
-    <button class="action-link primary" type="button" onclick={() => (learnOpen = true)}>Learn</button>
+    <button class="action-link primary" type="button" onclick={() => (learnOpen = true)}>
+      {data.lesson.learnChapter ? 'Learn chapter' : 'Learn'}
+    </button>
     <a class="action-link" href="#practice-lab">Start mock interview</a>
     {#if showSimulationLab}
       <a class="action-link" href="#simulation-lab">Open simulation lab</a>
     {/if}
     {#if showTopicLab}
       <a class="action-link" href="#topic-lab">Open topic lab</a>
+    {/if}
+    {#if data.lesson.learnChapter}
+      <span class="pill">Book chapter · {data.lesson.learnChapter.parts.length} parts · {data.lesson.learnChapter.readingTime}</span>
     {/if}
     <span class="pill">{data.lesson.duration}</span>
     {#if flow}

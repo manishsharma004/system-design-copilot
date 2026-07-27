@@ -2,27 +2,39 @@
 <script>
   import { base } from '$app/paths';
   import { getFlowBySlug, getModuleProgress } from '$lib/data/courseData';
+  import { getLessonLearnChapter } from '$lib/data/learnChapters';
   import { progress } from '$lib/stores/progress';
   export let data;
 
   $: flow = getFlowBySlug(data.module.flowSlug);
+  $: isAiFlow = data.module.flowSlug === 'ai-engineer';
   $: isLowLevelFlow = data.module.flowSlug === 'low-level-design';
   $: isDsaFlow = data.module.flowSlug === 'data-structures-and-algorithms';
+  $: lessonsWithChapters = data.module.lessons.map((lesson) => ({
+    lesson,
+    learnChapter: getLessonLearnChapter(lesson.id)
+  }));
   $: moduleFocusHeadline = isLowLevelFlow
     ? 'Design responsibilities cleanly before patterns start to stack up.'
     : isDsaFlow
       ? 'Choose the solving pattern early, then defend the invariant while you code.'
-      : 'Build one clean mental model before scaling it.';
+      : isAiFlow
+        ? 'Open the Learn chapter first — short summaries are not enough for interview depth.'
+        : 'Build one clean mental model before scaling it.';
   $: moduleFocusSummary = isLowLevelFlow
     ? 'Move through the lessons in order so each object-model decision has context before follow-up requirements and machine-coding trade-offs appear.'
     : isDsaFlow
       ? 'Move through the lessons in order so pattern recognition, live coding structure, and company-specific reps build on each other instead of staying disconnected.'
-      : 'Move through the lessons in order so each trade-off has context before the harder distributed systems decisions show up.';
+      : isAiFlow
+        ? 'Each AI/ML lesson includes a researched book-style chapter. Use Learn chapter for full explanations, then practice and labs.'
+        : 'Move through the lessons in order so each trade-off has context before the harder distributed systems decisions show up.';
   $: moduleDeepStudyLine = isLowLevelFlow
     ? 'Read the prompt shape, object boundaries, and extension seams before coding anything.'
     : isDsaFlow
       ? 'Read the prompt shape, pick the target pattern, and name the invariant before typing the first line of code.'
-      : 'Read the summary, inspect the diagram, and identify the sharpest trade-off.';
+      : isAiFlow
+        ? 'Open Learn chapter for the full explanation, then return for labs and mock interview practice.'
+        : 'Read the summary, inspect the diagram, and identify the sharpest trade-off.';
   $: practiceFlowLines = isLowLevelFlow
     ? [
         'Read the summary and explain the core object or workflow decision in your own words.',
@@ -35,11 +47,17 @@
           'Walk one example manually, then code the cleanest correct version before optimizing.',
           'Answer the interview prompts aloud before marking the lesson complete.'
         ]
-      : [
-          'Read the summary and explain the core trade-off in your own words.',
-          'Study the diagram and identify the critical path or failure boundary.',
-          'Answer the interview prompts aloud before marking the lesson complete.'
-        ];
+      : isAiFlow
+        ? [
+            'Open Learn chapter and teach the concept aloud without looking at the bullets.',
+            'Complete Check yourself prompts, then attempt the topic/practice lab.',
+            'Answer the interview prompts with a metric, a failure mode, and a concrete example.'
+          ]
+        : [
+            'Read the summary and explain the core trade-off in your own words.',
+            'Study the diagram and identify the critical path or failure boundary.',
+            'Answer the interview prompts aloud before marking the lesson complete.'
+          ];
   $: masteryCheckLines = isLowLevelFlow
     ? [
         'Clear assumptions, invariants, and object boundaries.',
@@ -211,7 +229,7 @@
 </section>
 
 <section class="lesson-grid">
-  {#each data.module.lessons as lesson}
+  {#each lessonsWithChapters as { lesson, learnChapter }}
     <article class="lesson-card module-lesson-card">
       <a class="topic-card-link" href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}>
         <div class="lesson-card-heading">
@@ -246,9 +264,19 @@
           <span class="pill">{lesson.duration}</span>
           <span class="pill">{lesson.interviewPrompts.length} prompts</span>
           <span class="pill">{lesson.sections.length} sections</span>
+          {#if learnChapter}
+            <span class="pill">Book chapter · {learnChapter.parts.length} parts</span>
+          {/if}
         </div>
         <span class="lesson-card-cta">{$progress.completedLessonIds.includes(lesson.id) ? 'Review lesson' : 'Start lesson'}</span>
       </a>
+      {#if learnChapter}
+        <div class="action-row" style="padding: 0 1rem 1rem;">
+          <a class="action-link primary" href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}?learn=1`}>
+            Learn chapter
+          </a>
+        </div>
+      {/if}
     </article>
   {/each}
 </section>
