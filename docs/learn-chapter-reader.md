@@ -23,6 +23,7 @@ Book-style lesson study UI opened from the lesson hero **Learn** button.
 - **All 41 AI Engineer lessons** ship researched long-form chapters (math/ML foundations, DL, LLMs, RAG production patterns, agents, MLOps, safety, labs). Content is authored for the Learn reader and is separate from the short on-page lesson summaries.
 - Module overview cards and the lesson runway show a **Learn chapter** deep link (`?learn=1`) when a dedicated chapter exists
 - The reader shows **Part X of Y** progress, highlights the active outline item while scrolling, marks visited sections, and resumes the last section from `localStorage`
+- Worked-example Python snippets are **runnable in place** (Run / Reset) through the shared ML Pyodide worker (`numpy` and friends)
 
 ### Schema
 
