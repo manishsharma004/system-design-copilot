@@ -1,821 +1,612 @@
 /** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
 export const mlFoundationsChapters = {
   "ml-foundations/math-for-ml": {
-    "title": "Chapter: Mathematics for machine learning",
-    "readingTime": "55-70 min",
-    "premise": "Linear algebra, calculus, and probability foundations required for understanding model internals and optimization. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "title": "Mathematics for machine learning",
+    "readingTime": "75-95 min",
+    "premise": "Machine learning is easier to reason about when vectors, derivatives, distributions, and optimization routines feel like one connected language. This chapter builds that language from the geometry of data through the numerical habits that keep real models trainable.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "data-as-vectors-and-linear-maps",
+        "heading": "Data as vectors and linear maps",
         "paragraphs": [
-          "Every optimization step in machine learning is a numerical story about gradients, matrices, and probability. If you can rewrite a training update as linear algebra plus a derivative, you can debug exploding losses, choose better initializations, and explain why PCA, attention, and Bayesian classifiers work instead of treating them as library magic.",
-          "This chapter treats \"Mathematics for machine learning\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+          "A model begins by turning a messy object into coordinates. A house becomes a vector of floor area, age, latitude, and recent sale context. A document becomes counts, dense embeddings, or token activations. A batch of examples becomes a matrix whose rows are observations and whose columns are features. That representation choice is not bookkeeping; it defines the space in which distances, angles, and directions are meaningful.",
+          "Linear algebra gives names to the operations that move through that space. A dot product compares alignment between two vectors, which is why cosine similarity is a normalized dot product. A matrix maps input coordinates to output coordinates, so the product X @ W is many linear predictions computed at once. Rank tells how many independent directions a matrix can express. The singular value decomposition separates any matrix into rotations and axis-wise stretches, which is why it appears in PCA, low-rank approximation, and numerical diagnostics.",
+          "The geometric view also explains why preprocessing matters. Centering moves the origin to the empirical mean, so covariance describes variation around a sensible reference point. Scaling prevents one unit convention, such as dollars instead of thousands of dollars, from dominating distances and regularization penalties. Norms measure size, but different norms encode different preferences: L2 spreads weight smoothly while L1 encourages sparse solutions. When an interview problem mentions embeddings, PCA, or nearest neighbors, first ask what vector space has been chosen and whether its geometry matches the task."
+        ],
+        "keyTerms": [
+          {
+            "term": "Vector space",
+            "definition": "A set of objects that can be added and scaled, giving machine learning a coordinate system for examples, parameters, and predictions."
+          },
+          {
+            "term": "Singular value decomposition",
+            "definition": "A factorization that expresses a matrix as orthogonal directions with nonnegative stretch factors, useful for PCA, compression, and conditioning analysis."
+          },
+          {
+            "term": "Norm",
+            "definition": "A rule for measuring vector or matrix size; common choices such as L1 and L2 lead to different modeling behavior."
+          }
         ],
         "callout": {
           "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "vectors-and-matrices-as-the-language-of-data",
-        "heading": "Vectors and matrices as the language of data",
-        "paragraphs": [
-          "Machine learning almost never operates on single scalars. A dataset with n rows and d features is an n by d matrix. A weight vector for linear regression is a d-dimensional vector. A mini-batch of embeddings is a matrix. When you multiply X by W you are applying the same linear map to every row: each feature is mixed into new coordinates. Geometrically, matrix multiplication rotates, scales, and shears space. Eigenvectors are special directions that only get scaled, not rotated; their eigenvalues tell you the stretch factor. In PCA those directions are the axes of greatest variance. In neural networks, ill-conditioned weight matrices make gradient descent zigzag. Numerical stability matters too: centering features before computing covariance and preferring stable solvers over naive inverse formulas are engineering consequences of linear algebra, not optional polish.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Represent tabular batches as matrices and think of models as maps between spaces.",
-          "• Eigen/SVD structure explains PCA, low-rank adapters, and conditioning problems.",
-          "• Prefer stable linear-algebra primitives over hand-rolled inverses in production code.",
-          "Production lens — Gradients are local, not global: Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry shows that wide, flat minima often generalize better than narrow ones. Learning rate schedules, momentum, and adaptive optimizers exist partly to escape poor basins and navigate ill-conditioned curvature."
-        ],
-        "keyTerms": [
-          {
-            "term": "Represent tabular batches as matrices and",
-            "definition": "Represent tabular batches as matrices and think of models as maps between spaces."
-          },
-          {
-            "term": "Eigen/SVD structure explains PCA, low-rank ad…",
-            "definition": "Eigen/SVD structure explains PCA, low-rank adapters, and conditioning problems."
-          },
-          {
-            "term": "Prefer stable linear-algebra primitives over …",
-            "definition": "Prefer stable linear-algebra primitives over hand-rolled inverses in production code."
-          }
-        ],
-        "workedExample": {
-          "title": "Matrix multiply as a neural-style transform",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nX = np.array([[1.0, 2.0], [3.0, 4.0], [-1.0, 0.5]])\nW = np.array([[0.5, -0.2], [0.1, 0.8]])\nb = np.array([0.1, -0.3])\nY = X @ W + b\nprint(\"batch shape:\", X.shape)\nprint(\"transformed:\\n\", Y.round(3))\nprint(\"column means after transform:\", Y.mean(axis=0).round(3))",
-          "language": "python"
+          "body": "Whenever a formula feels abstract, name the objects: rows are examples, columns are features, vectors are directions, and matrices are transformations."
         },
         "checkYourself": [
           {
-            "prompt": "Can explain gradient descent as following the negative gradient with a step size.",
-            "reveal": "Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry shows that wide, flat minima often generalize better than narrow ones. Learning rate schedules, momentum, and adaptive optimizers exist partly to escape poor basins and navigate ill-conditioned curvature."
+            "prompt": "Why can changing feature scale alter a linear model even when the raw information is unchanged?",
+            "reveal": "Feature scale changes distances, gradient magnitudes, and the meaning of coefficient penalties. With regularization, the optimizer is not only fitting predictions; it is also charging for coefficient size, so units affect the tradeoff unless features are standardized."
           }
         ]
       },
       {
-        "id": "gradients-chain-rule-and-what-optimizers-actually-do",
-        "heading": "Gradients, chain rule, and what optimizers actually do",
+        "id": "least-squares-pca-and-conditioning",
+        "heading": "Least squares, PCA, and conditioning",
         "paragraphs": [
-          "Training is iterative minimization of a scalar loss L(theta). The gradient points toward steepest ascent, so gradient descent steps opposite that direction: theta <- theta - eta * grad. For f(x)=(x-3)^2+1 the derivative is 2(x-3); from x=10 with learning rate 0.1 you move toward 3. Partial derivatives matter because models have many parameters: each coordinate answers \"if I nudge this weight alone, how does loss change?\" Backpropagation is the chain rule applied layer by layer. Learning rate trades speed for stability. Momentum and Adam accumulate gradient history to damp oscillation in high-curvature directions. When the loss blows up, the step usually left the region where the local linear approximation is valid.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Write the update rule before touching an optimizer API.",
-          "• Learning rate controls both speed and stability of the local approximation.",
-          "• Momentum/Adam reshape the effective step using gradient history.",
-          "Production lens — Matrix factorization connects PCA to modern ML: Singular value decomposition (SVD) and eigendecomposition underpin PCA, recommendation systems, and low-rank approximations used in model compression. Understanding that a matrix multiply is a linear transformation—and that eigenvectors reveal invariant directions—makes attention mechanisms and spectral normalization far less mysterious. Numerical stability (condition numbers, floating-point precision) is why production code uses stable decompositions rather than naive formulas."
-        ],
-        "keyTerms": [
-          {
-            "term": "Write the update rule before touching",
-            "definition": "Write the update rule before touching an optimizer API."
-          },
-          {
-            "term": "Learning rate controls both speed and",
-            "definition": "Learning rate controls both speed and stability of the local approximation."
-          },
-          {
-            "term": "Momentum/Adam reshape the effective step using",
-            "definition": "Momentum/Adam reshape the effective step using gradient history."
-          }
+          "Least squares is the cleanest bridge between geometry and supervised learning. The linear regression prediction Xw tries to land near the target vector y. If the columns of X span a subspace, the fitted predictions are the projection of y onto that subspace. The residual is the part of y that the chosen features cannot express linearly. This view is more durable than memorizing normal equations, because it tells you what changes when features are collinear or missing.",
+          "Solving least squares by explicitly forming an inverse is usually the wrong instinct. The matrix X^T X can amplify conditioning problems, especially when columns are nearly dependent. Stable solvers use QR decomposition, SVD, or iterative methods that avoid unnecessary numerical damage. The condition number measures how much small perturbations in input can change the solution. In production, a high condition number can look like coefficients that swing wildly after a minor data refresh.",
+          "PCA uses related machinery with a different objective. Instead of predicting y, it searches for orthogonal directions that preserve maximum variance in X. The top principal components are eigenvectors of the covariance matrix or right singular vectors of the centered data matrix. Keeping only the largest components compresses data while discarding low-variance directions. That can denoise, but it can also remove rare signals, so PCA should be tied to the downstream goal rather than treated as automatic cleanup."
         ],
         "workedExample": {
-          "title": "Gradient descent on a quadratic bowl",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef f(x):\n    return (x - 3.0) ** 2 + 1.0\n\ndef grad(x):\n    return 2.0 * (x - 3.0)\n\nx = 10.0\nlr = 0.1\nfor step in range(15):\n    x = x - lr * grad(x)\n    if step % 3 == 0:\n        print(f\"step {step:2d}: x={x:.4f} f={f(x):.4f}\")\nprint(\"converged near\", round(x, 4))",
+          "title": "NumPy least squares and PCA diagnostics",
+          "body": "This example fits a linear model without forming an explicit inverse, then inspects singular values to reason about PCA-style compression.",
+          "code": "import numpy as np\n\nrng = np.random.default_rng(7)\nX = rng.normal(size=(8, 3))\ntrue_w = np.array([1.5, -2.0, 0.7])\ny = X @ true_w + rng.normal(scale=0.05, size=8)\n\nw_hat, residuals, rank, singular_values = np.linalg.lstsq(X, y, rcond=None)\nprint(\"weights:\", w_hat.round(3))\nprint(\"rank:\", rank)\nprint(\"singular values:\", singular_values.round(3))\nprint(\"condition number:\", round(singular_values[0] / singular_values[-1], 3))\n\nX_centered = X - X.mean(axis=0)\n_, s, vt = np.linalg.svd(X_centered, full_matrices=False)\nexplained = (s ** 2) / np.sum(s ** 2)\nprint(\"PCA variance ratio:\", explained.round(3))\nprint(\"first component:\", vt[0].round(3))",
           "language": "python"
+        },
+        "callout": {
+          "tone": "warning",
+          "body": "The formula w = (X^T X)^-1 X^T y is useful for theory, but explicit inversion is often a numerical smell in code."
         },
         "checkYourself": [
           {
-            "prompt": "Can compute a small matrix multiply and state output shapes.",
-            "reveal": "Singular value decomposition (SVD) and eigendecomposition underpin PCA, recommendation systems, and low-rank approximations used in model compression. Understanding that a matrix multiply is a linear transformation—and that eigenvectors reveal invariant directions—makes attention mechanisms and spectral normalization far less mysterious. Numerical stability (condition numbers, floating-point precision) is why production code uses stable decompositions rather than naive formulas."
+            "prompt": "What does it mean geometrically when linear regression has a large residual?",
+            "reveal": "It means the target vector has a component outside the subspace spanned by the feature columns. More data alone does not fix that representation gap; the feature space or model family may need to change."
           }
         ]
       },
       {
-        "id": "probability-as-the-language-of-uncertainty",
-        "heading": "Probability as the language of uncertainty",
+        "id": "vector-calculus-for-learning-rules",
+        "heading": "Vector calculus for learning rules",
         "paragraphs": [
-          "Models rarely produce certainty; they produce distributions. A classifier that outputs 0.9 for spam is stating a calibrated belief only if you trained and evaluated for calibration. Bayes theorem rearranges conditional probability: P(spam|words) proportional to P(words|spam) P(spam). Naive Bayes assumes word independence given the class so the joint likelihood factors into a product—wrong in reality, often useful in practice. Distributions also choose losses: squared error pairs with Gaussian noise; cross-entropy pairs with categorical predictions. Hypothesis testing keeps you honest when comparing models: a 0.01 accuracy bump on 200 validation rows may be noise. Connect each probabilistic object to a decision: priors encode base rates, likelihoods encode evidence, posteriors drive actions under cost-sensitive thresholds.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Separate model scores from calibrated probabilities.",
-          "• Bayes theorem is the template for combining base rates with evidence.",
-          "• Loss functions encode noise and error-cost assumptions.",
-          "Production lens — Gradients are local, not global: Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry shows that wide, flat minima often generalize better than narrow ones. Learning rate schedules, momentum, and adaptive optimizers exist partly to escape poor basins and navigate ill-conditioned curvature."
+          "Training usually turns many predictions into one scalar loss. Vector calculus explains how that scalar changes when each parameter changes. The gradient is a vector of partial derivatives and points in the direction of steepest local increase. Gradient descent moves in the opposite direction, scaled by a learning rate. The word local is important because the gradient describes nearby behavior, not a promise about the whole loss surface.",
+          "The chain rule is the engine behind modern learning systems. If a prediction depends on an activation, which depends on weights, which depend on earlier layers, then derivatives multiply through that computational path. Backpropagation is not a neural-network trick; it is organized chain rule bookkeeping over a computation graph. Jacobians describe derivatives of vector-valued functions, while Hessians describe curvature of scalar functions. Curvature explains why the same learning rate can be gentle in one direction and explosive in another.",
+          "A reliable practitioner can move between notation and array shapes. If X has shape n by d and w has shape d, the gradient of mean squared error with respect to w also has shape d. If logits have shape batch by classes, the cross-entropy gradient at the logits has the same shape. These checks catch many implementation bugs before a training curve appears. In interviews, deriving a tiny gradient aloud often matters more than naming a sophisticated optimizer."
         ],
         "keyTerms": [
           {
-            "term": "Separate model scores from calibrated probabi…",
-            "definition": "Separate model scores from calibrated probabilities."
+            "term": "Gradient",
+            "definition": "The vector of partial derivatives of a scalar function, indicating the locally steepest ascent direction."
           },
           {
-            "term": "Bayes theorem is the template for",
-            "definition": "Bayes theorem is the template for combining base rates with evidence."
+            "term": "Jacobian",
+            "definition": "A matrix of first derivatives for a vector-valued function, used when outputs and inputs both have multiple coordinates."
           },
           {
-            "term": "Loss functions encode noise and error-cost",
-            "definition": "Loss functions encode noise and error-cost assumptions."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can apply Bayes theorem to a spam-style classification example.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to probability as the language of uncertainty."
-          }
-        ]
-      },
-      {
-        "id": "from-calculus-intuition-to-numerical-ml-practice",
-        "heading": "From calculus intuition to numerical ML practice",
-        "paragraphs": [
-          "Floating-point arithmetic is part of the math. Softmax can overflow if you exponentiate large logits; the fix is subtracting the max logit before exp. Log-sum-exp is the stable cousin used in losses. Vanishing and exploding signals show up whenever you multiply many Jacobians: products of numbers below one shrink to zero; products above one explode. That is why initialization scale, residual connections, and normalization layers keep signal magnitude in a trainable band. When debugging, log gradient norms per layer and activation histograms. A practitioner who can estimate \"this multiply mixes a 1024-d embedding into 12 heads of 64-d each\" is already thinking in transformer units.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Use stable softmax / log-sum-exp patterns by default.",
-          "• Track gradient and activation scales when deep compositions misbehave.",
-          "• Initialization and residual paths are numerical tools, not decoration.",
-          "Production lens — Matrix factorization connects PCA to modern ML: Singular value decomposition (SVD) and eigendecomposition underpin PCA, recommendation systems, and low-rank approximations used in model compression. Understanding that a matrix multiply is a linear transformation—and that eigenvectors reveal invariant directions—makes attention mechanisms and spectral normalization far less mysterious. Numerical stability (condition numbers, floating-point precision) is why production code uses stable decompositions rather than naive formulas."
-        ],
-        "keyTerms": [
-          {
-            "term": "Use stable softmax / log-sum-exp patterns",
-            "definition": "Use stable softmax / log-sum-exp patterns by default."
-          },
-          {
-            "term": "Track gradient and activation scales when",
-            "definition": "Track gradient and activation scales when deep compositions misbehave."
-          },
-          {
-            "term": "Initialization and residual paths are numerical",
-            "definition": "Initialization and residual paths are numerical tools, not decoration."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Knows at least one numerical stability trick used in softmax or losses.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to from calculus intuition to numerical ml practice."
-          }
-        ]
-      },
-      {
-        "id": "putting-the-pieces-together-for-model-internals",
-        "heading": "Putting the pieces together for model internals",
-        "paragraphs": [
-          "A linear classifier is matrix multiply plus bias plus activation. A neural net stacks those maps with nonlinearities so the overall function is no longer linear. PCA compresses X via top eigenvectors of the covariance. Attention scores are scaled dot products—geometry again—followed by softmax probabilities over tokens. Retrieval uses cosine similarity, which is a normalized inner product. Keep translating each new technique back to what vector space is involved, what objective is optimized, and what distribution is assumed. The goal is not memorizing identities; it is deriving a gradient for a toy loss, explaining a matrix shape error, and arguing why a probabilistic baseline belongs in every evaluation plan.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Translate architectures into shapes, objectives, and assumptions.",
-          "• Reuse geometric intuition across PCA, attention, and embeddings.",
-          "• Keep a tiny NumPy mental model before jumping to frameworks.",
-          "Production lens — Gradients are local, not global: Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry shows that wide, flat minima often generalize better than narrow ones. Learning rate schedules, momentum, and adaptive optimizers exist partly to escape poor basins and navigate ill-conditioned curvature."
-        ],
-        "keyTerms": [
-          {
-            "term": "Translate architectures into shapes, objectiv…",
-            "definition": "Translate architectures into shapes, objectives, and assumptions."
-          },
-          {
-            "term": "Reuse geometric intuition across PCA, attention,",
-            "definition": "Reuse geometric intuition across PCA, attention, and embeddings."
-          },
-          {
-            "term": "Keep a tiny NumPy mental model",
-            "definition": "Keep a tiny NumPy mental model before jumping to frameworks."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can connect eigenvalues/SVD to PCA or low-rank structure.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to putting the pieces together for model internals."
+            "term": "Hessian",
+            "definition": "A matrix of second derivatives that captures local curvature of a scalar objective."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
+          "body": "For a whiteboard derivation, state the loss, write the shapes, compute the gradient, and only then discuss optimizer choices."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why can a gradient step increase loss even though it points downhill locally?",
+            "reveal": "The step may be too large for the local linear approximation to remain valid. Curvature, poor scaling, or nonconvex structure can make a direction that is initially downhill overshoot into a worse region."
+          }
+        ]
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
+        "id": "probability-likelihood-and-bayes",
+        "heading": "Probability, likelihood, and Bayes",
         "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for mathematics for machine learning.",
-          "Trap: Memorizing formulas without geometric or probabilistic meaning. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring conditioning and floating-point issues until training diverges. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Skipping simple baselines that only need linear algebra and probability. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Confusing model confidence scores with true calibrated probabilities. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+          "Probability enters machine learning whenever data is noisy, labels are uncertain, or decisions have unequal costs. A random variable is a quantity whose value is not known in advance, and a distribution describes how likely its values are. Expectation is the long-run average under a distribution, while variance measures spread around that average. Covariance describes how two quantities move together. These concepts are not optional statistics vocabulary; they define losses, uncertainty estimates, and assumptions about errors.",
+          "Likelihood reverses the usual probability question. Instead of asking how probable future data is under fixed parameters, it asks which parameters make the observed data plausible. Maximum likelihood estimation chooses parameters that maximize that plausibility, while maximum a posteriori estimation adds a prior preference over parameters. Linear regression with squared error corresponds to Gaussian noise assumptions. Logistic regression with cross-entropy corresponds to Bernoulli labels whose probability is linked to a linear score.",
+          "Bayes' rule is the disciplined way to combine base rates with evidence. A medical test with high sensitivity can still produce many false alarms when the disease is rare. A fraud classifier score should be interpreted against the prior rate of fraud and the costs of intervention. Conditional independence assumptions, such as those in naive Bayes, are often false but can still produce useful models. The mature habit is to ask which uncertainty is being modeled, which is ignored, and what decision will use the resulting probability."
+        ],
+        "keyTerms": [
+          {
+            "term": "Likelihood",
+            "definition": "A function of model parameters measuring how plausible the observed data is under those parameters."
+          },
+          {
+            "term": "Prior",
+            "definition": "A probability distribution or preference over parameters before observing the current data."
+          },
+          {
+            "term": "Posterior",
+            "definition": "The updated distribution over unknown quantities after combining prior beliefs with observed evidence."
+          }
+        ],
+        "callout": {
+          "tone": "tip",
+          "body": "Scores are not automatically probabilities. Calibration is an empirical property that must be checked on held-out data."
+        },
+        "checkYourself": [
+          {
+            "prompt": "How does a base rate change the interpretation of a classifier score?",
+            "reveal": "Evidence is combined with prior prevalence. When positives are rare, even a strong signal may correspond to a modest posterior probability unless the likelihood ratio is very large."
+          }
+        ]
+      },
+      {
+        "id": "optimization-and-regularization",
+        "heading": "Optimization and regularization",
+        "paragraphs": [
+          "An optimization problem has variables, an objective, and often constraints. In machine learning the variables are usually parameters, the objective is an empirical loss plus regularization, and the constraints may be explicit or implicit. Convex objectives have a reassuring property: any local minimum is global. Many modern models are nonconvex, but convex problems remain essential because they teach the behavior of gradients, curvature, and dual tradeoffs. Logistic regression, ridge regression, and support vector machines are classical examples where this theory pays off.",
+          "Gradient descent is only one member of a larger optimization family. Stochastic gradient descent uses noisy mini-batch gradients, which can speed training and sometimes help escape sharp regions. Momentum accumulates velocity so updates do not bounce as much in narrow valleys. Newton and quasi-Newton methods use curvature information to choose better-scaled steps, though they can be expensive in high dimensions. Coordinate descent and proximal methods become attractive when objectives have separable penalties such as L1 regularization.",
+          "Regularization should be read as an optimization choice and a modeling belief. L2 weight decay prefers smaller, smoother parameter vectors and usually reduces variance. L1 penalties can set coefficients exactly to zero, producing sparse models that are easier to inspect. Early stopping regularizes by limiting how far optimization travels toward memorizing noise. Data augmentation, dropout, and margin constraints play similar roles in different model families: they restrict the functions that training is likely to discover."
+        ],
+        "keyTerms": [
+          {
+            "term": "Convex objective",
+            "definition": "An objective whose line segment between any two points lies above the function, making local minima globally optimal."
+          },
+          {
+            "term": "Stochastic gradient descent",
+            "definition": "An optimization method that estimates gradients from mini-batches rather than the full dataset."
+          },
+          {
+            "term": "Regularization",
+            "definition": "A constraint or penalty that discourages overly flexible solutions and improves generalization."
+          }
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+          "body": "Do not tune regularization by training loss. A regularizer is judged by validation behavior, stability, and the deployment cost of errors."
         },
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for Mathematics for machine learning and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Memorizing formulas without geometric or probabilistic meaning.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "Why can early stopping act like regularization?",
+            "reveal": "Stopping before full convergence limits how closely the model fits idiosyncrasies of the training set. The optimization path becomes part of the inductive bias."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "connecting-the-foundations-to-models",
+        "heading": "Connecting the foundations to models",
         "paragraphs": [
-          "Gradients are local, not global. Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry shows that wide, flat minima often generalize better than narrow ones. Learning rate schedules, momentum, and adaptive optimizers exist partly to escape poor basins and navigate ill-conditioned curvature.",
-          "Matrix factorization connects PCA to modern ML. Singular value decomposition (SVD) and eigendecomposition underpin PCA, recommendation systems, and low-rank approximations used in model compression. Understanding that a matrix multiply is a linear transformation—and that eigenvectors reveal invariant directions—makes attention mechanisms and spectral normalization far less mysterious. Numerical stability (condition numbers, floating-point precision) is why production code uses stable decompositions rather than naive formulas."
-        ],
-        "keyTerms": [
-          {
-            "term": "Gradients are local, not global",
-            "definition": "Gradient descent only guarantees convergence to a local minimum for non-convex losses like neural networks. In practice, saddle points and flat regions matter as much as sharp minima—research on loss landscape geometry s…"
-          },
-          {
-            "term": "Matrix factorization connects PCA to modern ML",
-            "definition": "Singular value decomposition (SVD) and eigendecomposition underpin PCA, recommendation systems, and low-rank approximations used in model compression. Understanding that a matrix multiply is a linear transformation—and t…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach mathematics for machine learning as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Why does gradient descent work, and when does it fail? | Explain the role of eigenvectors in PCA with a concrete 2D example. | How does Bayes theorem show up in a naive Bayes spam classifier?"
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Give a 90-second spoken overview of Mathematics for machine learning as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
-          }
+          "The same four mathematical tools reappear across algorithms. Linear algebra describes the representation and transformations. Calculus supplies gradients for learning. Probability tells us how to interpret noise, likelihood, and predictions. Optimization turns those ingredients into fitted parameters. Seeing the repetition prevents every new model from feeling like a new subject.",
+          "Consider a logistic classifier. The feature matrix is multiplied by a weight vector to produce scores. A sigmoid maps each score to a number between zero and one. Cross-entropy comes from the likelihood of Bernoulli labels. Gradient-based optimization adjusts the weights, while regularization encodes a preference for simpler explanations. The entire algorithm is the chapter in miniature.",
+          "The same pattern extends to newer methods. PCA is linear algebra plus an optimization objective about variance. Attention uses dot products, scaling, softmax probabilities, and gradient-based training. Gaussian processes combine linear algebra with probabilistic priors over functions. Even when software hides the details, debugging still demands this mental model: identify the space, the objective, the uncertainty assumption, and the numerical procedure."
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
-        }
+          "body": "A strong answer connects formulas to failure modes: collinearity, unstable gradients, bad calibration, and objective-metric mismatch."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Name the linear algebra, calculus, probability, and optimization pieces inside logistic regression.",
+            "reveal": "Linear algebra forms scores from Xw, calculus differentiates cross-entropy, probability interprets sigmoid outputs as Bernoulli parameters, and optimization fits w under a chosen regularizer."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can explain gradient descent as following the negative gradient with a step size.",
-        "Can compute a small matrix multiply and state output shapes.",
-        "Can apply Bayes theorem to a spam-style classification example.",
-        "Knows at least one numerical stability trick used in softmax or losses.",
-        "Can connect eigenvalues/SVD to PCA or low-rank structure."
+        "Representations define the vector space where models measure distance, alignment, and directions of change.",
+        "Stable linear algebra matters as much as closed-form formulas when data is collinear or high dimensional.",
+        "Gradients, likelihoods, and regularization are the shared mechanics behind many classical and modern algorithms.",
+        "Optimization choices encode assumptions about simplicity, scale, and acceptable numerical risk."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Mathematics for Machine Learning (Cambridge University Press) — https://mml-book.github.io/",
-        "Optional deeper reading: An Introduction to Matrix Algebra (Stanford) — https://web.stanford.edu/~boyd/papers/matrix-intro.pdf"
+        "Derive the gradient of mean squared error for a one-feature linear model.",
+        "Use NumPy to compare least-squares solutions on a well-conditioned and poorly conditioned design matrix.",
+        "Explain logistic regression as linear algebra plus Bernoulli likelihood plus optimization."
       ]
     }
   },
   "ml-foundations/classical-ml-algorithms": {
-    "title": "Chapter: Classical ML algorithms",
-    "readingTime": "55-70 min",
-    "premise": "Regression, classification, clustering, and ensemble methods using scikit-learn. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "title": "Classical ML algorithms",
+    "readingTime": "80-100 min",
+    "premise": "Classical machine learning is not a museum of older algorithms. It is the default toolbox for many high-value tabular, ranking, forecasting, and decision-support systems where data size, interpretability, latency, and monitoring constraints matter.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "inductive-bias-and-baselines",
+        "heading": "Inductive bias and the baseline ladder",
         "paragraphs": [
-          "Classical algorithms remain the best default for many production tabular problems and the baseline against which deep learning must justify complexity. Interviewers expect you to pick logistic regression, trees, or clustering for the right reasons: data size, feature types, interpretability, and latency—not fashion.",
-          "This chapter treats \"Classical ML algorithms\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "start-supervised-linear-models-before-ensembles",
-        "heading": "Start supervised: linear models before ensembles",
-        "paragraphs": [
-          "Linear and logistic regression force you to state an inductive bias: the target is roughly a weighted sum of features (after a link function for classification). That bias is a feature, not a bug. On small or mostly-linear problems they are fast, regularizable, and explainable via coefficients. Regularization (L2/L1) trades coefficient magnitude for generalization; scaling features matters because the penalty treats coefficient size as meaningful. When relationships are nonlinear and interactions dominate, tree ensembles usually win on tabular data. Still, ship a linear baseline first: if gradient boosting only beats logistic regression by a hair, the simpler model may win on monitoring, fairness review, and cold-start ops cost.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Use linear/logistic models as honest baselines with scaled features.",
-          "• Interpret coefficients only after accounting for scaling and collinearity.",
-          "• Escalate to trees when interactions and nonlinearity dominate.",
-          "Production lens — Bias-variance trade-off is algorithm-specific: Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map algorithm choice to data size, feature dimensionality, and interpretability requirements—not default to the fanciest method."
+          "Every algorithm carries an inductive bias, which is a preference for some patterns over others before seeing all possible data. Linear models prefer additive relationships in the chosen feature space. Trees prefer axis-aligned partitions. Nearest-neighbor methods prefer local smoothness under a distance metric. Support vector machines prefer separating boundaries with large margins. The right question is not which algorithm is strongest in general, but which bias is least wrong for the data and decision.",
+          "A practical workflow starts with baselines because baselines make complexity accountable. A mean predictor, majority-class classifier, or logistic regression model establishes the first reference point. If a boosted tree improves a metric by two points but triples latency and complicates explanations, the baseline frames that tradeoff. Baselines also expose dataset issues quickly; if a simple model performs impossibly well, leakage is more likely than genius. If it performs at chance, labels, features, or split strategy may be broken.",
+          "Bias and variance organize the ladder of model complexity. High-bias models underfit because their hypothesis class cannot express the signal. High-variance models overfit because they respond too strongly to sampling noise. Regularization, bagging, boosting, feature engineering, and more data all move this tradeoff in different ways. Interviewers listen for the ability to tie an algorithm choice to sample size, feature dimension, noise level, and operational constraints."
         ],
         "keyTerms": [
           {
-            "term": "Use linear/logistic models as honest baselines",
-            "definition": "Use linear/logistic models as honest baselines with scaled features."
+            "term": "Inductive bias",
+            "definition": "The assumptions an algorithm uses to generalize beyond the training examples it has seen."
           },
           {
-            "term": "Interpret coefficients only after accounting for",
-            "definition": "Interpret coefficients only after accounting for scaling and collinearity."
+            "term": "Bias-variance tradeoff",
+            "definition": "The tension between systematic error from an overly simple model and sensitivity to noise from an overly flexible model."
           },
           {
-            "term": "Escalate to trees when interactions and",
-            "definition": "Escalate to trees when interactions and nonlinearity dominate."
-          }
-        ],
-        "workedExample": {
-          "title": "Compare classifiers with cross-validation",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.datasets import load_iris\nfrom sklearn.model_selection import cross_val_score\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier\n\nX, y = load_iris(return_X_y=True)\nmodels = {\n    \"Logistic Regression\": LogisticRegression(max_iter=500),\n    \"Random Forest\": RandomForestClassifier(n_estimators=100, random_state=0),\n    \"Gradient Boosting\": GradientBoostingClassifier(random_state=0),\n}\nfor name, model in models.items():\n    scores = cross_val_score(model, X, y, cv=5, scoring=\"accuracy\")\n    print(f\"{name:20s} acc={scores.mean():.3f} +/- {scores.std():.3f}\")",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can pick linear vs tree ensembles given data shape and constraints.",
-            "reveal": "Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map algorithm choice to data size, feature dimensionality, and interpretability requirements—not default to the fanciest method."
-          }
-        ]
-      },
-      {
-        "id": "trees-and-boosting-variance-bias-and-why-they-dominate-tables",
-        "heading": "Trees and boosting: variance, bias, and why they dominate tables",
-        "paragraphs": [
-          "A decision tree partitions feature space with axis-aligned splits. Deep trees memorize; shallow trees underfit. Random forests average many deep trees trained on bootstrap samples with feature randomness, reducing variance. Gradient boosting builds trees sequentially to correct residuals, reducing bias aggressively—and overfitting if unchecked. Hyperparameters (depth, learning rate, subsample, min leaf size) are your knobs. For interviews, explain bagging versus boosting, and when monotonic constraints or shallow depths are required for policy reasons. Also remember inference cost: a 500-tree model may be fine offline but painful in a tight online latency budget.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Bagging reduces variance; boosting reduces bias (with overfitting risk).",
-          "• Tune depth and learning rate with validation, not training score.",
-          "• Consider latency and interpretability constraints before maxing trees.",
-          "Production lens — Feature scaling changes which algorithm wins: Distance-based methods (k-NN, SVM with RBF kernel) and gradient-based optimizers are sensitive to feature scale; tree methods are not. Regularization strength in logistic regression is also scale-dependent. A strong engineer always states preprocessing assumptions when comparing model families."
-        ],
-        "keyTerms": [
-          {
-            "term": "Bagging reduces variance; boosting reduces bias",
-            "definition": "Bagging reduces variance; boosting reduces bias (with overfitting risk)."
-          },
-          {
-            "term": "Tune depth and learning rate with",
-            "definition": "Tune depth and learning rate with validation, not training score."
-          },
-          {
-            "term": "Consider latency and interpretability constra…",
-            "definition": "Consider latency and interpretability constraints before maxing trees."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can explain bagging vs boosting in one minute.",
-            "reveal": "Distance-based methods (k-NN, SVM with RBF kernel) and gradient-based optimizers are sensitive to feature scale; tree methods are not. Regularization strength in logistic regression is also scale-dependent. A strong engineer always states preprocessing assumptions when comparing model families."
-          }
-        ]
-      },
-      {
-        "id": "unsupervised-structure-clustering-and-projection",
-        "heading": "Unsupervised structure: clustering and projection",
-        "paragraphs": [
-          "Unsupervised methods find structure without labels. K-means assumes roughly spherical clusters and needs k. DBSCAN finds arbitrary shapes and marks noise, but density parameters are sensitive. Hierarchical clustering yields a dendrogram useful for taxonomy exploration. PCA finds orthogonal directions of variance for compression and visualization; it is linear. t-SNE/UMAP are for visualization, not blindly as supervised features. Always validate clusters with domain checks: silhouette scores help, but a \"nice\" cluster that mixes fraud and non-fraud is still wrong for the business question. Use unsupervised tools for discovery and feature ideas, then confirm with labeled evaluation whenever labels exist.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Match cluster assumptions to geometry of the data.",
-          "• Treat nonlinear embeddings as visualization unless validated as features.",
-          "• Validate discovered structure against domain outcomes.",
-          "Production lens — Bias-variance trade-off is algorithm-specific: Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map algorithm choice to data size, feature dimensionality, and interpretability requirements—not default to the fanciest method."
-        ],
-        "keyTerms": [
-          {
-            "term": "Match cluster assumptions to geometry of",
-            "definition": "Match cluster assumptions to geometry of the data."
-          },
-          {
-            "term": "Treat nonlinear embeddings as visualization u…",
-            "definition": "Treat nonlinear embeddings as visualization unless validated as features."
-          },
-          {
-            "term": "Validate discovered structure against domain …",
-            "definition": "Validate discovered structure against domain outcomes."
-          }
-        ],
-        "workedExample": {
-          "title": "K-means plus PCA sketch",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\nfrom sklearn.cluster import KMeans\nfrom sklearn.decomposition import PCA\nfrom sklearn.datasets import make_blobs\n\nX, y = make_blobs(n_samples=300, centers=3, random_state=2)\nXs = (X - X.mean(0)) / X.std(0)\nlabels = KMeans(n_clusters=3, n_init=10, random_state=2).fit_predict(Xs)\nZ = PCA(n_components=2, random_state=2).fit_transform(Xs)\nprint(\"cluster sizes:\", np.bincount(labels))\nprint(\"PCA variance ratio:\", PCA(n_components=2).fit(Xs).explained_variance_ratio_.round(3))\nprint(\"embedded shape:\", Z.shape)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can build a leakage-safe sklearn Pipeline for mixed types.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to unsupervised structure: clustering and projection."
-          }
-        ]
-      },
-      {
-        "id": "feature-engineering-still-moves-the-needle",
-        "heading": "Feature engineering still moves the needle",
-        "paragraphs": [
-          "Algorithm choice matters less than representing the problem well. Missingness indicators, calibrated encodings, interaction terms, and leakage-safe aggregates often outperform a fancier model on raw columns. Pipelines in scikit-learn exist so imputation, scaling, and encoding fit inside each training fold. High-cardinality IDs are memorization traps. Target encoding can help but leaks if computed with future labels. Domain transforms (log spend, days since signup, ratio features) inject prior knowledge. Document feature contracts: type, allowed range, freshness, and owner—because production failures are often schema failures, not optimizer failures.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Prefer Pipeline/ColumnTransformer to prevent preprocessing leakage.",
-          "• Be skeptical of identifiers and leakage-prone target encodings.",
-          "• Invest in feature contracts as much as in estimators.",
-          "Production lens — Feature scaling changes which algorithm wins: Distance-based methods (k-NN, SVM with RBF kernel) and gradient-based optimizers are sensitive to feature scale; tree methods are not. Regularization strength in logistic regression is also scale-dependent. A strong engineer always states preprocessing assumptions when comparing model families."
-        ],
-        "keyTerms": [
-          {
-            "term": "Prefer Pipeline/ColumnTransformer to prevent …",
-            "definition": "Prefer Pipeline/ColumnTransformer to prevent preprocessing leakage."
-          },
-          {
-            "term": "Be skeptical of identifiers and leakage-prone",
-            "definition": "Be skeptical of identifiers and leakage-prone target encodings."
-          },
-          {
-            "term": "Invest in feature contracts as much",
-            "definition": "Invest in feature contracts as much as in estimators."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Knows when clustering results are hypotheses, not truths.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to feature engineering still moves the needle."
-          }
-        ]
-      },
-      {
-        "id": "model-selection-as-an-engineering-decision",
-        "heading": "Model selection as an engineering decision",
-        "paragraphs": [
-          "Choose models with constraints: data volume, sparsity, need for probabilities, human explainability, training frequency, and serving hardware. SVMs can work in high dimensions with clear margins but scale poorly to huge datasets. k-NN is a strong sanity check and can be productionized with ANN indexes, yet suffers in high dimensions without good features. Ensembles win many Kaggle-style tabular contests; linear models win many regulated scoring systems. The professional move is a ladder: baseline -> strong classical -> only then deep models if the delta justifies ops complexity. Record the comparison protocol so \"we tried the simple model\" is evidence, not folklore.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Define constraints before picking an algorithm family.",
-          "• Compare models with the same splits and the metric that matches cost.",
-          "• Escalate complexity only when measured gains justify ops burden.",
-          "Production lens — Bias-variance trade-off is algorithm-specific: Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map algorithm choice to data size, feature dimensionality, and interpretability requirements—not default to the fanciest method."
-        ],
-        "keyTerms": [
-          {
-            "term": "Define constraints before picking an algorithm",
-            "definition": "Define constraints before picking an algorithm family."
-          },
-          {
-            "term": "Compare models with the same splits",
-            "definition": "Compare models with the same splits and the metric that matches cost."
-          },
-          {
-            "term": "Escalate complexity only when measured gains",
-            "definition": "Escalate complexity only when measured gains justify ops burden."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Establishes a simple baseline before complex methods.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to model selection as an engineering decision."
+            "term": "Baseline",
+            "definition": "A simple reference model used to determine whether added complexity earns its cost."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
+          "body": "A senior answer usually starts with the simplest credible model, then explains the evidence needed to move up the complexity ladder."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why is a strong baseline useful even if you expect a complex model to win?",
+            "reveal": "It verifies the data pipeline, sets a cost-aware reference point, and shows whether the complex model's gain is large enough to justify extra tuning, latency, monitoring, and explanation burden."
+          }
+        ]
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
+        "id": "linear-and-logistic-models",
+        "heading": "Linear and logistic models",
         "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for classical ml algorithms.",
-          "Trap: Reaching for deep learning on small tabular datasets by default. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Fitting preprocessors on all data before cross-validation. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Reporting training accuracy as if it were generalization. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Treating t-SNE coordinates as supervised features without validation. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+          "Linear regression models a target as a weighted sum of features plus noise. Its simplicity makes it fast, inspectable, and surprisingly strong when features are well engineered. Coefficients are meaningful only relative to feature scaling and correlation with other features. Ridge regression shrinks coefficients smoothly with an L2 penalty, while lasso uses L1 regularization to encourage sparsity. Elastic net blends both when correlated groups and feature selection matter.",
+          "Logistic regression is a linear classifier with a probabilistic link function. It computes a score, passes it through the sigmoid function, and fits parameters by minimizing cross-entropy. The decision boundary is linear in the feature space, but nonlinear feature transforms can make the boundary richer. Regularization controls coefficient growth, especially in high-dimensional sparse settings such as text classification. Because outputs are often better calibrated than many flexible models, logistic regression remains valuable in risk scoring and policy settings.",
+          "Solvers and preprocessing are part of the algorithm, not implementation trivia. Gradient-based solvers need scaled features so steps are balanced across coordinates. Class imbalance may require weighting, threshold adjustment, or a metric that reflects false-positive and false-negative costs. Multicollinearity can make individual coefficients unstable even when predictions are stable. A disciplined report separates predictive performance, coefficient interpretation, calibration, and deployment threshold."
+        ],
+        "workedExample": {
+          "title": "NumPy logistic regression training loop",
+          "body": "This small example shows logistic regression as a score, sigmoid, cross-entropy loss, gradient, and regularized update.",
+          "code": "import numpy as np\n\nrng = np.random.default_rng(3)\nX = rng.normal(size=(120, 2))\ntrue_w = np.array([1.8, -1.2])\nlogits = X @ true_w - 0.2\np = 1 / (1 + np.exp(-logits))\ny = rng.binomial(1, p)\n\nXn = (X - X.mean(axis=0)) / X.std(axis=0)\nw = np.zeros(2)\nb = 0.0\nlr = 0.2\nl2 = 0.05\n\nfor step in range(300):\n    z = Xn @ w + b\n    pred = 1 / (1 + np.exp(-z))\n    loss = -(y * np.log(pred + 1e-9) + (1 - y) * np.log(1 - pred + 1e-9)).mean()\n    loss += 0.5 * l2 * np.sum(w ** 2)\n    error = pred - y\n    grad_w = Xn.T @ error / len(y) + l2 * w\n    grad_b = error.mean()\n    w -= lr * grad_w\n    b -= lr * grad_b\n\nprint(\"weights:\", w.round(3), \"bias:\", round(b, 3))\nprint(\"loss:\", round(float(loss), 3))\nprint(\"positive rate predicted:\", round(float((pred >= 0.5).mean()), 3))",
+          "language": "python"
+        },
+        "callout": {
+          "tone": "tip",
+          "body": "For linear and logistic models, feature design often matters more than changing solvers."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why can logistic regression be a good production choice even when a tree ensemble has slightly higher validation accuracy?",
+            "reveal": "It can be easier to calibrate, explain, monitor, retrain, and serve with low latency. A small metric gain may not compensate for the operational and governance cost of the ensemble."
+          }
+        ]
+      },
+      {
+        "id": "neighbors-margins-and-kernels",
+        "heading": "Neighbors, margins, and kernels",
+        "paragraphs": [
+          "Nearest-neighbor methods make almost no parametric assumption. They store examples and predict from nearby points according to a chosen distance. This can work well when the feature representation makes semantic neighbors close. It can fail badly in high dimensions because distances become less informative and irrelevant features dominate. Scaling, metric choice, and approximate nearest-neighbor indexing are therefore central to making k-NN useful.",
+          "Support vector machines take a different view. A linear SVM searches for a separating hyperplane with a large margin, meaning the closest examples are pushed as far from the boundary as possible. The hinge loss penalizes examples inside the margin or on the wrong side. The regularization parameter controls the tradeoff between margin width and training violations. SVMs can be powerful in medium-sized, high-dimensional problems where margins are meaningful.",
+          "Kernels let an SVM behave as if data were mapped into a richer feature space without explicitly building that space. The radial basis function kernel can form nonlinear boundaries by measuring similarity to training examples. This flexibility comes with computational cost and sensitivity to hyperparameters such as gamma. Kernels also reduce interpretability because the boundary is no longer a simple coefficient vector over original features. A good answer mentions both the mathematical elegance and the scaling limits."
+        ],
+        "keyTerms": [
+          {
+            "term": "Margin",
+            "definition": "The distance between a classifier boundary and the nearest training examples, central to support vector machines."
+          },
+          {
+            "term": "Kernel trick",
+            "definition": "A method for computing inner products in an implicit feature space without explicitly constructing transformed features."
+          },
+          {
+            "term": "Curse of dimensionality",
+            "definition": "The degradation of distance-based intuition and data coverage as feature dimension grows."
+          }
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+          "body": "Distance-based methods inherit every mistake in feature scaling and representation. A bad metric makes nearby examples meaningless."
         },
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for Classical ML algorithms and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Reaching for deep learning on small tabular datasets by default.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "When would an RBF-kernel SVM be a poor default?",
+            "reveal": "It can be a poor default for very large datasets, strict latency budgets, heavy interpretability requirements, or problems where hyperparameter tuning cannot be done carefully."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "trees-forests-and-boosting",
+        "heading": "Trees, forests, and boosting",
         "paragraphs": [
-          "Bias-variance trade-off is algorithm-specific. Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map algorithm choice to data size, feature dimensionality, and interpretability requirements—not default to the fanciest method.",
-          "Feature scaling changes which algorithm wins. Distance-based methods (k-NN, SVM with RBF kernel) and gradient-based optimizers are sensitive to feature scale; tree methods are not. Regularization strength in logistic regression is also scale-dependent. A strong engineer always states preprocessing assumptions when comparing model families."
+          "A decision tree partitions feature space by asking a sequence of threshold questions. Each split is chosen to reduce impurity or error in the child nodes. Shallow trees are interpretable but biased because they can express only coarse rules. Deep trees are flexible but high variance because small data changes can alter the structure. The tree's strength is that it captures interactions and nonlinear thresholds without manual feature crosses.",
+          "Random forests reduce variance by averaging many decorrelated trees. Each tree sees a bootstrap sample and a random subset of features at splits, so their errors are less synchronized. The ensemble often performs well with little preprocessing and is robust to monotonic transformations of individual features. However, feature importance can be misleading when features are correlated or have many split points. Forests are easier to tune than boosted trees but can still be heavy at inference time.",
+          "Gradient boosting builds an additive model sequentially. Each new tree fits the direction that reduces the current loss, often described as learning residual corrections. Learning rate, tree depth, number of estimators, subsampling, and leaf constraints govern the bias-variance tradeoff. Boosting can dominate tabular benchmarks because it combines weak rules into a strong predictor. It also overfits quietly when validation discipline is weak, so early stopping and honest splits are part of the method."
         ],
         "keyTerms": [
           {
-            "term": "Bias-variance trade-off is algorithm-specific",
-            "definition": "Tree ensembles reduce variance through bagging and boosting without the same bias increase that deeper single trees incur. Linear models sit at high bias / low variance; k-NN is the opposite. Interview answers should map…"
+            "term": "Bagging",
+            "definition": "Training models on bootstrap samples and averaging them to reduce variance."
           },
           {
-            "term": "Feature scaling changes which algorithm wins",
-            "definition": "Distance-based methods (k-NN, SVM with RBF kernel) and gradient-based optimizers are sensitive to feature scale; tree methods are not. Regularization strength in logistic regression is also scale-dependent. A strong engi…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach classical ml algorithms as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: When would you choose logistic regression over a neural network? | Explain the bias-variance tradeoff with a concrete tabular example. | How does gradient boosting differ from random forests?"
-        ],
-        "checkYourself": [
+            "term": "Boosting",
+            "definition": "Sequentially adding weak learners that correct errors of the current ensemble."
+          },
           {
-            "prompt": "Give a 90-second spoken overview of Classical ML algorithms as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            "term": "Impurity",
+            "definition": "A node-level measure, such as Gini impurity or entropy, used to choose decision-tree splits."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
-        }
+          "body": "Use the phrase carefully: forests mainly average variance down, while boosting changes bias and variance through staged residual fitting."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why does a single deep tree often generalize worse than a random forest?",
+            "reveal": "The single tree has high variance and can depend heavily on quirks of the sample. Averaging many decorrelated trees reduces that variance while preserving much of the nonlinear expressiveness."
+          }
+        ]
+      },
+      {
+        "id": "unsupervised-learning-and-feature-work",
+        "heading": "Unsupervised learning and feature work",
+        "paragraphs": [
+          "Unsupervised algorithms discover structure without target labels, but they do not discover meaning by themselves. K-means searches for cluster centers that minimize within-cluster squared distance, so it prefers roughly spherical clusters of similar scale. DBSCAN groups dense regions and labels sparse points as noise, which can fit irregular shapes but depends strongly on density parameters. Hierarchical clustering builds nested groupings that are useful for exploration and taxonomy. The output should be treated as a hypothesis until domain evidence validates it.",
+          "Dimensionality reduction has a similar caveat. PCA preserves linear variance, which may or may not preserve task-relevant information. Nonlinear visualization methods can reveal neighborhoods but are often unstable under parameter changes and should not be treated as guaranteed supervised features. Autoencoders and matrix factorization can learn compact representations, but they still optimize specific reconstruction or factorization objectives. The common question is whether the compressed view preserves the information needed for the decision.",
+          "Feature engineering remains a major source of classical ML performance. Missingness indicators can turn data quality patterns into signal. Ratios, lags, rolling aggregates, log transforms, and domain-specific bins can make simple models competitive. Categorical encoding must be designed carefully, especially for high-cardinality identifiers and target encoding. Any transformation learned from data must be fit inside the training fold, otherwise preprocessing itself leaks validation information."
+        ],
+        "keyTerms": [
+          {
+            "term": "K-means",
+            "definition": "A clustering algorithm that assigns examples to centers and updates centers to minimize within-cluster squared distance."
+          },
+          {
+            "term": "Target encoding",
+            "definition": "A categorical encoding based on target statistics, powerful but leakage-prone unless computed with out-of-fold discipline."
+          },
+          {
+            "term": "Dimensionality reduction",
+            "definition": "Mapping data to fewer coordinates while trying to preserve useful structure."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "A beautiful cluster plot is not a business result. Validate clusters against outcomes, expert review, or downstream performance."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why is target encoding dangerous when computed before cross-validation?",
+            "reveal": "The encoded value can contain label information from validation rows. The model then sees a summary of the answer during training, inflating validation metrics."
+          }
+        ]
+      },
+      {
+        "id": "choosing-classical-models-in-systems",
+        "heading": "Choosing classical models in systems",
+        "paragraphs": [
+          "Model choice is an engineering decision under constraints. Data volume, feature types, missingness, label noise, latency, memory, explainability, retraining cadence, and regulatory review all matter. A sparse text classifier may favor linear models. A heterogeneous tabular risk model may favor gradient boosting. A recommendation retrieval stage may use nearest-neighbor search over embeddings, followed by a ranking model.",
+          "The comparison must be fair before it is persuasive. Candidate models should share the same split, same preprocessing discipline, same metric definitions, and same threshold-selection policy. Hyperparameter search should be nested or protected by a validation set so the test set remains a final estimate. Slice metrics should be reported for important cohorts rather than only an average. A model that wins overall but fails new users, rare classes, or a regulated subgroup is not a clean win.",
+          "Classical models also need production ownership. Monitor input schema, missing rates, score distributions, calibration, latency, and delayed labels. Keep feature generation reproducible so training and serving compute the same values. Record model cards or decision logs that explain why the chosen algorithm beat simpler alternatives. The best classical ML systems feel boring in operation because the team invested in evaluation and data contracts, not because the algorithm was simple."
+        ],
+        "callout": {
+          "tone": "tip",
+          "body": "A classical model with clear features, honest validation, and stable monitoring often beats a complex model that the team cannot explain or operate."
+        },
+        "checkYourself": [
+          {
+            "prompt": "What should be identical when comparing logistic regression, random forest, and gradient boosting?",
+            "reveal": "They should use identical split membership, leakage-safe preprocessing, metric definitions, threshold policy, and evaluation slices. Otherwise the comparison mixes model quality with experiment differences."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can pick linear vs tree ensembles given data shape and constraints.",
-        "Can explain bagging vs boosting in one minute.",
-        "Can build a leakage-safe sklearn Pipeline for mixed types.",
-        "Knows when clustering results are hypotheses, not truths.",
-        "Establishes a simple baseline before complex methods."
+        "Algorithm choice is a choice of inductive bias under data and system constraints.",
+        "Linear and logistic models remain strong baselines because they are fast, regularizable, inspectable, and often well calibrated.",
+        "Trees, forests, and boosting dominate many tabular tasks by capturing nonlinear interactions with different bias-variance behavior.",
+        "Unsupervised results and engineered features need leakage-safe validation before they become trusted product signals."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: scikit-learn User Guide — Supervised Learning (scikit-learn) — https://scikit-learn.org/stable/supervised_learning.html",
-        "Optional deeper reading: XGBoost: A Scalable Tree Boosting System (arXiv) — https://arxiv.org/abs/1603.02754"
+        "Build a baseline ladder for one tabular problem: majority class, logistic regression, random forest, and gradient boosting.",
+        "Explain bagging versus boosting using variance, bias, and validation discipline.",
+        "Audit one feature pipeline for transformations that must be fit inside each cross-validation fold."
       ]
     }
   },
   "ml-foundations/model-evaluation": {
-    "title": "Chapter: Model evaluation and validation",
-    "readingTime": "55-70 min",
-    "premise": "Cross-validation, metrics selection, overfitting detection, and experiment tracking best practices. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
+    "title": "Model evaluation and validation",
+    "readingTime": "80-100 min",
+    "premise": "Evaluation is the discipline that turns model development into an evidence-producing process. This chapter covers split design, leakage, grouped cross-validation, metric choice, calibration, ROC versus precision-recall tradeoffs, and the production habits that keep validation honest.",
     "parts": [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
+        "id": "evaluation-as-experiment-design",
+        "heading": "Evaluation as experiment design",
         "paragraphs": [
-          "A model that looks great on the wrong split or the wrong metric becomes a production incident. Evaluation design—splits, metrics, calibration, and uncertainty—is how you turn modeling into a trustworthy decision system.",
-          "This chapter treats \"Model evaluation and validation\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
-        }
-      },
-      {
-        "id": "splits-are-contracts-not-formalities",
-        "heading": "Splits are contracts, not formalities",
-        "paragraphs": [
-          "Train data fits parameters, validation data chooses modeling decisions, and test data is a locked final estimate. Random row splits lie when users, sessions, or time create dependence across rows. If the same customer appears in train and test, leakage inflates scores. Time-based splits respect causality for forecasting and many product metrics. Grouped splits keep entire users or hospitals on one side. Nested cross-validation separates model selection variance from final estimation when you tune aggressively. Write the split rule down; if two engineers cannot reproduce the same membership, your leaderboard is theater.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Match split strategy to leakage structure (time, group, label).",
-          "• Keep a true holdout that is not used for iterative tuning.",
-          "• Document split seeds and membership rules for reproducibility.",
-          "Production lens — A single holdout split lies more than you think: Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constructed with the right grouping unit. Time-series and nested cross-validation exist precisely because naive splitting produces overconfident metrics."
+          "A model score is only as trustworthy as the experiment that produced it. Training data estimates parameters, validation data guides choices, and test data estimates final generalization after those choices are fixed. Confusing these roles turns evaluation into self-deception. The more often a team looks at a holdout score and changes the model, the less that holdout behaves like unseen data. Good evaluation starts by defining what question the split is supposed to answer.",
+          "The target deployment setting should determine the experiment. If tomorrow's users will differ from today's users, a random row split may be too optimistic. If the same person contributes many rows, splitting rows can put one person's behavior on both sides. If labels are delayed, using features computed after the prediction time creates a future-looking model. An evaluation protocol is a contract about time, identity, label availability, and allowed information.",
+          "Reproducibility is part of validity. Store dataset versions, split seeds, group definitions, feature-generation code, and metric definitions. A leaderboard that cannot be reconstructed is a story, not evidence. Human review also matters because a metric can improve while the product experience worsens for a critical slice. The evaluation artifact should let another engineer answer what changed, why it changed, and whether the result is likely to survive contact with production."
         ],
         "keyTerms": [
           {
-            "term": "Match split strategy to leakage structure",
-            "definition": "Match split strategy to leakage structure (time, group, label)."
+            "term": "Validation set",
+            "definition": "Data used during development to select features, hyperparameters, thresholds, and model families."
           },
           {
-            "term": "Keep a true holdout that is",
-            "definition": "Keep a true holdout that is not used for iterative tuning."
+            "term": "Test set",
+            "definition": "A protected dataset used after model selection to estimate generalization on unseen examples."
           },
           {
-            "term": "Document split seeds and membership rules",
-            "definition": "Document split seeds and membership rules for reproducibility."
+            "term": "Protocol",
+            "definition": "The documented rules for data membership, preprocessing, metrics, thresholds, and comparisons."
           }
-        ],
-        "workedExample": {
-          "title": "Stratified vs plain KFold on imbalance",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.datasets import make_classification\nfrom sklearn.model_selection import KFold, StratifiedKFold, cross_val_score\nfrom sklearn.ensemble import RandomForestClassifier\n\nX, y = make_classification(n_samples=500, weights=[0.9, 0.1], random_state=42)\nmodel = RandomForestClassifier(random_state=42)\nfor name, cv in {\n    \"KFold\": KFold(n_splits=5, shuffle=True, random_state=42),\n    \"StratifiedKFold\": StratifiedKFold(n_splits=5, shuffle=True, random_state=42),\n}.items():\n    acc = cross_val_score(model, X, y, cv=cv, scoring=\"accuracy\")\n    f1 = cross_val_score(model, X, y, cv=cv, scoring=\"f1\")\n    print(f\"{name}: acc={acc.mean():.3f} f1={f1.mean():.3f}\")",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can choose split strategy for time/group leakage risks.",
-            "reveal": "Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constructed with the right grouping unit. Time-series and nested cross-validation exist precisely because naive splitting produces overconfident metrics."
-          }
-        ]
-      },
-      {
-        "id": "metrics-must-match-the-decision-and-the-costs",
-        "heading": "Metrics must match the decision and the costs",
-        "paragraphs": [
-          "Accuracy is seductive and often wrong under imbalance: predicting the majority class can score 90% while missing every fraud case. Precision and recall make the precision-recall tradeoff explicit; F1 balances them when both matter. ROC-AUC summarizes ranking quality across thresholds but can look strong while precision at the deployed threshold is unusable. For probabilistic decisions, calibration error matters: a score of 0.8 should mean roughly 80% frequency in that bin. Regression needs MAE/MSE/MAPE chosen by error cost shape. Always state the operating threshold and the dollar or risk cost of false positives versus false negatives.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Pick metrics from business costs, not leaderboard habit.",
-          "• Report thresholded metrics for the deployed operating point.",
-          "• Check calibration when scores drive automated decisions.",
-          "Production lens — Optimize the metric that matches the business cost: Accuracy is misleading under class imbalance; ROC-AUC can look good while precision at the operating threshold is unusable. Calibration matters when scores drive decisions (lending, medical triage). Always tie metric choice to false-positive vs false-negative costs and whether ranking or absolute probability is needed."
-        ],
-        "keyTerms": [
-          {
-            "term": "Pick metrics from business costs, not",
-            "definition": "Pick metrics from business costs, not leaderboard habit."
-          },
-          {
-            "term": "Report thresholded metrics for the deployed",
-            "definition": "Report thresholded metrics for the deployed operating point."
-          },
-          {
-            "term": "Check calibration when scores drive automated",
-            "definition": "Check calibration when scores drive automated decisions."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Can justify metric choice from false positive/negative costs.",
-            "reveal": "Accuracy is misleading under class imbalance; ROC-AUC can look good while precision at the operating threshold is unusable. Calibration matters when scores drive decisions (lending, medical triage). Always tie metric choice to false-positive vs false-negative costs and whether ranking or absolute probability is needed."
-          }
-        ]
-      },
-      {
-        "id": "learning-curves-diagnose-bias-versus-variance",
-        "heading": "Learning curves diagnose bias versus variance",
-        "paragraphs": [
-          "Learning curves plot training and validation scores against training set size. A high-bias model shows both curves poor and close; more data will not save a too-shallow tree. A high-variance model shows a large gap: training near perfect, validation weaker; more data or stronger regularization can help. Validation curves sweep a hyperparameter such as max_depth. Use these plots before inventing exotic architectures. Also watch for non-stationary data: a beautiful curve on last quarter may not transfer after a product launch changes feature distributions.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Use learning curves to choose between more data vs more capacity.",
-          "• Interpret train/validation gaps as variance signals.",
-          "• Revisit curves after major distribution shifts.",
-          "Production lens — A single holdout split lies more than you think: Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constructed with the right grouping unit. Time-series and nested cross-validation exist precisely because naive splitting produces overconfident metrics."
-        ],
-        "keyTerms": [
-          {
-            "term": "Use learning curves to choose between",
-            "definition": "Use learning curves to choose between more data vs more capacity."
-          },
-          {
-            "term": "Interpret train/validation gaps as variance s…",
-            "definition": "Interpret train/validation gaps as variance signals."
-          },
-          {
-            "term": "Revisit curves after major distribution shifts.",
-            "definition": "Revisit curves after major distribution shifts."
-          }
-        ],
-        "workedExample": {
-          "title": "Learning curves for under/overfit trees",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "from sklearn.model_selection import learning_curve\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.datasets import make_classification\nimport numpy as np\n\nX, y = make_classification(n_samples=300, n_features=10, random_state=42)\nfor name, model in {\n    \"depth=1\": DecisionTreeClassifier(max_depth=1),\n    \"depth=None\": DecisionTreeClassifier(max_depth=None),\n    \"depth=5\": DecisionTreeClassifier(max_depth=5),\n}.items():\n    _, tr, va = learning_curve(model, X, y, cv=5, train_sizes=np.linspace(0.2, 1.0, 5), scoring=\"accuracy\")\n    gap = tr.mean(axis=1)[-1] - va.mean(axis=1)[-1]\n    print(f\"{name}: train={tr.mean(axis=1)[-1]:.3f} val={va.mean(axis=1)[-1]:.3f} gap={gap:.3f}\")",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can read learning curves for bias vs variance.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to learning curves diagnose bias versus variance."
-          }
-        ]
-      },
-      {
-        "id": "uncertainty-ablations-and-honest-comparisons",
-        "heading": "Uncertainty, ablations, and honest comparisons",
-        "paragraphs": [
-          "A single number without variance is incomplete. Prefer mean +/- std across folds or bootstrap intervals. When comparing model A and B, use the same folds. Ablations remove a feature set or component to prove it mattered. Statistical significance is not product significance: a tiny lift may not pay for complexity. For generative or ranking systems, combine offline metrics with slice analysis (new users, rare locales) because averages hide harmed cohorts. Build an evaluation sheet that lists dataset version, split rule, metric definitions, and known blind spots—this becomes the audit trail when someone asks why the model was shipped.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Report uncertainty, not only point estimates.",
-          "• Compare models on identical folds and dataset versions.",
-          "• Slice metrics to catch cohort-specific failures.",
-          "Production lens — Optimize the metric that matches the business cost: Accuracy is misleading under class imbalance; ROC-AUC can look good while precision at the operating threshold is unusable. Calibration matters when scores drive decisions (lending, medical triage). Always tie metric choice to false-positive vs false-negative costs and whether ranking or absolute probability is needed."
-        ],
-        "keyTerms": [
-          {
-            "term": "Report uncertainty, not only point estimates.",
-            "definition": "Report uncertainty, not only point estimates."
-          },
-          {
-            "term": "Compare models on identical folds and",
-            "definition": "Compare models on identical folds and dataset versions."
-          },
-          {
-            "term": "Slice metrics to catch cohort-specific failures.",
-            "definition": "Slice metrics to catch cohort-specific failures."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Reports fold variance and slice metrics, not only averages.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to uncertainty, ablations, and honest comparisons."
-          }
-        ]
-      },
-      {
-        "id": "from-offline-metrics-to-online-monitoring",
-        "heading": "From offline metrics to online monitoring",
-        "paragraphs": [
-          "Offline evaluation approximates future performance; production confirms it. Define leading indicators: prediction volume, null feature rates, score distribution drift, and delayed label performance. Some labels arrive late (credit default, churn), so you need proxy metrics and delayed evaluation jobs. Guardrail metrics catch harmful side effects even when the primary metric moves up. The evaluation mindset does not end at train time—it becomes the monitoring specification. If you cannot name how you would detect a silent failure within a week, your offline ROC curve is not an operational plan.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Translate offline metrics into online monitors and alerts.",
-          "• Plan for delayed labels with proxies and backfill evaluation.",
-          "• Include guardrail metrics alongside the optimization objective.",
-          "Production lens — A single holdout split lies more than you think: Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constructed with the right grouping unit. Time-series and nested cross-validation exist precisely because naive splitting produces overconfident metrics."
-        ],
-        "keyTerms": [
-          {
-            "term": "Translate offline metrics into online monitors",
-            "definition": "Translate offline metrics into online monitors and alerts."
-          },
-          {
-            "term": "Plan for delayed labels with proxies",
-            "definition": "Plan for delayed labels with proxies and backfill evaluation."
-          },
-          {
-            "term": "Include guardrail metrics alongside the optim…",
-            "definition": "Include guardrail metrics alongside the optimization objective."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Connects offline evaluation to production monitoring.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to from offline metrics to online monitoring."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
-      },
-      {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for model evaluation and validation.",
-          "Trap: Tuning on the test set until it becomes validation in disguise. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Using accuracy alone on imbalanced problems. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring calibration for thresholded automated decisions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Comparing models trained on different hidden preprocessing leaks. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
         ],
         "callout": {
           "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
+          "body": "A repeatedly consulted test set becomes validation data in practice, even if the file name still says test."
         },
         "checkYourself": [
           {
-            "prompt": "Pick the most dangerous pitfall for Model evaluation and validation and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Tuning on the test set until it becomes validation in disguise.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            "prompt": "Why is evaluation design part of modeling rather than a final reporting step?",
+            "reveal": "The split and metric define what the model is optimized to do. If they do not match deployment, later numbers can reward the wrong behavior."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
+        "id": "cross-validation-groups-and-time",
+        "heading": "Cross-validation, groups, and time",
         "paragraphs": [
-          "A single holdout split lies more than you think. Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constructed with the right grouping unit. Time-series and nested cross-validation exist precisely because naive splitting produces overconfident metrics.",
-          "Optimize the metric that matches the business cost. Accuracy is misleading under class imbalance; ROC-AUC can look good while precision at the operating threshold is unusable. Calibration matters when scores drive decisions (lending, medical triage). Always tie metric choice to false-positive vs false-negative costs and whether ranking or absolute probability is needed."
+          "Cross-validation estimates performance by fitting multiple models on different train-validation partitions. K-fold cross-validation reduces dependence on one lucky split and gives a variance estimate across folds. Stratified folds preserve label proportions, which is important under class imbalance. Repeated cross-validation can reduce split noise further, though it costs more compute. The result should be reported as a distribution, not only a mean.",
+          "Grouped data requires grouped splitting. In medical data, all rows from one patient should stay in the same fold. In recommendation systems, all events from one user or household may need to stay together depending on the deployment question. In enterprise settings, rows from one customer account can share hidden context. If groups are split across folds, the model can exploit identity-specific regularities and appear to generalize when it has only recognized familiar entities.",
+          "Time creates a stricter constraint because future information must not help past predictions. Forecasting and many product ML systems need forward-chaining, rolling-origin, or fixed historical holdout splits. Random shuffling can leak seasonality, campaign effects, and post-launch behavior backward into training. Nested cross-validation is useful when hyperparameter tuning is heavy because the outer loop estimates model-selection performance and the inner loop chooses settings. The right split is therefore a claim about causality, dependence, and how the model will be used."
         ],
         "keyTerms": [
           {
-            "term": "A single holdout split lies more than you think",
-            "definition": "Random train/test splits underestimate variance when data is temporally correlated or grouped (users, sessions, patients). K-fold cross-validation gives a better variance estimate but still leaks if folds are not constru…"
+            "term": "Grouped cross-validation",
+            "definition": "A split strategy that keeps all examples from the same entity, such as a user or patient, within one fold."
           },
           {
-            "term": "Optimize the metric that matches the business cost",
-            "definition": "Accuracy is misleading under class imbalance; ROC-AUC can look good while precision at the operating threshold is unusable. Calibration matters when scores drive decisions (lending, medical triage). Always tie metric cho…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach model evaluation and validation as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How do you evaluate a fraud model with 1% positives? | When is ROC-AUC misleading for deployment decisions? | Design a split strategy for user-level recommendations."
-        ],
-        "checkYourself": [
+            "term": "Stratification",
+            "definition": "Constructing folds so label proportions or other key distributions are similar across partitions."
+          },
           {
-            "prompt": "Give a 90-second spoken overview of Model evaluation and validation as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            "term": "Nested cross-validation",
+            "definition": "A two-level cross-validation design that separates hyperparameter selection from final performance estimation."
           }
         ],
         "callout": {
           "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
-        }
+          "body": "When asked how to split data, name the leakage unit: time, user, session, device, patient, account, item, or geography."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why can ordinary K-fold cross-validation be wrong for user-level recommendation data?",
+            "reveal": "The same user's behavior can appear in both training and validation folds. The model may learn user-specific patterns that are unavailable for truly new or future users, producing optimistic metrics."
+          }
+        ]
+      },
+      {
+        "id": "metrics-thresholds-and-roc-vs-pr",
+        "heading": "Metrics, thresholds, and ROC versus PR",
+        "paragraphs": [
+          "Metrics should be chosen from the decision and its error costs. Accuracy is reasonable only when classes and costs are roughly balanced. Precision answers how often positive predictions are correct. Recall answers how many actual positives are found. F1 compresses precision and recall into one number, but it hides the business tradeoff between false alarms and misses. A thresholded classifier should therefore be reported at the intended operating threshold, not only through threshold-free summaries.",
+          "ROC curves plot true positive rate against false positive rate across thresholds. ROC-AUC measures ranking quality and can be useful when both classes are well represented or when comparing rankers abstractly. Precision-recall curves focus on the positive class and are often more informative under severe imbalance. A fraud model can have a strong ROC-AUC while precision at useful recall is too low for investigators. PR-AUC changes with the base rate, which is not a flaw; it reflects how hard positive predictions are in the actual population.",
+          "Regression and ranking tasks have their own metric traps. Mean squared error punishes large errors more than mean absolute error, so it is sensitive to outliers. Mean absolute percentage error can explode near zero and bias evaluation against low-volume items. Ranking metrics such as NDCG and mean average precision depend on position and relevance definitions. Whatever the task, the metric should be accompanied by slice analysis, uncertainty intervals, and examples of failures that the metric does not capture."
+        ],
+        "keyTerms": [
+          {
+            "term": "ROC-AUC",
+            "definition": "The area under the curve of true positive rate versus false positive rate across classification thresholds."
+          },
+          {
+            "term": "Precision-recall curve",
+            "definition": "A curve showing the tradeoff between positive predictive value and sensitivity across thresholds."
+          },
+          {
+            "term": "Operating threshold",
+            "definition": "The score cutoff used in deployment to convert model scores into actions."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "For rare positives, ROC-AUC can look impressive while the precision-recall curve reveals an unusable alert stream."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why is PR-AUC often preferred for rare-event detection?",
+            "reveal": "It focuses on the quality and coverage of positive predictions. False positives that overwhelm the positive class are visible through precision, while ROC false-positive rates can look small because negatives are numerous."
+          }
+        ]
+      },
+      {
+        "id": "calibration-and-uncertainty",
+        "heading": "Calibration and uncertainty",
+        "paragraphs": [
+          "A model is calibrated when events assigned a probability occur at that frequency. Among examples scored near 0.8, roughly 80 percent should be positive. Calibration matters when scores drive decisions, pricing, ranking, triage, or human review. A model can rank examples well and still be poorly calibrated. That is why AUC and calibration answer different questions.",
+          "Calibration can be measured and improved. Reliability diagrams compare predicted probability bins with observed frequencies. The Brier score measures squared error of probabilistic predictions. Platt scaling fits a logistic mapping from scores to probabilities, while isotonic regression fits a monotone calibration curve. Calibration must be learned on validation data separate from training, and checked again after distribution shifts because base rates and score distributions change.",
+          "Uncertainty also includes uncertainty in evaluation results. A validation score computed from a few hundred examples can move substantially by chance. Confidence intervals, bootstrap resampling, and fold standard deviations help communicate that uncertainty. Statistical significance is not the same as practical significance; a tiny lift may be real and still not worth shipping. Evaluation should support decisions, not merely produce decimals."
+        ],
+        "keyTerms": [
+          {
+            "term": "Calibration",
+            "definition": "Agreement between predicted probabilities and observed event frequencies."
+          },
+          {
+            "term": "Brier score",
+            "definition": "The mean squared error between predicted probabilities and binary outcomes."
+          },
+          {
+            "term": "Reliability diagram",
+            "definition": "A plot comparing predicted probability bins with empirical outcome rates."
+          }
+        ],
+        "callout": {
+          "tone": "tip",
+          "body": "Separate ranking from probability quality: AUC asks whether positives score above negatives, while calibration asks whether score values mean what they claim."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Can a model have excellent ROC-AUC and poor calibration?",
+            "reveal": "Yes. It may rank positives above negatives reliably while assigning probabilities that are too high or too low. Ranking and probability accuracy are different properties."
+          }
+        ]
+      },
+      {
+        "id": "learning-curves-and-bias-variance",
+        "heading": "Learning curves and bias-variance diagnosis",
+        "paragraphs": [
+          "Learning curves plot training and validation performance as training set size grows. When both curves are poor and close together, the model likely has high bias or insufficient features. Adding more data may not help much because the model class cannot represent the signal. Better features, more flexible models, or a different objective may be needed. This pattern is common when a linear model is applied to strongly nonlinear structure without feature transforms.",
+          "When training performance is strong but validation performance lags, the model has high variance. More data, stronger regularization, simpler models, bagging, early stopping, or data augmentation may reduce the gap. Validation curves complement learning curves by sweeping a hyperparameter such as tree depth, C value, or regularization strength. These plots turn tuning from guesswork into diagnosis. They also show when a proposed solution, such as collecting labels, is likely to pay off.",
+          "Bias-variance language should be tied to the data-generating process. Label noise creates an irreducible error floor that no model can beat. Distribution shift can make past validation curves misleading after product, market, or policy changes. Slice-specific curves can reveal that the average model is high variance for rare groups and high bias for common ones. Evaluation maturity means diagnosing error sources before prescribing a bigger model."
+        ],
+        "keyTerms": [
+          {
+            "term": "Learning curve",
+            "definition": "A plot of training and validation performance as the amount of training data changes."
+          },
+          {
+            "term": "Validation curve",
+            "definition": "A plot of model performance as one hyperparameter changes."
+          },
+          {
+            "term": "Irreducible error",
+            "definition": "The portion of prediction error caused by noise or missing information that the model cannot eliminate."
+          }
+        ],
+        "callout": {
+          "tone": "interview",
+          "body": "Do not say only underfit or overfit. Say what evidence in the train and validation curves supports the diagnosis."
+        },
+        "checkYourself": [
+          {
+            "prompt": "What does it suggest when training and validation scores are both low and nearly equal?",
+            "reveal": "The model is likely high bias or missing important signal. More capacity, better features, or a better target formulation may help more than simply adding data."
+          }
+        ]
+      },
+      {
+        "id": "leakage-reproducibility-and-production-validation",
+        "heading": "Leakage, reproducibility, and production validation",
+        "paragraphs": [
+          "Leakage is information reaching the model during evaluation that would not be available at prediction time. Target leakage can be obvious, such as including a post-outcome status field, or subtle, such as an aggregate computed using future labels. Preprocessing leakage happens when scalers, imputers, encoders, feature selection, or PCA are fit on all data before splitting. Duplicate leakage happens when near-identical examples straddle train and validation. Leakage often presents as suspiciously high performance, especially for simple models.",
+          "The best defense is a pipeline that mirrors prediction time. Split first, fit transformations only on training folds, and transform validation folds with learned training parameters. Use group and time constraints to keep related records out of both sides. Maintain feature availability timestamps and data lineage so reviewers can see when each value became known. Add tests or audits for identifiers, duplicates, future timestamps, and target-derived fields.",
+          "Offline validation is the beginning of a model's evidence trail, not the end. Production monitoring should track input drift, missing rates, score distributions, calibration drift, latency, and delayed outcome metrics. Online experiments or shadow deployments can reveal feedback loops and user behavior changes that offline data cannot show. Rollback criteria should be defined before launch, not improvised during an incident. A trustworthy ML system connects the validation protocol to ongoing measurement after release."
+        ],
+        "keyTerms": [
+          {
+            "term": "Target leakage",
+            "definition": "Use of information derived from the label or future outcome that would not be available when making predictions."
+          },
+          {
+            "term": "Preprocessing leakage",
+            "definition": "Fitting transformations on data outside the training fold, allowing validation information into model development."
+          },
+          {
+            "term": "Data lineage",
+            "definition": "A record of where features came from, when they were available, and how they were transformed."
+          }
+        ],
+        "callout": {
+          "tone": "warning",
+          "body": "If a simple model scores near perfect on a noisy real-world problem, assume leakage until proven otherwise."
+        },
+        "checkYourself": [
+          {
+            "prompt": "Why must imputers and encoders be fit inside each training fold?",
+            "reveal": "Their learned statistics can contain information about validation rows. Fitting them inside each training fold keeps validation data unseen until evaluation."
+          }
+        ]
       }
     ],
     "wrapUp": {
       "takeaways": [
-        "Can choose split strategy for time/group leakage risks.",
-        "Can justify metric choice from false positive/negative costs.",
-        "Can read learning curves for bias vs variance.",
-        "Reports fold variance and slice metrics, not only averages.",
-        "Connects offline evaluation to production monitoring."
+        "Evaluation is experiment design: splits, metrics, thresholds, and allowed information define what evidence means.",
+        "Cross-validation must respect grouping, time, imbalance, and hyperparameter search or it will overstate generalization.",
+        "ROC-AUC, PR-AUC, calibration, and thresholded metrics answer different deployment questions.",
+        "Leakage prevention requires split-first pipelines, feature availability discipline, and reproducible evaluation records."
       ],
       "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Model evaluation: quantifying the quality of predictions (scikit-learn) — https://scikit-learn.org/stable/modules/model_evaluation.html",
-        "Optional deeper reading: A Survey on Evaluation Methods for Chatbots (arXiv) — https://arxiv.org/abs/1901.05815"
+        "Design split rules for a user-level recommender, a hospital readmission model, and a monthly demand forecast.",
+        "Compare ROC and precision-recall interpretations for a rare-event classifier.",
+        "Audit an ML pipeline for preprocessing, target, duplicate, and time leakage."
       ]
     }
   }
