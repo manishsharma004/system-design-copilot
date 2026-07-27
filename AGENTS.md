@@ -11,6 +11,17 @@ Keep this repo **light and small**:
 - **Minimize user-facing code paths.** One obvious way to do things; avoid parallel abstractions for the same UI pattern.
 - **Preserve the dark theme.** The app uses a fixed dark palette (purple accent `#696cff`, surfaces `#232333` / `#2b2c40`). Do not switch to light mode or replace these colors without an explicit request.
 
+## Docs
+
+Product and feature docs live in the root [`docs/`](docs/) folder. Start there before inventing parallel notes.
+
+| Doc | Topic |
+|-----|--------|
+| [`docs/learn-chapter-reader.md`](docs/learn-chapter-reader.md) | Learn button, book-style chapter modal, AI/ML chapter data, selection Search with AI |
+| [`docs/cursor/`](docs/cursor/) | Agent-maintained architecture snapshots (routes, data, components, LLM, etc.) |
+
+Update the matching root doc when you change user-facing Learn / chapter behavior. Prefer documenting durable product behavior in `docs/` over adding narrow unit tests for UI chrome.
+
 ## Cursor Cloud specific instructions
 
 - Package manager: use `npm` (Node v22 works; `npm install` is the install step). A `bun.lock` is also present but Bun is not installed in this environment, so prefer npm. The update script already runs `npm install` on startup.

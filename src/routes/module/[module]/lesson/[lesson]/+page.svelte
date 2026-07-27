@@ -1,10 +1,12 @@
 <svelte:options runes={false} />
 <script>
   import { base } from '$app/paths';
+  import { page } from '$app/stores';
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
   import SimulationIDE from '$lib/components/SimulationIDE.svelte';
   import AiLessonStudyGuide from '$lib/components/AiLessonStudyGuide.svelte';
+  import LessonLearnReader from '$lib/components/LessonLearnReader.svelte';
   import { getFlowBySlug } from '$lib/data/courseData';
   import { progress } from '$lib/stores/progress';
   import PracticeIDE from '$lib/components/PracticeIDE.svelte';
@@ -17,7 +19,17 @@
   import { solutionLessonIds } from '$lib/data/solutionLoader';
   export let data;
 
+  let learnOpen = false;
+  let learnQuerySeen = '';
+
   $: flow = getFlowBySlug(data.module.flowSlug);
+  $: learnQueryKey = `${data.lesson.id}:${$page.url.searchParams.get('learn') ?? ''}`;
+  $: if (learnQueryKey !== learnQuerySeen) {
+    learnQuerySeen = learnQueryKey;
+    if ($page.url.searchParams.get('learn') === '1') {
+      learnOpen = true;
+    }
+  }
   $: isDsaLesson = data.module.flowSlug === 'data-structures-and-algorithms';
   $: isQuestionBankLesson = data.module.flowSlug === 'interview-questions';
   $: isAiLesson = data.module.flowSlug === 'ai-engineer';
@@ -83,7 +95,8 @@
   <h1>{data.lesson.title}</h1>
   <p class="hero-subtitle">{data.lesson.summary}</p>
   <div class="action-row">
-    <a class="action-link primary" href="#practice-lab">Start mock interview</a>
+    <button class="action-link primary" type="button" onclick={() => (learnOpen = true)}>Learn</button>
+    <a class="action-link" href="#practice-lab">Start mock interview</a>
     {#if showSimulationLab}
       <a class="action-link" href="#simulation-lab">Open simulation lab</a>
     {/if}
@@ -358,3 +371,11 @@
     {/if}
   </div>
 </section>
+
+<LessonLearnReader
+  open={learnOpen}
+  lesson={data.lesson}
+  learnChapter={data.lesson.learnChapter}
+  moduleTitle={data.module.title}
+  onClose={() => (learnOpen = false)}
+/>
