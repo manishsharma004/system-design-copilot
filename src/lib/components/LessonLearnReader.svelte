@@ -458,17 +458,19 @@
 
   .learn-reader-progress {
     margin-top: 0.65rem;
-    height: 0.35rem;
+    height: 0.4rem;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--border) 80%, transparent);
+    background: color-mix(in srgb, var(--border) 70%, #000 30%);
     overflow: hidden;
-    max-width: 18rem;
+    width: min(18rem, 100%);
   }
 
   .learn-reader-progress span {
     display: block;
     height: 100%;
+    min-width: 0.4rem;
     background: var(--accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   }
 
   .learn-reader-shell {
