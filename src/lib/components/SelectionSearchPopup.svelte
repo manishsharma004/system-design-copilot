@@ -61,9 +61,16 @@
 
     selectedText = text;
     const popupWidth = 280;
-    const popupHeight = 96;
-    left = Math.min(Math.max(12, rect.left + rect.width / 2 - popupWidth / 2), window.innerWidth - popupWidth - 12);
-    top = Math.min(Math.max(12, rect.bottom + 8), window.innerHeight - popupHeight - 12);
+    const popupHeight = 110;
+    const preferredLeft = rect.left + rect.width / 2 - popupWidth / 2;
+    left = Math.min(Math.max(12, preferredLeft), window.innerWidth - popupWidth - 12);
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow < popupHeight + 16) {
+      top = Math.max(12, rect.top - popupHeight - 8);
+    } else {
+      top = Math.min(rect.bottom + 8, window.innerHeight - popupHeight - 12);
+    }
     open = true;
   }
 
