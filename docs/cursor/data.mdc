@@ -36,7 +36,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `aiIndustryCurrencyPatches.js` | Mid-2026 patches for LLM/RAG/agents/serving/governance lessons |
 | `aiInteractiveExtras.js` | Topic labs for remaining AI core lessons + advanced labs; merged into `interactiveLessons.js` |
 | `aiInteractiveCurrency2026.js` | Interactive overlays + LLMOps topic labs; `mergeInteractiveCurrency` |
-| `learnChapters.js` + `learnChapters/*` | Book-style Learn chapters for all AI/ML lessons (`getLessonLearnChapter`); see `docs/learn-chapter-reader.md` |
+| `learnChapters.js` + `learnChapters/*` | Book-style Learn chapters (`getLessonLearnChapter`); AI/ML modules plus DSA practice (`dsaFoundationsChapters`, `dsaCorePatternsChapters`, `dsaCompanyRoundsChapters`, `dsaMockLoopsChapters`); see `docs/learn-chapter-reader.md` |
 | `learningExpansionInteractive.js` | On-page interactive labs for HLD/LLD/DSA/AI expansion lessons (incl. HLD exhaustive labs); merged into `interactiveLessons.js` |
 | `lldInteractiveLabs.js` | Topic labs for 12 core + 8 advanced/hot-path LLD lessons |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |

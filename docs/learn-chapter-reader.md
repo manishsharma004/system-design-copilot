@@ -18,7 +18,7 @@ Book-style lesson study UI opened from the lesson hero **Learn** button.
 ## Chapter content
 
 - Hub: `src/lib/data/learnChapters.js` → `getLessonLearnChapter(lessonId)`
-- AI/ML bodies: `src/lib/data/learnChapters/*.js` (one file per AI module)
+- Chapter bodies: `src/lib/data/learnChapters/*.js` (one file per module family; AI/ML plus DSA practice modules)
 - Lesson load attaches `learnChapter` in `src/routes/module/[module]/lesson/[lesson]/+page.js`
 - **All 41 AI Engineer lessons** ship researched long-form chapters (math/ML foundations, DL, LLMs, RAG production patterns, agents, MLOps, safety, labs). Content is authored for the Learn reader and is separate from the short on-page lesson summaries.
 - Module overview cards and the lesson runway show a **Learn chapter** deep link (`?learn=1`) when a dedicated chapter exists
