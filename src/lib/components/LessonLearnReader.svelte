@@ -25,12 +25,20 @@
   let previouslyFocused = /** @type {HTMLElement | null} */ (null);
   let bodyOverflow = '';
   let wasOpen = false;
+  let activeSectionId = 'learn-premise';
+  /** @type {Set<string>} */
+  let visitedSectionIds = new Set(['learn-premise']);
+  /** @type {IntersectionObserver | null} */
+  let sectionObserver = null;
+
+  const POSITION_KEY = 'system-design-copilot-learn-position-v1';
 
   $: if (open && !wasOpen) {
     wasOpen = true;
     openReader();
   } else if (!open && wasOpen) {
     wasOpen = false;
+    persistPosition();
     closeReaderEffects();
   }
 
@@ -55,17 +63,29 @@
       ];
 
   $: answerContext = lesson ? buildLessonAnswerContext(lesson) : [];
+  $: activeIndex = Math.max(
+    0,
+    outline.findIndex((item) => item.id === activeSectionId)
+  );
+  $: progressLabel =
+    outline.length > 0 ? `Part ${activeIndex + 1} of ${outline.length}` : '';
+  $: progressRatio = outline.length ? Math.round(((activeIndex + 1) / outline.length) * 100) : 0;
 
   async function openReader() {
     if (typeof document === 'undefined') return;
     previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     bodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    activeSectionId = 'learn-premise';
+    visitedSectionIds = new Set(['learn-premise']);
     await tick();
     closeButton?.focus();
+    setupSectionObserver();
+    restorePosition();
   }
 
   function closeReaderEffects() {
+    teardownSectionObserver();
     if (typeof document === 'undefined') return;
     document.body.style.overflow = bodyOverflow || '';
     previouslyFocused?.focus?.();
@@ -73,7 +93,75 @@
   }
 
   function requestClose() {
+    persistPosition();
     onClose();
+  }
+
+  function setupSectionObserver() {
+    teardownSectionObserver();
+    if (!contentEl || typeof IntersectionObserver === 'undefined') return;
+
+    sectionObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0]?.target;
+        if (!(top instanceof HTMLElement) || !top.id) return;
+        activeSectionId = top.id;
+        if (!visitedSectionIds.has(top.id)) {
+          visitedSectionIds = new Set([...visitedSectionIds, top.id]);
+        }
+      },
+      {
+        root: contentEl,
+        rootMargin: '-12% 0px -55% 0px',
+        threshold: [0.15, 0.35, 0.6]
+      }
+    );
+
+    for (const item of outline) {
+      const node = contentEl.querySelector(`#${CSS.escape(item.id)}`);
+      if (node) sectionObserver.observe(node);
+    }
+  }
+
+  function teardownSectionObserver() {
+    sectionObserver?.disconnect();
+    sectionObserver = null;
+  }
+
+  function persistPosition() {
+    if (typeof localStorage === 'undefined' || !lesson?.id || !contentEl) return;
+    try {
+      const payload = {
+        sectionId: activeSectionId,
+        scrollTop: contentEl.scrollTop,
+        updatedAt: Date.now()
+      };
+      localStorage.setItem(`${POSITION_KEY}:${lesson.id}`, JSON.stringify(payload));
+    } catch {
+      // Ignore storage failures.
+    }
+  }
+
+  function restorePosition() {
+    if (typeof localStorage === 'undefined' || !lesson?.id || !contentEl) return;
+    try {
+      const raw = localStorage.getItem(`${POSITION_KEY}:${lesson.id}`);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const sectionIdValue = typeof saved?.sectionId === 'string' ? saved.sectionId : '';
+      const target = sectionIdValue ? contentEl.querySelector(`#${CSS.escape(sectionIdValue)}`) : null;
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ block: 'start' });
+        activeSectionId = sectionIdValue;
+      } else if (typeof saved?.scrollTop === 'number') {
+        contentEl.scrollTop = saved.scrollTop;
+      }
+    } catch {
+      // Ignore corrupt storage.
+    }
   }
 
   /** @param {KeyboardEvent} event */
@@ -119,10 +207,13 @@
     const target = contentEl.querySelector(href);
     if (target instanceof HTMLElement) {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      activeSectionId = href.slice(1);
+      visitedSectionIds = new Set([...visitedSectionIds, activeSectionId]);
     }
   }
 
   onDestroy(() => {
+    persistPosition();
     closeReaderEffects();
   });
 </script>
@@ -147,8 +238,12 @@
           <h2>{learnChapter?.title || lesson.title}</h2>
           <p class="learn-reader-meta">
             {learnChapter?.readingTime || lesson.duration || 'Reading'}
+            · {progressLabel}
             · select any phrase for Search with AI
           </p>
+          <div class="learn-reader-progress" aria-hidden="true">
+            <span style={`width:${progressRatio}%`}></span>
+          </div>
         </div>
         <button class="action-link" type="button" bind:this={closeButton} onclick={requestClose}>
           Close
@@ -158,7 +253,14 @@
       <div class="learn-reader-shell">
         <nav class="learn-reader-outline" aria-label="Chapter outline">
           {#each outline as item}
-            <a href={`#${item.id}`} onclick={jumpToSection}>{item.label}</a>
+            <a
+              class:active={item.id === activeSectionId}
+              class:visited={visitedSectionIds.has(item.id)}
+              href={`#${item.id}`}
+              onclick={jumpToSection}
+            >
+              {item.label}
+            </a>
           {/each}
         </nav>
 
@@ -354,6 +456,21 @@
     font-size: 0.85rem;
   }
 
+  .learn-reader-progress {
+    margin-top: 0.65rem;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--border) 80%, transparent);
+    overflow: hidden;
+    max-width: 18rem;
+  }
+
+  .learn-reader-progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
   .learn-reader-shell {
     display: grid;
     grid-template-columns: minmax(11rem, 15rem) 1fr;
@@ -377,10 +494,21 @@
     line-height: 1.35;
     padding: 0.4rem 0.5rem;
     border-radius: 0.45rem;
+    opacity: 0.78;
+  }
+
+  .learn-reader-outline a.visited {
+    opacity: 1;
   }
 
   .learn-reader-outline a:hover {
     background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .learn-reader-outline a.active {
+    opacity: 1;
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .learn-reader-content {

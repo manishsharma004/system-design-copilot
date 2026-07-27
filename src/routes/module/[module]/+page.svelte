@@ -205,25 +205,40 @@
   </div>
 
   <div class="module-runway-grid">
-    {#each data.module.lessons as lesson}
-      <a
+    {#each lessonsWithChapters as { lesson, learnChapter }}
+      <div
         class:completed={$progress.completedLessonIds.includes(lesson.id)}
         class:next-lesson={lesson.id === nextLesson.id}
         class="lesson-sequence-card"
-        href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}
       >
-        <div class="lesson-sequence-header">
-          <span class="pill">Lesson {lesson.order}</span>
-          <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : lesson.id === nextLesson.id ? 'Next' : 'Open'}</span>
-        </div>
-        <strong>{lesson.title}</strong>
-        <p>{lesson.summary}</p>
-        <div class="lesson-sequence-meta">
-          <span>{lesson.duration}</span>
-          <span>{lesson.interviewPrompts.length} prompts</span>
-          <span>{lesson.sections.length} sections</span>
-        </div>
-      </a>
+        <a
+          class="lesson-sequence-link"
+          href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}`}
+        >
+          <div class="lesson-sequence-header">
+            <span class="pill">Lesson {lesson.order}</span>
+            <span class:done={$progress.completedLessonIds.includes(lesson.id)} class="progress-badge">{$progress.completedLessonIds.includes(lesson.id) ? 'Completed' : lesson.id === nextLesson.id ? 'Next' : 'Open'}</span>
+          </div>
+          <strong>{lesson.title}</strong>
+          <p>{lesson.summary}</p>
+          <div class="lesson-sequence-meta">
+            <span>{lesson.duration}</span>
+            <span>{lesson.interviewPrompts.length} prompts</span>
+            <span>{lesson.sections.length} sections</span>
+            {#if learnChapter}
+              <span>Book chapter · {learnChapter.parts.length} parts</span>
+            {/if}
+          </div>
+        </a>
+        {#if learnChapter}
+          <a
+            class="action-link primary lesson-sequence-learn"
+            href={`${base}/module/${data.module.slug}/lesson/${lesson.slug}?learn=1`}
+          >
+            Learn chapter
+          </a>
+        {/if}
+      </div>
     {/each}
   </div>
 </section>
