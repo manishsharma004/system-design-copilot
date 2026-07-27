@@ -1,965 +1,761 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const mlopsChapters = {
+const chapters = {
   "mlops-and-deployment/ml-pipeline-design": {
-    "title": "Chapter: ML pipeline design",
-    "readingTime": "55-70 min",
-    "premise": "Data pipelines, feature stores, training infrastructure, and experiment tracking for reproducible ML development. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: ML pipeline design for production AI",
+    readingTime: "65-80 min",
+    premise:
+      "Modern MLOps pipelines manage more than trained model files. They version data, features, code, prompts, retrieval indexes, evaluation suites, environments, approvals, and deployment aliases. This chapter teaches pipeline design as a set of artifact contracts and promotion gates that make classic ML, LLM applications, and agent systems reproducible enough to operate.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "ML platforms now run dual tracks: classic training/registry pipelines and LLM app pipelines where prompts, indexes, and eval suites are versioned releases. Ignoring either track creates shadow IT.",
-          "This chapter treats \"ML pipeline design\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "pipelines-as-artifact-graphs",
+        heading: "Pipelines are artifact graphs, not notebooks with schedules",
+        paragraphs: [
+          "A production ML pipeline is a directed graph of transformations that produce versioned artifacts. Typical classic stages include ingest, validate, label, feature, train, evaluate, register, deploy, and monitor. LLM application stages add prompt packaging, chunking, embedding, index build, retrieval eval, tool-schema validation, judge calibration, and safety red teams. The graph matters because every promoted system should answer a simple question: which code, data, configuration, environment, and eval evidence produced this behavior?",
+          "Artifacts need contracts. A dataset artifact should declare schema, time range, sampling logic, privacy filters, and lineage. A feature artifact should declare transformation version, freshness, join keys, and point-in-time correctness. A model artifact should declare training code, hyperparameters, environment image, metrics, fairness slices, and intended serving runtime. A prompt or agent artifact should declare model alias, tool catalog version, memory policy, retrieval index, and eval suite. Without these contracts, retries and rollbacks become guesswork.",
+          "The pipeline should be idempotent. Re-running a stage with the same inputs should either reuse the cached artifact or produce the same artifact identity. This enables backfills, disaster recovery, and audit reproduction. Non-idempotent writes, hidden notebook state, live vendor-console prompt edits, and unpinned dependencies are pipeline smells. They may work during research, but they are not a production release path."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "artifact graph",
+            definition:
+              "A dependency graph where each pipeline stage consumes and produces versioned artifacts with explicit contracts."
+          },
+          {
+            term: "lineage",
+            definition:
+              "Metadata that links a production artifact to the data, code, configuration, environment, and evaluation that produced it."
+          },
+          {
+            term: "idempotent stage",
+            definition:
+              "A pipeline step that can be retried safely without duplicating side effects or changing results for the same inputs."
+          }
+        ],
+        workedExample: {
+          title: "A compact lineage record",
+          body:
+            "The record is the minimum kind of metadata a registry or artifact store should preserve for later audit.",
+          code:
+            "lineage = {\n    \"artifact\": \"fraud_model_v42\",\n    \"data_snapshot\": \"transactions_2026_07_01_to_2026_07_14\",\n    \"feature_set\": \"fraud_features_v18\",\n    \"code_sha\": \"9f2c1ab\",\n    \"env_image\": \"ml-train:2026-07-20\",\n    \"eval_report\": \"eval_fraud_v42.json\",\n    \"approved_by\": [\"risk\", \"ml_platform\"],\n}\n\nrequired = [\"data_snapshot\", \"feature_set\", \"code_sha\", \"eval_report\"]\nprint(all(key in lineage for key in required))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why is a scheduled notebook not enough to count as a production ML pipeline?",
+            reveal:
+              "A production pipeline needs explicit artifact contracts, idempotent stages, lineage, validation, promotion gates, and rollback paths. A notebook schedule usually hides state and evidence."
+          }
+        ]
+      },
+      {
+        id: "data-validation-and-feature-correctness",
+        heading: "Data validation and feature correctness are first-class stages",
+        paragraphs: [
+          "Most ML failures begin before training. Null spikes, duplicated events, shifted category values, delayed labels, broken joins, and upstream backfills can silently change the meaning of a training set. Data validation should run before expensive training and before index builds. It should check schema, ranges, uniqueness, volume, freshness, referential integrity, privacy filters, and known invariants. Validation failures should block promotion or route to owners with clear remediation.",
+          "Feature correctness is especially subtle for time-dependent systems. Point-in-time joins prevent the model from seeing future information during training. Offline and online transformations must match or the serving path will compute features the model never learned. Feature stores help by centralizing definitions, but they do not remove ownership questions: who approves a feature change, how freshness is monitored, and how backfills affect historical labels.",
+          "LLM and retrieval pipelines have analogous data quality problems. A documentation crawler can ingest stale pages, an embedding job can mix embedder versions, a chunker change can break citations, and a PII scrubber can miss prompt logs. Treat corpus snapshots, chunk metadata, embedding model ids, and index build ids as feature artifacts. Retrieval quality is not separate from MLOps; it is feature engineering for generative systems."
+        ],
+        keyTerms: [
+          {
+            term: "point-in-time join",
+            definition:
+              "A training-set join that only uses feature values available at the prediction time for each example."
+          },
+          {
+            term: "training-serving skew",
+            definition:
+              "A mismatch between features or transformations used during training and those used during production inference."
+          },
+          {
+            term: "corpus snapshot",
+            definition:
+              "A versioned capture of documents and metadata used to build a retrieval index."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "What is the LLM-app equivalent of a feature-set version in a classic ML pipeline?",
+            reveal:
+              "A prompt, chunker configuration, embedding model id, corpus snapshot, index build id, tool schema set, and eval bundle together play a similar role as versioned release artifacts."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "If you cannot rebuild the training set or retrieval index from identifiers, you cannot reliably debug production behavior."
         }
       },
       {
-        "id": "pipeline-stages-as-a-dag",
-        "heading": "Pipeline stages as a DAG",
-        "paragraphs": [
-          "Typical stages: ingest -> validate -> featurize -> train -> evaluate -> register -> deploy. Edges encode data dependencies. DAGs let you retry failed stages, cache expensive steps, and compute in parallel when independent. Name artifacts explicitly (dataset version, feature version, model version). If you cannot redraw the DAG on a whiteboard with artifact contracts, the platform tooling will not save you. Artifact contracts should include schema hashes so downstream stages fail fast on drift. Artifact contracts should include schema hashes so downstream stages fail fast on drift.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Make stages idempotent with explicit artifact IOs.",
-          "• Cache immutable outputs by content hash when possible.",
-          "• Separate training DAGs from inference paths.",
-          "Production lens — Reproducibility requires versioning everything: Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produced this model?\" Feature stores bridge training-serving skew by sharing transformation logic between batch and online paths."
+        id: "training-evaluation-and-promotion",
+        heading: "Training is only one step before gated promotion",
+        paragraphs: [
+          "Training jobs produce candidates, not production systems. Candidates must pass evaluation gates that reflect product risk: offline metrics, calibration, slice performance, fairness checks, robustness, latency estimates, cost, and compatibility with the target runtime. For LLM apps, gates may include groundedness, retrieval recall proxies, JSON validity, refusal quality, tool-call correctness, red-team attack success, and cost per successful task. Promotion is a decision with evidence, not the final line of a training script.",
+          "A model registry or release registry should store more than binaries. It should link artifacts, metrics, approvals, known limitations, owners, model cards or system cards, and deployment aliases. High-risk domains often require human review before a candidate becomes deployable. Lower-risk systems can automate more of the path, but even then the gate policy should be explicit. A silent auto-promotion based on one aggregate score is a common source of regressions.",
+          "The evaluation report should be immutable and comparable. If a model improves overall AUC but worsens performance for a protected slice, the report should show the tradeoff. If a prompt reduces hallucination but doubles token spend, the report should show whether the launch gate allows that. The point is not to optimize every metric simultaneously. It is to make tradeoffs visible before they become user-facing surprises."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Make stages idempotent with explicit artifact",
-            "definition": "Make stages idempotent with explicit artifact IOs."
+            term: "promotion gate",
+            definition:
+              "A rule or review requirement that a candidate artifact must satisfy before deployment."
           },
           {
-            "term": "Cache immutable outputs by content hash",
-            "definition": "Cache immutable outputs by content hash when possible."
+            term: "registry",
+            definition:
+              "A system of record for model or AI application artifacts, metadata, metrics, approvals, and aliases."
           },
           {
-            "term": "Separate training DAGs from inference paths.",
-            "definition": "Separate training DAGs from inference paths."
+            term: "system card",
+            definition:
+              "Documentation for an AI system, including intended use, components, evaluations, limitations, and operational controls."
           }
         ],
-        "workedExample": {
-          "title": "Tiny DAG scheduler in Python",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def run_dag(nodes):\n    # nodes: name -> {fn, deps}\n    done = {}\n    while len(done) < len(nodes):\n        progress = False\n        for name, node in nodes.items():\n            if name in done:\n                continue\n            if all(d in done for d in node[\"deps\"]):\n                done[name] = node[\"fn\"]({d: done[d] for d in node[\"deps\"]})\n                progress = True\n        if not progress:\n            raise RuntimeError(\"cycle or missing deps\")\n    return done\n\nnodes = {\n    \"data\": {\"deps\": [], \"fn\": lambda _: [1, 2, 3]},\n    \"train\": {\"deps\": [\"data\"], \"fn\": lambda inp: sum(inp[\"data\"])},\n    \"eval\": {\"deps\": [\"train\"], \"fn\": lambda inp: inp[\"train\"] / 3},\n}\nprint(run_dag(nodes))",
-          "language": "python"
+        workedExample: {
+          title: "Gate a candidate on multiple dimensions",
+          body:
+            "A gate can block on safety even when aggregate accuracy improves.",
+          code:
+            "def gate(report):\n    failures = []\n    if report[\"auc\"] < 0.86:\n        failures.append(\"auc\")\n    if report[\"slice_gap\"] > 0.04:\n        failures.append(\"slice_gap\")\n    if report[\"p95_latency_ms\"] > 120:\n        failures.append(\"latency\")\n    if report[\"critical_redteam_failures\"] != 0:\n        failures.append(\"redteam\")\n    return {\"promote\": not failures, \"failures\": failures}\n\nprint(gate({\"auc\": 0.88, \"slice_gap\": 0.02, \"p95_latency_ms\": 90, \"critical_redteam_failures\": 0}))\nprint(gate({\"auc\": 0.90, \"slice_gap\": 0.07, \"p95_latency_ms\": 80, \"critical_redteam_failures\": 0}))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can sketch a training DAG with artifact contracts.",
-            "reveal": "Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produced this model?\" Feature stores bridge training-serving skew by sharing transformation logic between batch and online paths."
+            prompt:
+              "Why should a registry entry include approvals and limitations, not only a model file?",
+            reveal:
+              "Production operation requires evidence: who approved it, what it was evaluated on, where it should not be used, which version is deployed, and how to roll it back."
           }
         ]
       },
       {
-        "id": "feature-pipelines-and-training-serving-skew",
-        "heading": "Feature pipelines and training/serving skew",
-        "paragraphs": [
-          "The same feature logic must run in training and serving. Skew happens when SQL in a warehouse differs from online Python transforms. Feature stores help by sharing definitions and point-in-time joins for training. Point-in-time correctness prevents label leakage from future aggregates. Document feature freshness SLAs. Test offline/online parity with recorded requests replayed through both paths. Idempotent stages make retries safe; non-idempotent writes turn transient blips into duplicates. Idempotent stages make retries safe; non-idempotent writes turn transient blips into duplicates.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Shared definitions beat duplicated transforms.",
-          "• Point-in-time joins are mandatory for time-travel training sets.",
-          "• Parity tests catch train/serve skew.",
-          "Production lens — CI/CD for ML adds validation gates beyond unit tests: Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow, Kubeflow, Metaflow) manage dependencies; the hard part is organizational contracts on who owns each stage."
+        id: "orchestration-and-environments",
+        heading: "Orchestration coordinates compute, environments, and ownership",
+        paragraphs: [
+          "Orchestrators such as Airflow, Kubeflow, Metaflow, Dagster, cloud-native pipeline services, and internal platforms solve scheduling and dependency execution, but the hard work is designing ownership and contracts. Each stage needs an owner, retry policy, resource profile, secret scope, data access boundary, and runbook. Backfills should be planned, not improvised. When a data correction requires rebuilding six months of features and retraining three models, the pipeline design is tested more than the scheduler brand.",
+          "Environments must be reproducible. Training images, CUDA versions, Python dependencies, compiler settings, tokenizer versions, and feature code all influence outputs. For LLM systems, prompt templates, tokenizer behavior, model aliases, provider settings, and index builders also belong in configuration. Secrets should come from managed secret stores, never notebooks or artifact metadata. Dev, staging, and production should have different data scopes and credentials so experiments cannot accidentally touch regulated production data.",
+          "Pipeline observability includes duration, queue time, retries, failure rate, stale artifact age, validation failures, cost, and owner response. These are platform SLIs, not afterthoughts. If the daily training job fails every third run but the model is still serving yesterday's version, users may not notice immediately; the business will notice when labels drift and retraining cannot catch up. MLOps reliability is software reliability with data-dependent symptoms."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Shared definitions beat duplicated transforms.",
-            "definition": "Shared definitions beat duplicated transforms."
+            term: "backfill",
+            definition:
+              "A controlled reprocessing of historical data or artifacts after code, data, or logic changes."
           },
           {
-            "term": "Point-in-time joins are mandatory for time-tr…",
-            "definition": "Point-in-time joins are mandatory for time-travel training sets."
+            term: "environment image",
+            definition:
+              "A pinned runtime container or equivalent environment that captures dependencies needed to reproduce a stage."
           },
           {
-            "term": "Parity tests catch train/serve skew.",
-            "definition": "Parity tests catch train/serve skew."
+            term: "pipeline SLI",
+            definition:
+              "A service-level indicator for pipeline health, such as freshness, duration, retry rate, or validation failure rate."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Explains train/serve skew and PIT joins.",
-            "reveal": "Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow, Kubeflow, Metaflow) manage dependencies; the hard part is organizational contracts on who owns each stage."
+            prompt:
+              "What makes a pipeline backfill safe instead of risky?",
+            reveal:
+              "Idempotent stages, versioned artifacts, clear data partitions, controlled credentials, validation gates, cost awareness, and owner runbooks make backfills safe."
           }
         ]
       },
       {
-        "id": "evaluation-gates-before-registry",
-        "heading": "Evaluation gates before registry",
-        "paragraphs": [
-          "Not every trained checkpoint deserves promotion. Gates check metric thresholds, fairness slices, calibration, and smoke inference. Store evaluation reports beside model binaries. Require reviewers for high-risk models. The registry records lineage: code git SHA, data versions, hyperparameters, metrics. Without lineage, rollback and audits fail. Promotion gates are product decisions encoded as code—keep them reviewed like business logic. Promotion gates are product decisions encoded as code—keep them reviewed like business logic.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Promotion is a gated decision, not an automatic last step.",
-          "• Registry entries need full lineage metadata.",
-          "• Keep evaluation artifacts immutable.",
-          "Production lens — Reproducibility requires versioning everything: Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produced this model?\" Feature stores bridge training-serving skew by sharing transformation logic between batch and online paths."
+        id: "dual-track-llm-and-classic-ml",
+        heading: "Classic ML and LLM application releases need dual-track discipline",
+        paragraphs: [
+          "Many 2026 products ship both classic ML and LLM components. A fraud system may use gradient-boosted risk models plus an analyst assistant. A support product may use intent classifiers, retrieval, generation, and tool-calling agents. The platform must handle both tracks without pretending they are identical. Classic training pipelines center on data snapshots, features, labels, training, registry, and serving. LLM application pipelines center on prompt bundles, model aliases, retrieval indexes, tools, memory policy, eval suites, traces, and safety controls.",
+          "The shared discipline is versioned release candidates. A prompt edit in a vendor console is a production change. An embedding model upgrade without a matching index rebuild is a broken artifact graph. A tool schema change without trajectory evals can alter agent behavior even when the model is unchanged. Conversely, a tabular model retrain without a feature-store update can pass offline metrics but fail online due to skew. Draw the two tracks together during architecture reviews so dependencies are visible.",
+          "Promotion and rollback should use aliases. Product code should call stable names such as `fraud-risk-prod`, `support-rag-default`, or `agent-tools-v4`, while deployment control maps those names to concrete artifacts. This keeps rollback as a configuration action, enables canaries, and avoids hard-coded model or prompt ids scattered across clients. Release notes should describe the whole AI behavior bundle, not just one model file."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Promotion is a gated decision, not",
-            "definition": "Promotion is a gated decision, not an automatic last step."
+            term: "AI behavior bundle",
+            definition:
+              "The combined versioned set of model, prompt, tools, retrieval, memory, guardrails, and eval artifacts that define runtime behavior."
           },
           {
-            "term": "Registry entries need full lineage metadata.",
-            "definition": "Registry entries need full lineage metadata."
+            term: "deployment alias",
+            definition:
+              "A stable production identifier that routes traffic to a concrete artifact version and can be flipped for canary or rollback."
           },
           {
-            "term": "Keep evaluation artifacts immutable.",
-            "definition": "Keep evaluation artifacts immutable."
+            term: "prompt bundle",
+            definition:
+              "A versioned package of prompts, model parameters, output schemas, and related evaluation metadata."
           }
         ],
-        "workedExample": {
-          "title": "Gate model promotion with thresholds",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def should_promote(metrics, thresholds):\n    failures = [k for k, t in thresholds.items() if metrics.get(k, -1e9) < t]\n    return len(failures) == 0, failures\n\nprint(should_promote({\"f1\": 0.82, \"auc\": 0.91}, {\"f1\": 0.8, \"auc\": 0.9}))\nprint(should_promote({\"f1\": 0.7, \"auc\": 0.91}, {\"f1\": 0.8, \"auc\": 0.9}))",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Defines metric gates before registry promotion.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluation gates before registry."
+            prompt:
+              "Why can an embedding model upgrade require a pipeline rebuild even if application code is unchanged?",
+            reveal:
+              "The retrieval index was built in the old embedding space. Changing the embedder without rebuilding and evaluating the index can break retrieval relevance and citations."
           }
         ]
       },
       {
-        "id": "orchestration-environments-and-secrets",
-        "heading": "Orchestration, environments, and secrets",
-        "paragraphs": [
-          "Orchestrators schedule DAGs with retries and backfills. Keep configs declarative. Separate environments (dev/stage/prod) with different data scopes and credentials. Secrets never belong in notebooks or git. Parameterize runs so backfills are first-class. Observability on pipeline duration and failure rate is part of MLOps health. Backfills are where pipeline design quality shows; if backfill is hard, redesign storage keys.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Declarative configs + env separation.",
-          "• Secrets via vault/secret manager only.",
-          "• Measure pipeline SLIs like microservice SLIs.",
-          "Production lens — CI/CD for ML adds validation gates beyond unit tests: Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow, Kubeflow, Metaflow) manage dependencies; the hard part is organizational contracts on who owns each stage."
+        id: "pipeline-governance-and-feedback",
+        heading: "Pipelines close the loop from production back to evidence",
+        paragraphs: [
+          "A pipeline does not end at deployment. Monitoring produces drift reports, quality samples, incident traces, user feedback, human labels, and cost data. Those signals should feed new training data, golden evals, prompt tests, feature fixes, and risk reviews. If production failures stay in dashboards and never become artifacts, the platform forgets. A strong MLOps loop turns each meaningful failure into a reproducible case.",
+          "Governance evidence should be generated as much as possible by the pipeline. Model cards, data sheets, system cards, eval reports, risk classifications, approval records, and audit logs should reference concrete artifact ids. This reduces last-minute slide assembly and supports regulatory or enterprise reviews. When the pipeline blocks a deploy because a required card or eval report is missing, governance becomes operational rather than ceremonial.",
+          "The design goal is predictable change. Teams should be able to answer what changed, why it changed, who approved it, how it was evaluated, what users are exposed, how it is monitored, and how it rolls back. Whether the artifact is a LightGBM model, a reranker, a prompt, an index, or an agent policy, production AI needs the same release discipline. The implementation details differ; the accountability loop does not."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Declarative configs + env separation.",
-            "definition": "Declarative configs + env separation."
+            term: "feedback loop",
+            definition:
+              "The process that converts production observations into new data, evals, fixes, and release gates."
           },
           {
-            "term": "Secrets via vault/secret manager only.",
-            "definition": "Secrets via vault/secret manager only."
+            term: "governance evidence",
+            definition:
+              "Versioned proof such as eval reports, approvals, model cards, risk assessments, and audit logs."
           },
           {
-            "term": "Measure pipeline SLIs like microservice SLIs.",
-            "definition": "Measure pipeline SLIs like microservice SLIs."
+            term: "predictable change",
+            definition:
+              "A release process where changes are identifiable, evaluated, approved, monitored, and reversible."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Separates secrets and environments.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to orchestration, environments, and secrets."
-          }
-        ]
-      },
-      {
-        "id": "human-workflows-around-automation",
-        "heading": "Human workflows around automation",
-        "paragraphs": [
-          "Automation should not hide ownership. Define who is on call when a daily training job fails, who approves promotions, and how hotfixes roll back. Provide runbooks for common failures: schema drift, empty partitions, metric regressions. Pipelines are socio-technical systems; clear owners beat clever DAGs. Separate feature compute from model training so each can scale and fail independently.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Assign owners and on-call for training DAGs.",
-          "• Write runbooks for top failure modes.",
-          "• Make rollback a practiced path.",
-          "Production lens — Reproducibility requires versioning everything: Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produced this model?\" Feature stores bridge training-serving skew by sharing transformation logic between batch and online paths."
-        ],
-        "keyTerms": [
-          {
-            "term": "Assign owners and on-call for training",
-            "definition": "Assign owners and on-call for training DAGs."
-          },
-          {
-            "term": "Write runbooks for top failure modes.",
-            "definition": "Write runbooks for top failure modes."
-          },
-          {
-            "term": "Make rollback a practiced path.",
-            "definition": "Make rollback a practiced path."
+            prompt:
+              "What should happen to a production incident trace in a healthy ML pipeline organization?",
+            reveal:
+              "It should become a reproducible eval or training case, trigger artifact or policy fixes, update monitoring or runbooks, and link to the next release evidence."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Names owners/runbooks for pipeline failures.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to human workflows around automation."
-          }
-        ]
-      },
-      {
-        "id": "dual-track-pipelines-classic-training-and-llm-app-releases",
-        "heading": "Dual-track pipelines: classic training and LLM app releases",
-        "paragraphs": [
-          "Classic MLOps pipelines still matter: data validation → features → train → evaluate → register → deploy for tabular, CV, and ranking models. In parallel, LLM product work needs a second release train whose artifacts are prompts, tool schemas, chunker config, embedding model ids, index snapshots, routing policies, and offline eval bundles—not only weight files. Treat a prompt+index+eval triple as a versioned release candidate with changelogs and rollback. CI should run golden retrieval and answer suites the way training pipelines run metric gates; promotion to “prod alias” mirrors promoting a model registry entry. Shared platform pieces include artifact storage, approval records, secret management, and canary traffic—but stage graphs differ. A common failure mode is improving a classifier with rigorous Airflow DAGs while the companion RAG prompts are edited live in a vendor UI with no diff. Another failure is retraining an LLM adapter without refreshing the retrieval index versions referenced in production. Draw both tracks in architecture reviews; assign owners; require the same discipline for JSON prompt bundles that you require for ONNX files. Where possible, unify observability ids so a quickstart tutorial and a fraud model incident use the same deployment vocabulary.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Keep a classic train/eval/register track for discriminative models.",
-          "• Version prompts, indexes, tool schemas, and eval sets as LLM app release artifacts.",
-          "• Gate both tracks with CI metrics and alias-based rollback.",
-          "• Avoid unversioned prompt edits in vendor consoles for production paths.",
-          "Production lens — CI/CD for ML adds validation gates beyond unit tests: Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow, Kubeflow, Metaflow) manage dependencies; the hard part is organizational contracts on who owns each stage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Keep a classic train/eval/register track for",
-            "definition": "Keep a classic train/eval/register track for discriminative models."
-          },
-          {
-            "term": "Version prompts, indexes, tool schemas, and",
-            "definition": "Version prompts, indexes, tool schemas, and eval sets as LLM app release artifacts."
-          },
-          {
-            "term": "Gate both tracks with CI metrics",
-            "definition": "Gate both tracks with CI metrics and alias-based rollback."
-          },
-          {
-            "term": "Avoid unversioned prompt edits in vendor",
-            "definition": "Avoid unversioned prompt edits in vendor consoles for production paths."
-          }
-        ],
-        "workedExample": {
-          "title": "Version dict for an LLM app release",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "release = {\n    'prompt_version': 'policy_assist_v12',\n    'embedder': 'e5-large-v3',\n    'index_build': 'acme_docs_2026_07_20',\n    'eval_suite': 'rag_gold_v7',\n    'routing_alias': 'chat-strong',\n}\nrequired = ['prompt_version', 'embedder', 'index_build', 'eval_suite']\nmissing = [k for k in required if k not in release]\nprint(\"ready\" if not missing else missing)",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Documents both classic ML and LLM app pipeline tracks.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to dual-track pipelines: classic training and llm app releases."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
-      },
-      {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for ml pipeline design.",
-          "Trap: Notebook-only training without lineage. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Duplicated online/offline feature logic. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Auto-promoting every checkpoint. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No backfill story for data corrections. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Production prompts edited without version control. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Deploying a new embedder without a matching index build id. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Assuming registry-only workflows cover RAG systems. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
-        ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
-          {
-            "prompt": "Pick the most dangerous pitfall for ML pipeline design and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Notebook-only training without lineage.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Reproducibility requires versioning everything. Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produced this model?\" Feature stores bridge training-serving skew by sharing transformation logic between batch and online paths.",
-          "CI/CD for ML adds validation gates beyond unit tests. Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow, Kubeflow, Metaflow) manage dependencies; the hard part is organizational contracts on who owns each stage."
-        ],
-        "keyTerms": [
-          {
-            "term": "Reproducibility requires versioning everything",
-            "definition": "Data snapshots, feature definitions, code commits, hyperparameters, and environment images must be linked to every trained artifact. Pipelines should be idempotent with clear lineage so you can answer \"which data produce…"
-          },
-          {
-            "term": "CI/CD for ML adds validation gates beyond unit tests",
-            "definition": "Data schema checks, drift detectors, offline metric thresholds, and shadow deployments gate promotion. Training jobs are expensive—trigger them on meaningful data or code changes, not every commit. Orchestrators (Airflow…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach ml pipeline design as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Design a daily training pipeline for fraud models. | How do you prevent training/serving skew? | What metadata belongs in a model registry?"
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Give a 90-second spoken overview of ML pipeline design as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "interview",
+          body:
+            "For pipeline design interviews, speak in artifacts, gates, owners, and rollback. That language shows production maturity."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can sketch a training DAG with artifact contracts.",
-        "Explains train/serve skew and PIT joins.",
-        "Defines metric gates before registry promotion.",
-        "Separates secrets and environments.",
-        "Names owners/runbooks for pipeline failures."
+    wrapUp: {
+      takeaways: [
+        "Production ML pipelines are artifact graphs with explicit lineage and contracts.",
+        "Data validation, point-in-time features, and retrieval index quality are core pipeline stages.",
+        "Candidates need promotion gates before registry or deployment.",
+        "Orchestration must include reproducible environments, secrets, ownership, and backfill paths.",
+        "Classic ML and LLM app releases need dual-track discipline with shared governance evidence."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: MLflow Documentation (MLflow) — https://mlflow.org/docs/latest/index.html",
-        "Optional deeper reading: Hidden Technical Debt in Machine Learning Systems (NeurIPS) — https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems"
+      nextSteps: [
+        "Draw an artifact graph for a product that combines a classifier, RAG, and an agent.",
+        "List the promotion gates for one high-risk and one low-risk AI release.",
+        "Define the metadata required to rebuild a model and a retrieval index six months later."
       ]
     }
   },
   "mlops-and-deployment/model-serving": {
-    "title": "Chapter: Model serving and inference",
-    "readingTime": "55-70 min",
-    "premise": "Serving infrastructure, optimization techniques, scaling strategies, and cost management for production model inference. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Model serving and inference systems",
+    readingTime: "65-80 min",
+    premise:
+      "Model serving turns artifacts into reliable user-facing behavior. This chapter covers online, batch, and streaming inference; schema and alias management; canary and shadow release patterns; GPU and LLM serving mechanics; latency and cost optimization; security; and production SLOs for classic models, LLMs, and AI application gateways.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "LLM serving in 2026 is dominated by KV-cache behavior, continuous batching, prefill vs decode asymmetry, and the choice between managed APIs and open-weight engines behind gateways—with canary prompts and model aliases as release machinery.",
-          "This chapter treats \"Model serving and inference\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "serving-shapes",
+        heading: "Choose the serving shape before the serving stack",
+        paragraphs: [
+          "Serving begins with a product question: how fresh must the prediction be, how quickly must the user see it, and what happens if the system is unavailable? Online inference answers interactive requests under strict latency SLOs. Batch inference scores large datasets on a schedule. Streaming inference reacts to events continuously. An internal churn score used weekly does not need the same path as a fraud decision at checkout or an LLM assistant generating a live answer.",
+          "Each serving shape has different failure semantics. Online systems need timeouts, load shedding, fallbacks, and p99 latency control. Batch systems need partition correctness, idempotent outputs, backfill support, and freshness monitoring. Streaming systems need ordering, replay, watermarking, state management, and exactly-once or at-least-once tradeoffs. Forcing every workload into a model microservice creates unnecessary operational cost and can make simple batch jobs brittle.",
+          "LLM applications add hybrid serving paths. A single user request may perform auth, retrieval, reranking, prompt assembly, model generation, tool calls, moderation, and logging. Some steps are online; others are precomputed. Chunking and embedding may run as batch pipelines, while retrieval and generation run online. Treat the end-to-end path as the serving system because users experience the whole chain, not the model call alone."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "online inference",
+            definition:
+              "Low-latency inference performed in response to interactive requests."
+          },
+          {
+            term: "batch inference",
+            definition:
+              "Scheduled or ad hoc scoring over many records where immediate response is not required."
+          },
+          {
+            term: "streaming inference",
+            definition:
+              "Inference triggered by event streams with continuous state and freshness requirements."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why might batch inference be better than online serving for some ML products?",
+            reveal:
+              "If freshness and interactivity are not required, batch is often cheaper, simpler, easier to backfill, and easier to validate at large scale."
+          }
+        ]
+      },
+      {
+        id: "apis-aliases-and-rollout",
+        heading: "APIs, aliases, canaries, and shadows control change",
+        paragraphs: [
+          "Serving APIs need stable schemas. Inputs should be validated, outputs should include model or behavior version, and errors should be structured. Model artifacts and API schemas can evolve independently, but clients need compatibility rules. Additive fields are easier than renames. For LLM systems, output schemas may include JSON contracts, citation objects, tool-call envelopes, refusal metadata, or safety categories. Schema validation protects both users and downstream automation.",
+          "Deployment aliases decouple product code from concrete artifacts. Clients call `ranker-prod` or `chat-default`, while the serving layer maps that alias to a model, prompt bundle, index, or gateway route. Canary releases send a small traffic slice to a candidate. Shadow deployments run the candidate on live traffic without affecting users. Champion/challenger patterns compare a stable system against a new one over time. Rollback should be an alias flip or config change, not a rebuild.",
+          "Canaries must compare more than accuracy. Watch latency, error rate, calibration, slice metrics, refusal rate, citation quality, tool errors, token spend, and downstream business outcomes. A candidate that improves relevance but doubles p99 latency may still fail. A prompt that lowers hallucination by refusing too much may increase human escalations. Release decisions should use predefined guardrails so teams do not rationalize regressions after seeing a favorite metric improve."
+        ],
+        keyTerms: [
+          {
+            term: "shadow deployment",
+            definition:
+              "A candidate system receives copies of live requests for measurement but does not affect user outcomes."
+          },
+          {
+            term: "canary release",
+            definition:
+              "A controlled rollout where a small share of traffic uses a candidate before broader promotion."
+          },
+          {
+            term: "serving alias",
+            definition:
+              "A stable route name that maps to concrete model or AI application artifact versions."
+          }
+        ],
+        workedExample: {
+          title: "Stable alias with weighted canary",
+          body:
+            "A production router can shift traffic without changing client code.",
+          code:
+            "def route(request_id, canary_percent):\n    bucket = hash(request_id) % 100\n    return \"candidate_v7\" if bucket < canary_percent else \"stable_v6\"\n\ncounts = {\"stable_v6\": 0, \"candidate_v7\": 0}\nfor i in range(1000):\n    counts[route(f\"req-{i}\", 5)] += 1\nprint(counts)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why should clients call a stable model alias rather than a concrete model id?",
+            reveal:
+              "Aliases allow canary, rollback, vendor migration, and capacity routing without changing every client or redeploying product code."
+          }
+        ]
+      },
+      {
+        id: "latency-throughput-and-cost",
+        heading: "Serving economics are latency, throughput, quality, and cost together",
+        paragraphs: [
+          "A model server's p99 latency includes more than inference math. Authentication, request parsing, feature lookup, retrieval, serialization, queueing, batching, network hops, post-processing, logging, and safety filters all contribute. Optimizing the GPU kernel while feature lookup dominates p99 is wasted effort. Teams should create a latency budget that allocates time across the end-to-end path and trace each segment.",
+          "Batching improves throughput but can hurt tail latency. Dynamic batching waits briefly to group requests. Continuous batching for LLMs keeps GPUs full while sequences enter and leave at different lengths. Caching helps repeated embeddings, repeated retrieval prefixes, common prompts, and deterministic feature vectors. Quantization, pruning, distillation, compilation, and hardware-specific formats reduce cost, but each needs quality gates. A faster model that silently worsens a protected slice is not an improvement.",
+          "Cost should be measured per useful outcome. For classic models, cost may be CPU, memory, feature-store reads, and network egress. For LLMs, cost includes prompt tokens, output tokens, context length, cache hit rate, tool calls, retrieval, and sometimes GPU reservation. Long contexts can make time-to-first-token and KV-cache memory explode. Teams that only monitor requests per second miss the economics that decide whether a feature can scale."
+        ],
+        keyTerms: [
+          {
+            term: "latency budget",
+            definition:
+              "A planned allocation of end-to-end response time across preprocessing, inference, post-processing, and network segments."
+          },
+          {
+            term: "dynamic batching",
+            definition:
+              "Grouping requests over a short window to improve throughput while managing added latency."
+          },
+          {
+            term: "cost per useful outcome",
+            definition:
+              "Serving cost normalized by successful user or business task rather than raw request count."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why is average latency a weak serving metric?",
+            reveal:
+              "Users experience tail latency, and averages hide queueing, cold starts, long-context requests, and slow dependencies. p95/p99 and segment traces are more actionable."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "For serving design, always ask which part of the path owns p99 before prescribing optimization techniques."
         }
       },
       {
-        "id": "serving-shapes-online-batch-streaming",
-        "heading": "Serving shapes: online, batch, streaming",
-        "paragraphs": [
-          "Online inference answers interactive requests under tight SLOs. Batch scores large tables periodically. Streaming scores events as they arrive. Each shape has different latency, throughput, and failure semantics. Do not force batch workloads through an online microservice without reason. Document the path your product actually needs and the freshness requirements for scores. p99 latency is a product feature; users feel tail latency even when averages look healthy. p99 latency is a product feature; users feel tail latency even when averages look healthy. p99 latency is a product feature; users feel tail latency even when averages look healthy.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Match serving shape to freshness and traffic patterns.",
-          "• Batch can be simpler and cheaper when interactive latency is unnecessary.",
-          "• Streaming fits continuous feature updates.",
-          "Production lens — Latency budgets split across pre/post-processing: GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LLMs, time-to-first-token and tokens/sec are separate UX metrics; speculative decoding and KV-cache reuse dominate optimization."
+        id: "llm-serving-mechanics",
+        heading: "LLM serving is shaped by prefill, decode, and KV cache",
+        paragraphs: [
+          "LLM serving differs from ordinary stateless inference. Prefill processes the prompt and builds the key-value cache; decode generates one token at a time while reading and extending that cache. Time-to-first-token is dominated by prompt processing and queueing, while tokens per second reflects decode efficiency. Long prompts, long outputs, and high concurrency compete for memory because KV cache grows with layers, sequence length, hidden dimensions, and batch size.",
+          "Open-weight serving engines use techniques such as paged attention, continuous batching, prefix caching, speculative decoding, tensor parallelism, and quantization to improve utilization. Managed API providers hide some details but not the product tradeoffs: context length, output length, streaming behavior, rate limits, vendor latency, region, data retention, and cost still matter. Many organizations use gateways to normalize API shapes, apply auth, enforce quotas, route by alias, and compare managed and self-hosted models.",
+          "Capacity planning should use LLM-specific metrics: queue time, time-to-first-token, output tokens per second, prompt tokens, completion tokens, context length distribution, KV-cache utilization, cache hit rate, GPU memory pressure, out-of-memory kills, and rate-limit retries. Generic GPU utilization can look healthy while users wait because decode is serialized or the queue is full of long-context requests. Serving teams need workload-aware dashboards."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Match serving shape to freshness and",
-            "definition": "Match serving shape to freshness and traffic patterns."
+            term: "prefill",
+            definition:
+              "The LLM serving phase that processes input tokens and initializes the KV cache before output generation."
           },
           {
-            "term": "Batch can be simpler and cheaper",
-            "definition": "Batch can be simpler and cheaper when interactive latency is unnecessary."
+            term: "decode",
+            definition:
+              "The token-by-token generation phase that extends the sequence using the KV cache."
           },
           {
-            "term": "Streaming fits continuous feature updates.",
-            "definition": "Streaming fits continuous feature updates."
+            term: "KV cache",
+            definition:
+              "Stored key and value tensors used by transformer attention to avoid recomputing previous context during generation."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Chooses online vs batch vs streaming deliberately.",
-            "reveal": "GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LLMs, time-to-first-token and tokens/sec are separate UX metrics; speculative decoding and KV-cache reuse dominate optimization."
-          }
-        ]
-      },
-      {
-        "id": "apis-schemas-and-backward-compatibility",
-        "heading": "APIs, schemas, and backward compatibility",
-        "paragraphs": [
-          "Version request/response schemas. Additive changes are safer than renames. Include model version in responses for debugging. Validate inputs and return structured errors. Canary new models on a traffic slice comparing scores and latencies. Keep a shadow mode that scores without affecting users. Rollback must be a config change, not a rebuild. Shadow traffic is the safest way to learn score deltas without user impact. Shadow traffic is the safest way to learn score deltas without user impact.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Version models and API schemas independently but coherently.",
-          "• Canary/shadow before full cutover.",
-          "• Practice rollback as an operational drill.",
-          "Production lens — Model formats and runtimes determine portability: ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, and autoscaling on GPU metrics (utilization, queue depth) are standard production patterns."
-        ],
-        "keyTerms": [
-          {
-            "term": "Version models and API schemas independently",
-            "definition": "Version models and API schemas independently but coherently."
-          },
-          {
-            "term": "Canary/shadow before full cutover.",
-            "definition": "Canary/shadow before full cutover."
-          },
-          {
-            "term": "Practice rollback as an operational drill.",
-            "definition": "Practice rollback as an operational drill."
-          }
-        ],
-        "workedExample": {
-          "title": "Canary traffic split decision",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def route(user_id, canary_pct=10):\n    return \"canary\" if (hash(user_id) % 100) < canary_pct else \"stable\"\n\nfrom collections import Counter\nprint(Counter(route(f\"u{i}\") for i in range(1000)))",
-          "language": "python"
+        workedExample: {
+          title: "Estimate KV-cache memory pressure",
+          body:
+            "This simplified estimate shows why long context and concurrency fight for GPU memory.",
+          code:
+            "def kv_cache_gib(layers, heads, head_dim, seq_len, batch, bytes_per_value=2):\n    elements = 2 * layers * heads * head_dim * seq_len * batch\n    return elements * bytes_per_value / (1024 ** 3)\n\nfor seq in [4096, 16384, 65536]:\n    print(seq, round(kv_cache_gib(32, 32, 128, seq, batch=8), 2), \"GiB\")",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Versions APIs and model artifacts with canaries.",
-            "reveal": "ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, and autoscaling on GPU metrics (utilization, queue depth) are standard production patterns."
+            prompt:
+              "Why should LLM dashboards separate time-to-first-token from tokens per second?",
+            reveal:
+              "They reflect different bottlenecks. TTFT is affected by prefill, queueing, and prompt length; tokens per second reflects decode throughput and generation efficiency."
           }
         ]
       },
       {
-        "id": "performance-engineering-batching-caching-quantization",
-        "heading": "Performance engineering: batching, caching, quantization",
-        "paragraphs": [
-          "Dynamic batching raises throughput at some latency cost. Caching helps when identical feature vectors recur. Quantization and distillation reduce compute at potential quality cost—validate with offline eval + online guards. Profile before optimizing; often feature fetch dominates model math. Expose p50/p95/p99 latency, not only averages. Quantization without a quality gate is just silent accuracy drift with better GPU utilization. Quantization without a quality gate is just silent accuracy drift with better GPU utilization.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Optimize the true bottleneck (often features I/O).",
-          "• Measure percentile latencies.",
-          "• Validate compression techniques against quality gates.",
-          "Production lens — Latency budgets split across pre/post-processing: GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LLMs, time-to-first-token and tokens/sec are separate UX metrics; speculative decoding and KV-cache reuse dominate optimization."
+        id: "security-privacy-and-multitenancy",
+        heading: "Security, privacy, and multitenancy are serving concerns",
+        paragraphs: [
+          "Model serving sits on sensitive boundaries. Requests may include PII, regulated features, customer documents, code, secrets, or tenant identifiers. Serving layers should authenticate callers, authorize tenants and feature access, redact or minimize logs, encrypt in transit, enforce retention, and isolate credentials. For LLM gateways, prompts, retrieved context, tool observations, and generated outputs all need data-handling rules. A prompt log can be as sensitive as an application database row.",
+          "Multitenancy affects memory, caching, and retrieval. A shared embedding cache must not leak tenant data. A retrieval index may need per-tenant partitions or regional storage. A model server hosting multiple customers needs rate limits and noisy-neighbor protection. If a product promises data residency, routing must keep inference, logs, indexes, and support traces in approved regions. Security review should include the full serving path, not only the model container.",
+          "Supply chain matters as well. Hosted models require vendor diligence around training-data use, retention, subprocessors, uptime, incident notification, and evaluation rights. Open-weight models shift responsibilities to the operator: model provenance, license terms, vulnerability scanning, fine-tune data controls, and abuse monitoring. Neither option removes the need for application-level guardrails and monitoring. The serving architecture implements those obligations."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Optimize the true bottleneck (often features",
-            "definition": "Optimize the true bottleneck (often features I/O)."
+            term: "tenant isolation",
+            definition:
+              "Controls that prevent data, cache entries, credentials, and logs from crossing customer or organizational boundaries."
           },
           {
-            "term": "Measure percentile latencies.",
-            "definition": "Measure percentile latencies."
+            term: "data residency",
+            definition:
+              "Requirements that data processing and storage remain within approved geographic or legal regions."
           },
           {
-            "term": "Validate compression techniques against quali…",
-            "definition": "Validate compression techniques against quality gates."
+            term: "LLM gateway",
+            definition:
+              "A serving layer that normalizes access to one or more model providers while enforcing auth, routing, policy, and observability."
           }
         ],
-        "workedExample": {
-          "title": "Simulate dynamic batching throughput",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import math\n\ndef throughput(qps_arrivals, batch_window_ms, max_batch, infer_ms_per_batch):\n    # toy: items per window capped by max_batch\n    arrivals_per_window = qps_arrivals * (batch_window_ms / 1000)\n    batch = min(max_batch, max(1, math.floor(arrivals_per_window)))\n    batches_per_sec = 1000 / (batch_window_ms + infer_ms_per_batch)\n    return batch * batches_per_sec\n\nprint(round(throughput(200, 10, 32, 5), 2))",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Tunes batching/caching with percentile SLOs.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to performance engineering: batching, caching, quantization."
+            prompt:
+              "Why can model-serving logs create privacy risk even when the model itself is secure?",
+            reveal:
+              "Logs may contain raw prompts, features, retrieved documents, tool outputs, PII, secrets, or tenant identifiers. Retention and access controls must cover them."
           }
         ]
       },
       {
-        "id": "resource-management-and-autoscaling",
-        "heading": "Resource management and autoscaling",
-        "paragraphs": [
-          "Scale on concurrency, queue depth, or CPU/GPU utilization. Cold starts hurt; keep warm pools for critical paths. Isolate noisy neighbors. Set timeouts and load-shed before cascading failure. Multi-model hosts need memory budgets and admission control. Treat model servers as production services with SLOs and error budgets. Admission control protects expensive models from retry storms. Admission control protects expensive models from retry storms.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Scale on leading indicators like queue depth.",
-          "• Load-shed intentionally under overload.",
-          "• Give models memory/admission budgets.",
-          "Production lens — Model formats and runtimes determine portability: ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, and autoscaling on GPU metrics (utilization, queue depth) are standard production patterns."
+        id: "slo-operations-and-fallbacks",
+        heading: "SLOs, fallbacks, and runbooks keep inference dependable",
+        paragraphs: [
+          "Serving SLOs should cover availability, latency, correctness proxies, cost, and safety. For a ranking model, p99 latency and click-quality proxies may matter. For fraud scoring, fail-open versus fail-closed policy is critical. For LLM assistants, groundedness samples, refusal quality, token spend, citation failures, and tool errors may join ordinary 5xx metrics. Each SLO needs an owner and a runbook; alerts without action become dashboard decoration.",
+          "Fallbacks should be designed before incidents. Options include cached scores, previous model version, rules-based baseline, simpler model, retrieval-only response, human handoff, read-only agent mode, provider failover, or feature disablement. The right fallback depends on harm. A medical triage model may fail closed to human review; a recommendation carousel may fall back to popularity. A support assistant may stop generating and show a knowledge-base search result when grounding is weak.",
+          "Operational maturity shows up during rollback. Teams should know how to flip aliases, drain traffic, clear bad cache entries, disable a tool, reduce context length, change rate limits, or shift between providers. Post-incident reviews should add serving tests and monitoring, not only blame capacity. Inference is a live service, and model quality is only one component of its reliability."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Scale on leading indicators like queue",
-            "definition": "Scale on leading indicators like queue depth."
+            term: "fail open",
+            definition:
+              "A fallback posture that allows the user or transaction to proceed when the model is unavailable or uncertain."
           },
           {
-            "term": "Load-shed intentionally under overload.",
-            "definition": "Load-shed intentionally under overload."
+            term: "fail closed",
+            definition:
+              "A fallback posture that blocks, delays, or routes to review when the model is unavailable or uncertain."
           },
           {
-            "term": "Give models memory/admission budgets.",
-            "definition": "Give models memory/admission budgets."
+            term: "provider failover",
+            definition:
+              "Routing requests from one model provider or serving cluster to another during outages or capacity events."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Autoscales and load-sheds with clear policies.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to resource management and autoscaling."
-          }
-        ]
-      },
-      {
-        "id": "security-and-privacy-at-the-edge-of-the-model",
-        "heading": "Security and privacy at the edge of the model",
-        "paragraphs": [
-          "Authenticate callers, authorize features/tenants, scrub logs, and encrypt in transit. Prompt/feature logs may contain PII—apply retention limits. For LLMs, prevent secret leakage through outputs. Serving is part of the threat model, not just MLOps plumbing. Include model version in every log line you might need during an incident. Include model version in every log line you might need during an incident.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Authn/z in front of model APIs.",
-          "• Minimize sensitive log retention.",
-          "• Include serving in privacy reviews.",
-          "Production lens — Latency budgets split across pre/post-processing: GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LLMs, time-to-first-token and tokens/sec are separate UX metrics; speculative decoding and KV-cache reuse dominate optimization."
-        ],
-        "keyTerms": [
-          {
-            "term": "Authn/z in front of model APIs.",
-            "definition": "Authn/z in front of model APIs."
-          },
-          {
-            "term": "Minimize sensitive log retention.",
-            "definition": "Minimize sensitive log retention."
-          },
-          {
-            "term": "Include serving in privacy reviews.",
-            "definition": "Include serving in privacy reviews."
+            prompt:
+              "How do you choose between fail-open and fail-closed behavior?",
+            reveal:
+              "Choose based on harm. Low-risk UX features may fail open or degrade; safety, financial, legal, or security decisions often fail closed or route to human review."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Applies auth and privacy controls to inference.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to security and privacy at the edge of the model."
-          }
-        ]
-      },
-      {
-        "id": "llm-serving-realities-kv-cache-batching-gateways-and-aliases",
-        "heading": "LLM serving realities: KV cache, batching, gateways, and aliases",
-        "paragraphs": [
-          "Classic sklearn/torch classifiers hide behind simple horizontal autoscaling; LLMs do not. Prefill processes the prompt in parallel and builds a KV cache; decode generates token-by-token while reading and appending to that cache. Time-to-first-token is mostly prefill; tokens-per-second is decode. Continuous batching (vLLM-class and similar engines) schedules many sequences in one GPU batch as they grow at different lengths, improving utilization versus naive one-request-per-batch serving. Memory is often bound by KV cache (layers × heads × sequence × width), so long contexts and concurrency fight each other. Quantization, paged attention, and prefix caching are standard levers. Many teams put an API gateway in front of open-weight engines to expose OpenAI-compatible routes, auth, rate limits, and routing—while other workloads stay on managed frontier APIs. Product code should call stable model aliases (`chat-strong`, `extract-fast`) that map to concrete revisions; canary prompts and eval suites run against candidates before alias flips. Deprecations and capacity events then become controlled cutovers instead of surprise regressions. Measure queue time, prefill ms, decode TPS, cache hit rate, and OOM kills—not only “GPU busy %.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Separate prefill (TTFT) from decode (TPS) when capacity planning.",
-          "• Continuous batching and KV-cache memory dominate open-weight serving economics.",
-          "• Use gateways + model aliases in front of engines; canary prompts before alias flips.",
-          "• Track cache hits, queue time, and OOM alongside generic GPU metrics.",
-          "Production lens — Model formats and runtimes determine portability: ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, and autoscaling on GPU metrics (utilization, queue depth) are standard production patterns."
-        ],
-        "keyTerms": [
-          {
-            "term": "Separate prefill (TTFT) from decode (TPS)",
-            "definition": "Separate prefill (TTFT) from decode (TPS) when capacity planning."
-          },
-          {
-            "term": "Continuous batching and KV-cache memory dominate",
-            "definition": "Continuous batching and KV-cache memory dominate open-weight serving economics."
-          },
-          {
-            "term": "Use gateways + model aliases in",
-            "definition": "Use gateways + model aliases in front of engines; canary prompts before alias flips."
-          },
-          {
-            "term": "Track cache hits, queue time, and",
-            "definition": "Track cache hits, queue time, and OOM alongside generic GPU metrics."
-          }
-        ],
-        "workedExample": {
-          "title": "Estimate KV-cache memory growth",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def kv_cache_gb(layers, heads, seq, head_dim, bytes_per=2, batch=1):\n    # K and V each store layers*batch*heads*seq*head_dim\n    elements = 2 * layers * batch * heads * seq * head_dim\n    return elements * bytes_per / (1024 ** 3)\n\nfor seq in [2048, 8192, 32768]:\n    print(seq, round(kv_cache_gb(32, 32, seq, 128, batch=8), 2), \"GiB\")",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can explain prefill vs decode and KV-cache memory scaling.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to llm serving realities: kv cache, batching, gateways, and aliases."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
-      },
-      {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for model serving and inference.",
-          "Trap: Deploying without canary/shadow comparison. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Average latency hiding bad p99. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No rollback switch. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Logging raw sensitive features forever. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Autoscaling LLMs like stateless CPU microservices without cache awareness. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Hard-coding provider model IDs in every client. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring TTFT when optimizing only average latency. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
-        ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
-          {
-            "prompt": "Pick the most dangerous pitfall for Model serving and inference and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Deploying without canary/shadow comparison.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Latency budgets split across pre/post-processing. GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LLMs, time-to-first-token and tokens/sec are separate UX metrics; speculative decoding and KV-cache reuse dominate optimization.",
-          "Model formats and runtimes determine portability. ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, and autoscaling on GPU metrics (utilization, queue depth) are standard production patterns."
-        ],
-        "keyTerms": [
-          {
-            "term": "Latency budgets split across pre/post-processing",
-            "definition": "GPU inference may be a fraction of p99 latency once serialization, auth, feature lookup, and batching queues are included. Dynamic batching improves throughput but adds tail latency—SLAs dictate batch window size. For LL…"
-          },
-          {
-            "term": "Model formats and runtimes determine portability",
-            "definition": "ONNX, TensorRT, TorchScript, and GGUF each target different hardware and precision trade-offs. Quantization (INT8/INT4) reduces memory but needs calibration on representative data. Multi-model routing, canary releases, a…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach model serving and inference as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Design a canary deployment for a ranking model. | How do you decide between batch and online scoring? | What metrics instrument a model server?"
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Give a 90-second spoken overview of Model serving and inference as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "interview",
+          body:
+            "A serving design answer is incomplete until it includes canary, rollback, SLOs, and fallback behavior."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Chooses online vs batch vs streaming deliberately.",
-        "Versions APIs and model artifacts with canaries.",
-        "Tunes batching/caching with percentile SLOs.",
-        "Autoscales and load-sheds with clear policies.",
-        "Applies auth and privacy controls to inference."
+    wrapUp: {
+      takeaways: [
+        "Serving shape should match product freshness, latency, and failure semantics.",
+        "Stable schemas, aliases, canaries, and shadows make model changes controllable.",
+        "Latency, throughput, quality, and cost must be optimized together across the full path.",
+        "LLM serving capacity is shaped by prefill, decode, KV cache, context length, and gateway routing.",
+        "Security, privacy, SLOs, fallbacks, and runbooks are core inference responsibilities."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: NVIDIA Triton Inference Server (NVIDIA) — https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/index.html",
-        "Optional deeper reading: vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention (arXiv) — https://arxiv.org/abs/2309.06180"
+      nextSteps: [
+        "Create a latency budget for a RAG request from auth through generation.",
+        "Define canary metrics for a model alias flip.",
+        "Write fallback behavior for three products: recommendations, fraud scoring, and an LLM assistant."
       ]
     }
   },
   "mlops-and-deployment/monitoring-and-observability": {
-    "title": "Chapter: ML monitoring and observability",
-    "readingTime": "55-70 min",
-    "premise": "Model drift detection, performance monitoring, alerting, and feedback loops for maintaining model quality in production. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Monitoring and observability for AI systems",
+    readingTime: "65-80 min",
+    premise:
+      "AI monitoring combines service health, data quality, model quality, GenAI traces, business outcomes, fairness slices, cost, and governance signals. This chapter teaches how production teams detect drift, label delay, retrieval failures, agent loops, prompt regressions, and serving incidents while converting observations back into evals and release controls.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "LLMOps monitoring complements classic ML drift: token cost, groundedness sampling, retrieval miss rate, and tool errors can tank a product while feature PSI stays flat. You need dashboards that separate traditional model decay from generative quality regressions.",
-          "This chapter treats \"ML monitoring and observability\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "four-monitoring-planes",
+        heading: "Monitor four planes: infrastructure, data, behavior, and outcomes",
+        paragraphs: [
+          "Classic service monitoring asks whether the system is up, fast, and error-free. AI systems require more planes. Infrastructure signals cover latency, saturation, errors, queue depth, GPU memory, and cost. Data signals cover schema, nulls, freshness, ranges, categories, feature distributions, corpus changes, and index build health. Behavior signals cover predictions, scores, explanations, prompts, retrieval, tool calls, refusals, guardrails, and traces. Outcome signals cover user success, delayed labels, human overrides, complaints, revenue, safety events, and fairness slices.",
+          "A dashboard that shows green GPUs and low HTTP errors can still hide a broken AI product. A retrieval index might stop finding policy documents, a prompt change might increase unsupported claims, a feature pipeline might swap units, or an agent might loop through tools while eventually returning a polite apology. Observability should connect the user request to the data, model, retrieval, tool, and output path so responders can see where quality changed.",
+          "The four-plane framing also reduces alert noise. Not every distribution shift should page someone at 3 a.m. Schema breaks, missing partitions, runaway spend, and high-severity policy escapes may page immediately. Mild drift may open a ticket with slice context. Outcome regressions may require a product and data-science review once labels mature. Monitoring is useful when each signal has an owner and a next action."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "behavior signal",
+            definition:
+              "A measurement of model or AI application behavior, such as score distribution, citation quality, refusal rate, or tool errors."
+          },
+          {
+            term: "outcome signal",
+            definition:
+              "A downstream product or user result, such as conversion, fraud loss, resolution rate, complaint rate, or delayed label quality."
+          },
+          {
+            term: "alert actionability",
+            definition:
+              "The property that an alert has a clear owner, severity, and runbook response."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why are infrastructure golden signals insufficient for AI monitoring?",
+            reveal:
+              "They show whether the service is technically healthy, but not whether data, predictions, retrieval, generation, fairness, cost, or user outcomes are correct."
+          }
+        ]
+      },
+      {
+        id: "drift-label-delay-and-slices",
+        heading: "Drift, label delay, and slices make quality measurement hard",
+        paragraphs: [
+          "Covariate drift means input distributions change. Concept drift means the relationship between inputs and labels changes. Prior probability shift means class balance changes. In production, labels often arrive late: fraud chargebacks, loan defaults, customer churn, long-term retention, and medical outcomes may take days or months. Teams must use leading proxies carefully while maintaining mature reporting windows that reflect true labels.",
+          "Slice monitoring prevents averages from hiding harm. A global AUC, groundedness rate, or latency metric can look stable while one locale, device, tenant, protected group, product category, or intent breaks. Each slice needs volume floors and confidence intervals so noise does not become alert fatigue. For fairness-sensitive systems, disaggregated performance and error types should connect to governance review, not only dashboards.",
+          "Drift is not always a reason to retrain. It may indicate an upstream data bug, product launch, seasonality, abuse pattern, label-policy change, or monitoring instrumentation issue. The runbook should ask: did inputs change, did outputs change, did outcomes change, did a deploy happen, and which slices moved? Retraining on broken data can lock the failure into the next model. Observability is diagnosis before automation."
+        ],
+        keyTerms: [
+          {
+            term: "covariate drift",
+            definition:
+              "A change in input feature distribution between training or baseline data and production traffic."
+          },
+          {
+            term: "concept drift",
+            definition:
+              "A change in the relationship between inputs and the target outcome."
+          },
+          {
+            term: "slice metric",
+            definition:
+              "A metric computed for a subgroup, tenant, locale, intent, device, or other segment rather than only globally."
+          }
+        ],
+        workedExample: {
+          title: "Simple population stability score",
+          body:
+            "This toy PSI-like score is a drift screen, not an automatic retraining trigger.",
+          code:
+            "import math\n\ndef psi(expected, actual, eps=1e-6):\n    total_e = sum(expected) + eps\n    total_a = sum(actual) + eps\n    score = 0.0\n    for e, a in zip(expected, actual):\n        ep = e / total_e\n        ap = a / total_a\n        score += (ap - ep) * math.log((ap + eps) / (ep + eps))\n    return score\n\nprint(round(psi([20, 30, 50], [10, 25, 65]), 4))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why should drift alerts not automatically trigger retraining?",
+            reveal:
+              "Drift can come from data bugs, product changes, seasonality, abuse, or label shifts. Retraining before diagnosis can preserve or amplify the problem."
+          }
+        ]
+      },
+      {
+        id: "genai-traces-and-evals",
+        heading: "GenAI observability needs traces that feed evals",
+        paragraphs: [
+          "LLM applications need request traces across retrieve, rerank, prompt assembly, model call, tool call, guardrail, and response. Useful attributes include model id, prompt version, temperature, token counts, context length, retrieved document ids, citation ids, cache hits, tool names, validation failures, refusal category, latency segments, cost estimate, and user feedback. OpenTelemetry GenAI semantic conventions and vendor tooling have made span naming more consistent, but the key is complete causality from input to output.",
+          "Quality metrics depend on the application. RAG systems monitor retrieval recall proxies, citation precision, answer-without-citation rate, groundedness samples, stale-document hits, and chunk coverage. Agent systems monitor tool error rate, loop length, approval blocks, policy escapes, memory writes, and cost per successful task. Structured-output systems monitor JSON validity, schema repair attempts, and downstream rejection. A single `LLM quality` score is less useful than task-specific failure categories.",
+          "Traces should generate eval data. Sampled bad answers become golden prompts. Failed citations become retrieval cases. Tool validation failures become contract fixtures. Guardrail denials become red-team cases. Human corrections become labeled examples with bias-aware sampling. The goal is not to store everything forever; it is to retain enough redacted, governed evidence to improve the release harness."
+        ],
+        keyTerms: [
+          {
+            term: "GenAI trace",
+            definition:
+              "A structured request trace across prompts, retrieval, generation, tools, guardrails, costs, and outputs."
+          },
+          {
+            term: "groundedness",
+            definition:
+              "The degree to which an answer is supported by supplied evidence or approved sources."
+          },
+          {
+            term: "eval seed",
+            definition:
+              "A production observation converted into a repeatable offline evaluation case."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Name four LLM application metrics beyond HTTP errors and GPU utilization.",
+            reveal:
+              "Examples include token spend, groundedness, citation precision, retrieval miss rate, JSON validity, refusal rate, tool error rate, loop length, and cost per successful task."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "If a production trace cannot become an eval case, it probably lacks the metadata needed for learning."
         }
       },
       {
-        "id": "what-to-monitor-data-model-system",
-        "heading": "What to monitor: data, model, system",
-        "paragraphs": [
-          "Data monitors: null rates, range violations, category shifts. Model monitors: score distributions, calibration proxies, delayed-label performance. System monitors: latency, errors, saturation. Slice by segment (country, device) to catch localized failures. Averages hide incidents. Start from user journeys: which broken signal would first show that ranking or fraud scoring is wrong? A monitor without a runbook is a future ignored page; write the action next to the threshold. A monitor without a runbook is a future ignored page; write the action next to the threshold. A monitor without a runbook is a future ignored page; write the action next to the threshold.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Cover data, model, and system signals.",
-          "• Slice metrics by critical segments.",
-          "• Tie monitors to user journeys.",
-          "Production lens — Four planes: infra, data, GenAI traces, outcomes: Classical ML monitoring watched features, predictions, and delayed labels. LLM apps add prompt/retrieval/tool traces and token economics. A green GPU graph with collapsing citation hit rate is still an incident. Organize dashboards into infra SLOs, data/quality SLIs, GenAI trace red-lanes, and business outcomes—and page only when playbooks exist.\n\nOpenTelemetry GenAI conventions help standardize span names and attributes across vendors and self-hosted stacks. Include model ID, cache hits, retrieval document IDs, and tool errors. Sampling strategies must balance debug needs with privacy; never ship raw prompts to shared logs without redaction contracts."
+        id: "feedback-and-human-review",
+        heading: "Feedback loops need sampling discipline",
+        paragraphs: [
+          "Human review and user feedback are valuable but biased. Users who click thumbs-down are not a random sample. Review queues often overrepresent uncertain, high-value, or escalated cases. Support agents may correct only the most visible errors. If teams train or evaluate directly on this feedback without documenting sampling, they can overfit to the review process rather than the population. Monitoring should track how feedback was collected, not just what it says.",
+          "Sampling plans should balance cost, privacy, and coverage. Stratify by traffic slice, intent, model version, risk tier, geography, tenant, and confidence. Oversample rare high-severity events, but maintain a baseline random sample for trend estimation. For LLM judges or human graders, measure inter-rater agreement, calibrate rubrics, and periodically audit judge drift. Expensive review should focus where cheap heuristics indicate risk, while still preserving unbiased trend data.",
+          "Closed-loop learning also needs safeguards. Feedback that enters training, prompt edits, retrieval curation, or memory must carry provenance and consent. A user complaint can indicate a policy mismatch, a data error, a model problem, or a UX issue. The loop should route different findings to different owners: data engineering for upstream breaks, product for unclear policy, ML for model regression, trust and safety for harm patterns, and platform for trace or serving issues."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Cover data, model, and system signals.",
-            "definition": "Cover data, model, and system signals."
+            term: "sampling bias",
+            definition:
+              "Distortion caused when reviewed or labeled examples do not represent the population the metric claims to measure."
           },
           {
-            "term": "Slice metrics by critical segments.",
-            "definition": "Slice metrics by critical segments."
+            term: "inter-rater agreement",
+            definition:
+              "A measure of how consistently different human reviewers apply the same rubric."
           },
           {
-            "term": "Tie monitors to user journeys.",
-            "definition": "Tie monitors to user journeys."
+            term: "judge drift",
+            definition:
+              "A change over time in how an automated or human judge applies evaluation criteria."
           }
         ],
-        "workedExample": {
-          "title": "PSI-like drift score on histograms",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef psi(expected, actual, eps=1e-6):\n    expected = expected / (expected.sum() + eps)\n    actual = actual / (actual.sum() + eps)\n    return float(np.sum((actual - expected) * np.log((actual + eps) / (expected + eps))))\n\ne = np.array([0.2, 0.3, 0.5])\na = np.array([0.1, 0.2, 0.7])\nprint(round(psi(e, a), 4))",
-          "language": "python"
+        workedExample: {
+          title: "Stratified sample plan sketch",
+          body:
+            "The plan reserves baseline coverage while oversampling high-risk traffic.",
+          code:
+            "traffic = {\n    \"billing\": 50000,\n    \"security\": 8000,\n    \"medical\": 1200,\n    \"general\": 200000,\n}\n\nsample = {}\nfor intent, volume in traffic.items():\n    base = max(30, int(volume * 0.001))\n    if intent in {\"security\", \"medical\"}:\n        base *= 3\n    sample[intent] = base\nprint(sample)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Defines data/model/system monitors with slices.",
-            "reveal": "Classical ML monitoring watched features, predictions, and delayed labels. LLM apps add prompt/retrieval/tool traces and token economics. A green GPU graph with collapsing citation hit rate is still an incident. Organize dashboards into infra SLOs, data/quality SLIs, GenAI trace red-lanes, and business outcomes—and page only when playbooks exist.\n\nOpenTelemetry GenAI conventions help standardize span names and attributes across vendors and self-hosted stacks. Include model ID, cache hits, retrieval document IDs, and tool errors. Sampling strategies must balance debug needs with privacy; never ship raw prompts to shared logs without redaction contracts."
+            prompt:
+              "Why can a human-review dataset mislead a monitoring program?",
+            reveal:
+              "It may overrepresent escalations, uncertain cases, specific users, or visible failures. Without sampling metadata, metrics may not represent live traffic."
           }
         ]
       },
       {
-        "id": "drift-vs-performance-labels-are-late",
-        "heading": "Drift vs performance: labels are late",
-        "paragraphs": [
-          "Concept drift changes the input-output relationship; covariate shift changes input distributions. You often see covariate shift before labels arrive. Use proxy outcomes and human feedback when labels lag. Do not alert on every PSI tick—set thresholds from historical noise and connect to actionable playbooks. Re-training is one response; fixing upstream data bugs is another. Slice metrics catch the failures that global averages will apologize for too late. Slice metrics catch the failures that global averages will apologize for too late.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Separate data bugs from true concept drift.",
-          "• Use proxies while waiting for labels.",
-          "• Alert only with actionable runbooks.",
-          "Production lens — Slice-aware quality beats global averages: Corpus refreshes, embedding upgrades, and UI changes often break one locale, tenant, or intent first. Monitor task-success proxies, faithfulness samples, and guardrail deny rates by slice with volume floors. Tie alerts to actions: roll back index, tighten guardrail, retrain reranker, or degrade to FAQ search.\n\nLabel delay still applies: many outcomes (fraud, long-term retention, ticket reopen) arrive late. Use leading proxies carefully and maintain maturation windows for honest reporting. Champion/challenger and shadow modes remain the safe way to validate retrains when ground truth is slow."
+        id: "alerting-runbooks-and-incidents",
+        heading: "Alerts need runbooks, ownership, and rollback choices",
+        paragraphs: [
+          "Alert design is part of MLOps design. Page on signals that require immediate action, such as missing data partitions, schema breaks, runaway token spend, serving unavailability, critical policy escapes, or a high-risk model alias misroute. Ticket lower-severity drift with slice evidence and suggested diagnosis. Review trend dashboards for slow quality decay. A page that has no owner or no action trains responders to ignore the next page.",
+          "Runbooks should start with symptoms and lead to hypotheses. Did a deploy happen? Did upstream data change? Did a vendor model alias move? Did retrieval corpus freshness drop? Did a region fail? Did a guardrail begin blocking a new legitimate pattern? Did labels mature differently across slices? Mitigations include rollback, freeze training, rebuild index, disable a tool, switch provider, fail to rules, lower max context, or route to humans. The runbook should name who can make each decision.",
+          "Postmortems for AI incidents require artifact ids. Include model version, prompt bundle, index build, feature set, data snapshot, serving alias, guardrail version, trace ids, and affected slices. The corrective action should add a test, a monitor, a data validation, a runbook step, or a release gate. Otherwise the same class of failure will return under a new model version."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Separate data bugs from true concept",
-            "definition": "Separate data bugs from true concept drift."
+            term: "AI incident",
+            definition:
+              "A production failure involving model behavior, data quality, AI system safety, cost, or serving reliability."
           },
           {
-            "term": "Use proxies while waiting for labels.",
-            "definition": "Use proxies while waiting for labels."
+            term: "artifact id",
+            definition:
+              "A stable identifier for a versioned model, prompt, index, dataset, feature set, guardrail, or eval report."
           },
           {
-            "term": "Alert only with actionable runbooks.",
-            "definition": "Alert only with actionable runbooks."
+            term: "rollback choice",
+            definition:
+              "A predefined mitigation such as alias flip, feature disablement, rules fallback, or human handoff."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Knows drift types and label delay tactics.",
-            "reveal": "Corpus refreshes, embedding upgrades, and UI changes often break one locale, tenant, or intent first. Monitor task-success proxies, faithfulness samples, and guardrail deny rates by slice with volume floors. Tie alerts to actions: roll back index, tighten guardrail, retrain reranker, or degrade to FAQ search.\n\nLabel delay still applies: many outcomes (fraud, long-term retention, ticket reopen) arrive late. Use leading proxies carefully and maintain maturation windows for honest reporting. Champion/challenger and shadow modes remain the safe way to validate retrains when ground truth is slow."
-          }
-        ]
-      },
-      {
-        "id": "dashboards-traces-and-ownership",
-        "heading": "Dashboards, traces, and ownership",
-        "paragraphs": [
-          "Dashboards should answer: is the service healthy, is the model healthy, did we change something? Link deploys to charts. Distributed traces connect feature store latency to model latency. Own pages: who gets paged for drift vs 5xx spikes may differ (data science vs platform). Weekly review of top alerts prevents pager fatigue. Deploy annotations turn mysteries into timelines. Deploy annotations turn mysteries into timelines.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Annotate charts with deploys and data changes.",
-          "• Clarify on-call ownership by failure class.",
-          "• Prune noisy alerts regularly.",
-          "Production lens — Alert fatigue is an MLOps design smell: PSI-on-everything paging trains on-call to ignore signals. Tier alerts: schema/null/freshness pages immediately; distribution drift opens tickets with slice context; quality SLO burn pages with owners. For agents, spike detection on tool error rates and loop length catches runaway behavior faster than waiting for CSAT.\n\nClose the loop into eval: sampled failures become golden cases; repeated guardrail denials become red-team tests. Monitoring without a path into the harness and release gates becomes a museum of charts. Mid-2026 interview strength is naming GenAI traces, slice SLIs, and rollback playbooks together."
-        ],
-        "keyTerms": [
-          {
-            "term": "Annotate charts with deploys and data",
-            "definition": "Annotate charts with deploys and data changes."
-          },
-          {
-            "term": "Clarify on-call ownership by failure class.",
-            "definition": "Clarify on-call ownership by failure class."
-          },
-          {
-            "term": "Prune noisy alerts regularly.",
-            "definition": "Prune noisy alerts regularly."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Links dashboards to deploys and owners.",
-            "reveal": "PSI-on-everything paging trains on-call to ignore signals. Tier alerts: schema/null/freshness pages immediately; distribution drift opens tickets with slice context; quality SLO burn pages with owners. For agents, spike detection on tool error rates and loop length catches runaway behavior faster than waiting for CSAT.\n\nClose the loop into eval: sampled failures become golden cases; repeated guardrail denials become red-team tests. Monitoring without a path into the harness and release gates becomes a museum of charts. Mid-2026 interview strength is naming GenAI traces, slice SLIs, and rollback playbooks together."
+            prompt:
+              "What artifact identifiers belong in an AI incident postmortem?",
+            reveal:
+              "Include model, prompt, index, feature set, data snapshot, serving alias, guardrail, eval report, and relevant trace ids."
           }
         ]
       },
       {
-        "id": "feedback-loops-and-closed-loop-ml",
-        "heading": "Feedback loops and closed-loop ML",
-        "paragraphs": [
-          "Captured labels and human corrections should flow back into datasets with lineage. Beware selection bias: only reviewing uncertain cases skews retraining. Design sampling policies for feedback. For bandits/recommenders, logging propensities matters for offline evaluation. Monitoring is incomplete without a path from incident to dataset fix. Proxy labels are imperfect; document their bias when you use them for early detection. Proxy labels are imperfect; document their bias when you use them for early detection.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Close the loop from production to datasets carefully.",
-          "• Account for selection bias in human review.",
-          "• Log what you need for offline counterfactuals.",
-          "Production lens — Four planes: infra, data, GenAI traces, outcomes: Classical ML monitoring watched features, predictions, and delayed labels. LLM apps add prompt/retrieval/tool traces and token economics. A green GPU graph with collapsing citation hit rate is still an incident. Organize dashboards into infra SLOs, data/quality SLIs, GenAI trace red-lanes, and business outcomes—and page only when playbooks exist.\n\nOpenTelemetry GenAI conventions help standardize span names and attributes across vendors and self-hosted stacks. Include model ID, cache hits, retrieval document IDs, and tool errors. Sampling strategies must balance debug needs with privacy; never ship raw prompts to shared logs without redaction contracts."
+        id: "governance-fairness-and-cost-observability",
+        heading: "Monitoring also serves governance, fairness, and unit economics",
+        paragraphs: [
+          "Governance needs ongoing evidence, not only pre-launch review. High-risk systems should monitor performance by relevant groups, data quality, human override rates, complaint categories, transparency notices, audit-log completeness, and incident response times. Fairness at launch can decay after product expansion, market shifts, or feedback loops. Monitoring should connect slice regressions to escalation paths and model cards or system cards.",
+          "Cost monitoring is not a finance afterthought. LLM and agent systems can regress economically without obvious quality drops: longer prompts, larger context windows, lower cache hit rates, repeated tool calls, provider price changes, or retries during partial outages. Track token spend, GPU hours, cost per successful task, cost by tenant, and spend anomalies. Tie budgets to product value so teams can decide whether to optimize, downgrade, cache, batch, or remove a feature.",
+          "The strongest observability programs make dashboards part of release governance. A candidate is not ready if the team cannot monitor its known risks. A launch review should ask which metrics prove the system is healthy, which alerts page whom, which slices are reviewed, which traces are retained, which privacy filters protect logs, and how production failures become evals. Monitoring is the operating memory of the AI organization."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Close the loop from production to",
-            "definition": "Close the loop from production to datasets carefully."
+            term: "audit-log completeness",
+            definition:
+              "The share of required actions or decisions that produce complete traceable records."
           },
           {
-            "term": "Account for selection bias in human",
-            "definition": "Account for selection bias in human review."
+            term: "spend anomaly",
+            definition:
+              "An unexpected increase in cost due to traffic, token usage, retries, provider changes, or inefficient behavior."
           },
           {
-            "term": "Log what you need for offline",
-            "definition": "Log what you need for offline counterfactuals."
+            term: "release observability",
+            definition:
+              "The requirement that a system's known risks can be measured and responded to before launch."
           }
         ],
-        "workedExample": {
-          "title": "Alert if null rate exceeds baseline",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def null_alert(current_null_rate, baseline, margin=0.05):\n    return current_null_rate > baseline + margin\n\nprint(null_alert(0.12, 0.03), null_alert(0.04, 0.03))",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Plans feedback capture without severe bias.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to feedback loops and closed-loop ml."
-          }
-        ]
-      },
-      {
-        "id": "incident-response-for-ml-systems",
-        "heading": "Incident response for ML systems",
-        "paragraphs": [
-          "Runbooks: symptoms -> dashboards -> hypotheses (deploy, upstream schema, vendor outage, drift) -> mitigations (rollback model, disable feature, fail open/closed). Postmortems include data versions and model versions. Practice game days. The best monitor is useless without a rehearsed response. Game-day exercises reveal missing dashboards faster than design docs. Game-day exercises reveal missing dashboards faster than design docs.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Write ML-specific incident runbooks.",
-          "• Include model/data versions in postmortems.",
-          "• Rehearse rollback and disable switches.",
-          "Production lens — Slice-aware quality beats global averages: Corpus refreshes, embedding upgrades, and UI changes often break one locale, tenant, or intent first. Monitor task-success proxies, faithfulness samples, and guardrail deny rates by slice with volume floors. Tie alerts to actions: roll back index, tighten guardrail, retrain reranker, or degrade to FAQ search.\n\nLabel delay still applies: many outcomes (fraud, long-term retention, ticket reopen) arrive late. Use leading proxies carefully and maintain maturation windows for honest reporting. Champion/challenger and shadow modes remain the safe way to validate retrains when ground truth is slow."
-        ],
-        "keyTerms": [
-          {
-            "term": "Write ML-specific incident runbooks.",
-            "definition": "Write ML-specific incident runbooks."
-          },
-          {
-            "term": "Include model/data versions in postmortems.",
-            "definition": "Include model/data versions in postmortems."
-          },
-          {
-            "term": "Rehearse rollback and disable switches.",
-            "definition": "Rehearse rollback and disable switches."
+            prompt:
+              "How can an LLM feature have a production incident with no accuracy drop?",
+            reveal:
+              "It can suffer runaway token spend, tool loops, privacy logging violations, citation failures, high refusal rates, tenant-specific regressions, or governance evidence gaps."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Has ML incident runbooks.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to incident response for ml systems."
-          }
-        ]
-      },
-      {
-        "id": "llmops-dashboards-vs-classic-ml-drift",
-        "heading": "LLMOps dashboards vs classic ML drift",
-        "paragraphs": [
-          "Tabular model monitoring centers on feature distributions, prediction scores, and delayed labels. LLM applications fail differently: a prompt change, embedder upgrade, or provider model swap can collapse groundedness while every classic drift gauge stays green. Build LLMOps dashboards that track token spend and cache hit rate, latency split by prefill/decode or provider TTFT, retrieval miss rate / recall proxies on canary queries, groundedness or citation validity on sampled traffic, schema-validation failure rate, tool/function error rate, refusal rate, and user friction (reprompts, thumbs-down). Distinguish incident classes: data drift in an upstream ranker versus generative regression from a temperature or alias change. Sampling plans matter—you cannot LLM-judge 100% of traffic; use stratified samples by tenant and query type, plus always-on cheap heuristics (citation regex, JSON parse). Join traces across retrieve → rerank → generate → tools with a single request id. Alert on spend per successful task and on sudden jumps in “answer without citation,” not only on 5xx rates. Classic PSI still matters for embedded classifiers in the same product; keep both panes rather than replacing ML monitoring with chat logs.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Add token cost, groundedness samples, retrieval misses, and tool errors to the core dashboard.",
-          "• Separate classic feature/score drift from LLM quality regressions in runbooks.",
-          "• Use stratified sampling for expensive judges; keep cheap always-on parsers.",
-          "• Alert on spend-per-success and citation failures, not only HTTP errors.",
-          "Production lens — Alert fatigue is an MLOps design smell: PSI-on-everything paging trains on-call to ignore signals. Tier alerts: schema/null/freshness pages immediately; distribution drift opens tickets with slice context; quality SLO burn pages with owners. For agents, spike detection on tool error rates and loop length catches runaway behavior faster than waiting for CSAT.\n\nClose the loop into eval: sampled failures become golden cases; repeated guardrail denials become red-team tests. Monitoring without a path into the harness and release gates becomes a museum of charts. Mid-2026 interview strength is naming GenAI traces, slice SLIs, and rollback playbooks together."
-        ],
-        "keyTerms": [
-          {
-            "term": "Add token cost, groundedness samples, retrieval",
-            "definition": "Add token cost, groundedness samples, retrieval misses, and tool errors to the core dashboard."
-          },
-          {
-            "term": "Separate classic feature/score drift from LLM",
-            "definition": "Separate classic feature/score drift from LLM quality regressions in runbooks."
-          },
-          {
-            "term": "Use stratified sampling for expensive judges;",
-            "definition": "Use stratified sampling for expensive judges; keep cheap always-on parsers."
-          },
-          {
-            "term": "Alert on spend-per-success and citation failu…",
-            "definition": "Alert on spend-per-success and citation failures, not only HTTP errors."
-          }
-        ],
-        "workedExample": {
-          "title": "Aggregate a tiny LLMOps metrics table",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import pandas as pd\n\ndf = pd.DataFrame([\n    {'route': 'rag', 'tokens': 1200, 'grounded': 1, 'retrieve_hit': 1, 'tool_err': 0},\n    {'route': 'rag', 'tokens': 1800, 'grounded': 0, 'retrieve_hit': 0, 'tool_err': 0},\n    {'route': 'agent', 'tokens': 4000, 'grounded': 1, 'retrieve_hit': 1, 'tool_err': 1},\n])\nsummary = df.groupby(\"route\").agg(\n    avg_tokens=(\"tokens\", \"mean\"),\n    grounded_rate=(\"grounded\", \"mean\"),\n    retrieve_recall_proxy=(\"retrieve_hit\", \"mean\"),\n    tool_error_rate=(\"tool_err\", \"mean\"),\n)\nprint(summary.round(3))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Lists LLMOps metrics beyond HTTP and GPU utilization.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to llmops dashboards vs classic ml drift."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
-      },
-      {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for ml monitoring and observability.",
-          "Trap: Only watching infrastructure golden signals. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Alerting on noisy drift without actions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No slice metrics. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No path from production errors to dataset fixes. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Assuming stable PSI means the RAG answers are still faithful. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Logging prompts without PII controls. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Alerting only on latency while token spend doubles. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
-        ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
-          {
-            "prompt": "Pick the most dangerous pitfall for ML monitoring and observability and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Only watching infrastructure golden signals.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Four planes: infra, data, GenAI traces, outcomes. Classical ML monitoring watched features, predictions, and delayed labels. LLM apps add prompt/retrieval/tool traces and token economics. A green GPU graph with collapsing citation hit rate is still an incident. Organize dashboards into infra SLOs, data/quality SLIs, GenAI trace red-lanes, and business outcomes—and page only when playbooks exist.\n\nOpenTelemetry GenAI conventions help standardize span names and attributes across vendors and self-hosted stacks. Include model ID, cache hits, retrieval document IDs, and tool errors. Sampling strategies must balance debug needs with privacy; never ship raw prompts to shared logs without redaction contracts.",
-          "Slice-aware quality beats global averages. Corpus refreshes, embedding upgrades, and UI changes often break one locale, tenant, or intent first. Monitor task-success proxies, faithfulness samples, and guardrail deny rates by slice with volume floors. Tie alerts to actions: roll back index, tighten guardrail, retrain reranker, or degrade to FAQ search.\n\nLabel delay still applies: many outcomes (fraud, long-term retention, ticket reopen) arrive late. Use leading proxies carefully and maintain maturation windows for honest reporting. Champion/challenger and shadow modes remain the safe way to validate retrains when ground truth is slow.",
-          "Alert fatigue is an MLOps design smell. PSI-on-everything paging trains on-call to ignore signals. Tier alerts: schema/null/freshness pages immediately; distribution drift opens tickets with slice context; quality SLO burn pages with owners. For agents, spike detection on tool error rates and loop length catches runaway behavior faster than waiting for CSAT.\n\nClose the loop into eval: sampled failures become golden cases; repeated guardrail denials become red-team tests. Monitoring without a path into the harness and release gates becomes a museum of charts. Mid-2026 interview strength is naming GenAI traces, slice SLIs, and rollback playbooks together."
-        ],
-        "keyTerms": [
-          {
-            "term": "Four planes: infra, data, GenAI traces, outcomes",
-            "definition": "Classical ML monitoring watched features, predictions, and delayed labels. LLM apps add prompt/retrieval/tool traces and token economics. A green GPU graph with collapsing citation hit rate is still an incident. Organize…"
-          },
-          {
-            "term": "Slice-aware quality beats global averages",
-            "definition": "Corpus refreshes, embedding upgrades, and UI changes often break one locale, tenant, or intent first. Monitor task-success proxies, faithfulness samples, and guardrail deny rates by slice with volume floors. Tie alerts t…"
-          },
-          {
-            "term": "Alert fatigue is an MLOps design smell",
-            "definition": "PSI-on-everything paging trains on-call to ignore signals. Tier alerts: schema/null/freshness pages immediately; distribution drift opens tickets with slice context; quality SLO burn pages with owners. For agents, spike …"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach ml monitoring and observability as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you detect silent fraud-model failure? | What is PSI and when should it page someone? | Design a dashboard for an LLM+RAG feature."
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Give a 90-second spoken overview of ML monitoring and observability as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "interview",
+          body:
+            "A complete monitoring answer names signals, slices, owners, runbooks, and how failures become future evals."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Defines data/model/system monitors with slices.",
-        "Knows drift types and label delay tactics.",
-        "Links dashboards to deploys and owners.",
-        "Plans feedback capture without severe bias.",
-        "Has ML incident runbooks."
+    wrapUp: {
+      takeaways: [
+        "AI observability spans infrastructure, data, behavior, and outcomes.",
+        "Drift requires diagnosis across labels, slices, product changes, and upstream data before retraining.",
+        "GenAI traces should connect retrieval, prompts, tools, guardrails, cost, and outputs.",
+        "Feedback loops need sampling discipline and ownership routing.",
+        "Monitoring supports incident response, governance, fairness, and unit economics."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: OpenTelemetry — Generative AI semantic conventions (OpenTelemetry) — https://opentelemetry.io/docs/specs/semconv/gen-ai/",
-        "Optional deeper reading: Evidently AI documentation (Evidently) — https://docs.evidentlyai.com/"
+      nextSteps: [
+        "Design a four-plane dashboard for a RAG support assistant.",
+        "Write an alert runbook for a sudden groundedness drop in one locale.",
+        "Choose five production failures and describe how each becomes an eval case."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const mlopsChapters = JSON.parse(JSON.stringify(chapters));

@@ -1,965 +1,771 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const aiAgentsChapters = {
+const chapters = {
   "ai-agents/agent-fundamentals": {
-    "title": "Chapter: Agent architectures and patterns",
-    "readingTime": "55-70 min",
-    "premise": "ReAct, plan-and-execute, reflection, and multi-agent patterns for building autonomous AI systems. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Agent fundamentals as production systems",
+    readingTime: "65-80 min",
+    premise:
+      "A production AI agent is not a long prompt with ambition. It is a bounded system that combines a model policy, explicit state, typed tools, runtime budgets, traces, guardrails, and evaluation loops. This chapter teaches the core mental model used by mid-2026 agent teams: build the smallest autonomous controller that earns its complexity, instrument every step, and keep humans and deterministic workflows in the design when risk requires them.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Agents are optional autonomy. In 2026 interviews, strong candidates explain when deterministic workflows beat agents, how approval gates bound risk, and why multi-agent coordination is a cost center unless specialization truly pays.",
-          "This chapter treats \"Agent architectures and patterns\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "agent-as-controller",
+        heading: "An agent is a controller around a model, not the model itself",
+        paragraphs: [
+          "In production language, an agent is a control loop that observes a task state, asks a policy to choose the next action, executes that action through a constrained interface, records the result, and repeats until a stop condition fires. The policy is often an LLM, but the system includes much more than model weights: routing logic, tool catalogs, memory stores, budget counters, approval states, trace collection, and error handling. If those parts are invisible, the agent is not simpler; it is merely uncontrolled.",
+          "This framing keeps autonomy proportional to the problem. A password reset flow with known steps should be a workflow with perhaps one LLM classification step, not a free-running agent that decides which account operations to perform. A procurement research task, a messy incident triage, or a support case that branches on many observations may benefit from agentic control because the next step depends on what was just learned. The engineering question is not whether agents are modern; it is whether runtime choice improves success enough to justify variance, cost, and audit burden.",
+          "By 2026, mature teams describe agents as graphs or state machines before they write prompts. The state includes goal, user context, permissions, working notes, selected tools, observations, approvals, cost so far, and a stop reason. Each transition has a contract: what inputs the policy sees, what outputs are allowed, which tool executor validates them, and what happens on timeout or malformed arguments. This is the same discipline used for distributed systems, with the added complication that one component speaks probabilistically."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "agent runtime",
+            definition:
+              "The orchestration layer that manages state, model calls, tool execution, budgets, traces, and termination."
+          },
+          {
+            term: "policy",
+            definition:
+              "The decision function, often an LLM prompt plus model configuration, that selects the next action from the current state."
+          },
+          {
+            term: "stop condition",
+            definition:
+              "A hard rule that ends the loop, such as task success, failure, human handoff, step limit, token budget, or wall-clock deadline."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why is an agent better described as a stateful controller than as a single LLM prompt?",
+            reveal:
+              "Because production behavior depends on state, tool contracts, validation, approvals, budgets, and traces. The LLM chooses actions, but the runtime decides what actions are legal and when the task must stop."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "A strong interview answer starts with the control loop, then immediately names boundaries: tools, state, budgets, evals, and human escalation."
         }
       },
       {
-        "id": "the-agent-loop-as-a-state-machine",
-        "heading": "The agent loop as a state machine",
-        "paragraphs": [
-          "An agent maintains state: goal, memory/scratchpad, tool results, and step count. Each iteration, a policy (often an LLM) chooses an action: call a tool, ask the user, or finish. Observations update state. This is closer to a controller than to a single prompt. Draw states and transitions explicitly: Init -> Plan -> Tool -> Integrate -> Done/Fail. Caps on steps and wall-clock time are part of the design, not ops afterthoughts. In-browser we simulate the loop with mocked tools and deterministic policies so you can test control flow without APIs. Autonomy without observability is just an unattended script with a language model attached.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Model agents as state machines with explicit budgets.",
-          "• Separate policy choice from tool execution.",
-          "• Define Done/Fail terminal conditions up front.",
-          "Production lens — Agents are budgeted control loops over contracts: The durable abstraction is observe → plan/act → update memory until a stop condition—not unbounded autonomy. Mid-2026 systems encode stop conditions as hard budgets (steps, tokens, wall-clock), structured outputs, and human handoff. ReAct-style interleaving still helps tool selection, but production reliability comes from contracts around tools and state more than from longer chain-of-thought.\n\nPrefer deterministic workflows when the path is known (form submit, ETL, fixed approval chain). Reserve agents for ambiguous multi-step work where branching depends on observations. Teams that “agentify” CRUD create cost and failure modes without upside. Architecture reviews should start from the task graph and privilege set, then decide whether an LLM loop belongs at all."
+        id: "state-and-memory",
+        heading: "State and memory determine reliability",
+        paragraphs: [
+          "Agent state is the difference between deliberate progress and repeated guessing. Short-term state holds the active objective, recent model messages, tool outputs, intermediate artifacts, and budget counters. Long-term memory stores durable facts such as user preferences, prior decisions, or reusable documents. These stores need different controls. Working state can be verbose and temporary; durable memory must be sparse, consent-aware, searchable, correctable, and governed by retention policy.",
+          "The hardest memory bugs are not missing memories; they are wrong memories that become future instructions. A malicious document can ask the agent to remember a false rule, a stale project summary can override current requirements, or a user preference can leak across tenants. Production agents therefore separate observations from instructions, mark retrieved content as untrusted unless promoted by policy, summarize before persistence, and expose deletion or correction paths. Memory is a product and privacy feature, not a convenience cache.",
+          "State should also be replayable. When an agent makes a surprising decision, engineers need to reconstruct the run: initial request, policy version, model id, selected tools, arguments, observations, approvals, state mutations, and stop reason. Replayable state supports debugging, eval generation, incident response, and governance review. Without it, teams argue about transcripts; with it, they can add a regression case and prove that a fix changes the trajectory."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Model agents as state machines with",
-            "definition": "Model agents as state machines with explicit budgets."
+            term: "working state",
+            definition:
+              "Temporary task context used during a single run, including observations, intermediate artifacts, and budget counters."
           },
           {
-            "term": "Separate policy choice from tool execution.",
-            "definition": "Separate policy choice from tool execution."
+            term: "durable memory",
+            definition:
+              "Persisted information reused across runs, controlled by write policies, retention, privacy rules, and correction workflows."
           },
           {
-            "term": "Define Done/Fail terminal conditions up front.",
-            "definition": "Define Done/Fail terminal conditions up front."
+            term: "memory poisoning",
+            definition:
+              "An attack or defect where untrusted content is stored and later treated as reliable instruction or fact."
           }
         ],
-        "workedExample": {
-          "title": "Toy ReAct-style loop with mocked tools",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def search(q):\n    return \"Weather API says 72F sunny\" if \"weather\" in q.lower() else \"No results\"\n\ntools = {\"search\": search}\n\ndef agent(goal, max_steps=3):\n    scratch = []\n    for step in range(max_steps):\n        # naive policy: search once then finish\n        if not scratch:\n            obs = tools[\"search\"](goal)\n            scratch.append(obs)\n            continue\n        return {\"final\": scratch[-1], \"steps\": step+1}\n    return {\"final\": \"budget exceeded\", \"steps\": max_steps}\n\nprint(agent(\"What is the weather in Austin?\"))",
-          "language": "python"
+        workedExample: {
+          title: "Minimal state record for an agent run",
+          body:
+            "This is intentionally small: the point is to show the categories a runtime must preserve for replay and evaluation.",
+          code:
+            "run_state = {\n    \"goal\": \"summarize incident tickets\",\n    \"policy_version\": \"triage-agent-v8\",\n    \"budget\": {\"max_steps\": 6, \"steps_used\": 2},\n    \"observations\": [\n        {\"tool\": \"ticket_search\", \"ids\": [\"INC-42\", \"INC-43\"]}\n    ],\n    \"memory_writes\": [],\n    \"stop_reason\": None,\n}\n\nrun_state[\"observations\"].append({\"tool\": \"summarizer\", \"summary_id\": \"S-9\"})\nrun_state[\"budget\"][\"steps_used\"] += 1\nrun_state[\"stop_reason\"] = \"needs_human_review\"\nprint(run_state)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can draw an agent state machine with budgets.",
-            "reveal": "The durable abstraction is observe → plan/act → update memory until a stop condition—not unbounded autonomy. Mid-2026 systems encode stop conditions as hard budgets (steps, tokens, wall-clock), structured outputs, and human handoff. ReAct-style interleaving still helps tool selection, but production reliability comes from contracts around tools and state more than from longer chain-of-thought.\n\nPrefer deterministic workflows when the path is known (form submit, ETL, fixed approval chain). Reserve agents for ambiguous multi-step work where branching depends on observations. Teams that “agentify” CRUD create cost and failure modes without upside. Architecture reviews should start from the task graph and privilege set, then decide whether an LLM loop belongs at all."
+            prompt:
+              "Name two controls that make durable agent memory safer than simply appending every conversation.",
+            reveal:
+              "Use explicit write policies and retention rules, and treat stored text as untrusted data unless it has been validated or approved. Summarization, tenant isolation, correction flows, and memory-poisoning tests are also important."
           }
         ]
       },
       {
-        "id": "planning-styles-react-plan-then-execute-multi-agent",
-        "heading": "Planning styles: ReAct, plan-then-execute, multi-agent",
-        "paragraphs": [
-          "ReAct interleaves thoughts and actions—flexible but can wander. Plan-then-execute drafts steps first—more inspectable, less adaptive mid-flight. Multi-agent systems split roles (researcher, coder, critic) at the cost of coordination complexity and cascading errors. Choose the simplest loop that meets reliability targets. For many enterprise tasks, a structured workflow with LLM steps beats a free-form autonomous agent. Autonomy is a dial, not a badge of honor. Write the stop conditions before the clever planning prompts; most incidents are loops and overspend.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Prefer structured workflows when steps are known.",
-          "• Use free-form agents when tool paths are highly variable.",
-          "• Multi-agent needs protocols and shared critique criteria.",
-          "Production lens — MCP and shared tool protocols reduce glue—and clarify trust boundaries: The Model Context Protocol (MCP) standardizes how hosts discover tools/resources and exchange context with servers. Whether you adopt MCP or an internal equivalent, the industry direction is clear: typed tool surfaces, negotiated capabilities, and explicit client/server boundaries beat one-off adapters per model vendor. Shared protocols make authz, logging, and least privilege enforceable in one place.\n\nProtocol adoption does not remove threat models. Tool servers still need authentication, scoped credentials, and output sanitation against indirect injection. Multi-agent designs (planner/worker/critic) should pass typed artifacts, not free-form telepathy, and must attribute costs per agent role. Eval on trajectories—success, steps, policy violations—belongs in the same harness as chat quality."
+        id: "planning-patterns",
+        heading: "Planning patterns are choices about control and observability",
+        paragraphs: [
+          "Common patterns include ReAct-style interleaving, plan-then-execute, reflection, workflow graphs with LLM nodes, and multi-agent role splits. ReAct is useful when the policy must alternate between reasoning and observation, such as searching, reading, and deciding what to inspect next. Plan-then-execute improves inspectability because the agent produces a proposed path before acting, but it can become brittle when the environment changes. Workflow graphs are often the production winner: deterministic edges own the control plane, while the model handles narrow judgment points.",
+          "Multi-agent systems deserve special skepticism. Splitting planner, researcher, writer, critic, and executor roles can reduce single-model blind spots when the task benefits from independent review. It also creates coordination cost, inconsistent shared state, extra latency, more tokens, and harder incident reconstruction. In production, multi-agent designs should pass typed artifacts between roles, assign responsibility for each role's decisions, and measure whether the committee beats a simpler well-tooled agent in trajectory evals.",
+          "The practical pattern is to start from a task graph, not from a framework. Mark the nodes that are deterministic, the nodes that require language judgment, the nodes with side effects, and the nodes that require approval. Add agentic loops only around the genuinely uncertain portions. This avoids the common anti-pattern where a model is asked to rediscover a fixed business process on every request while operations teams absorb the cost of nondeterminism."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Prefer structured workflows when steps are",
-            "definition": "Prefer structured workflows when steps are known."
+            term: "ReAct loop",
+            definition:
+              "A pattern that alternates model reasoning, tool action, and observation so the next step can respond to new evidence."
           },
           {
-            "term": "Use free-form agents when tool paths",
-            "definition": "Use free-form agents when tool paths are highly variable."
+            term: "workflow graph",
+            definition:
+              "A deterministic orchestration graph that can include model calls at specific decision nodes without giving the model full control."
           },
           {
-            "term": "Multi-agent needs protocols and shared critique",
-            "definition": "Multi-agent needs protocols and shared critique criteria."
+            term: "typed artifact",
+            definition:
+              "A structured output, such as JSON or a task object, passed between agent roles instead of unbounded prose."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Chooses ReAct vs workflow deliberately.",
-            "reveal": "The Model Context Protocol (MCP) standardizes how hosts discover tools/resources and exchange context with servers. Whether you adopt MCP or an internal equivalent, the industry direction is clear: typed tool surfaces, negotiated capabilities, and explicit client/server boundaries beat one-off adapters per model vendor. Shared protocols make authz, logging, and least privilege enforceable in one place.\n\nProtocol adoption does not remove threat models. Tool servers still need authentication, scoped credentials, and output sanitation against indirect injection. Multi-agent designs (planner/worker/critic) should pass typed artifacts, not free-form telepathy, and must attribute costs per agent role. Eval on trajectories—success, steps, policy violations—belongs in the same harness as chat quality."
-          }
-        ]
-      },
-      {
-        "id": "memory-scratchpads-episodic-logs-and-retrieval",
-        "heading": "Memory: scratchpads, episodic logs, and retrieval",
-        "paragraphs": [
-          "Short-term scratchpads hold intermediate tool outputs for the current task. Long-term memory stores user prefs or prior tickets via databases/vector stores—with privacy controls. Summarize aggressively; dumping full histories blows context. Memory write policies matter: what is allowed to persist? Incorrect memories cause confident future mistakes. Test memory poisoning attacks (malicious content that gets stored and later trusted). Scratchpad contents should be structured (JSON) so later steps do not re-parse messy prose.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Distinguish working memory from durable memory.",
-          "• Summarize before persisting.",
-          "• Threat-model memory poisoning.",
-          "Production lens — Memory policy is a privacy and correctness feature: Short-term context, session scratchpads, and long-term stores (vector or structured) each need write/forget policies. Unbounded memory causes drift, cross-session leakage, and prompt-injection persistence. Store what improves task success; expire or redact what creates compliance risk. Reflection-style summaries help long tasks but must be treated as untrusted text when fed back as instructions.\n\nConnect agent fundamentals to serving and governance: tool privileges appear in the AI system inventory; trajectory logs feed eval; budgets protect unit economics. Strong mid-2026 answers mention MCP-style contracts, trajectory eval, and dual-control writes in the same breath as ReAct."
-        ],
-        "keyTerms": [
-          {
-            "term": "Distinguish working memory from durable memory.",
-            "definition": "Distinguish working memory from durable memory."
-          },
-          {
-            "term": "Summarize before persisting.",
-            "definition": "Summarize before persisting."
-          },
-          {
-            "term": "Threat-model memory poisoning.",
-            "definition": "Threat-model memory poisoning."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Separates working vs durable memory.",
-            "reveal": "Short-term context, session scratchpads, and long-term stores (vector or structured) each need write/forget policies. Unbounded memory causes drift, cross-session leakage, and prompt-injection persistence. Store what improves task success; expire or redact what creates compliance risk. Reflection-style summaries help long tasks but must be treated as untrusted text when fed back as instructions.\n\nConnect agent fundamentals to serving and governance: tool privileges appear in the AI system inventory; trajectory logs feed eval; budgets protect unit economics. Strong mid-2026 answers mention MCP-style contracts, trajectory eval, and dual-control writes in the same breath as ReAct."
+            prompt:
+              "When should a team prefer a workflow graph with LLM nodes over a free-form autonomous loop?",
+            reveal:
+              "When the main path and approval points are known. The graph gives deterministic control, easier auditing, and lower variance while still using the model where judgment is valuable."
           }
         ]
       },
       {
-        "id": "reliability-budgets-idempotency-human-checkpoints",
-        "heading": "Reliability: budgets, idempotency, human checkpoints",
-        "paragraphs": [
-          "Cap tool calls, tokens, and dollars per request. Make side-effecting tools idempotent or require confirmation. Insert human-in-the-loop approvals for irreversible actions (refunds, emails outbound, production deploys). Provide transcripts for audit. An agent that cannot explain which tools it called is not shippable in regulated contexts. Prefer confirming irreversible actions even when the model is 'sure'.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Budget steps/tokens/cost per run.",
-          "• Approve irreversible tools explicitly.",
-          "• Retain auditable transcripts.",
-          "Production lens — Agents are budgeted control loops over contracts: The durable abstraction is observe → plan/act → update memory until a stop condition—not unbounded autonomy. Mid-2026 systems encode stop conditions as hard budgets (steps, tokens, wall-clock), structured outputs, and human handoff. ReAct-style interleaving still helps tool selection, but production reliability comes from contracts around tools and state more than from longer chain-of-thought.\n\nPrefer deterministic workflows when the path is known (form submit, ETL, fixed approval chain). Reserve agents for ambiguous multi-step work where branching depends on observations. Teams that “agentify” CRUD create cost and failure modes without upside. Architecture reviews should start from the task graph and privilege set, then decide whether an LLM loop belongs at all."
+        id: "tool-contracts-and-privileges",
+        heading: "Agents act through contracts and privileges",
+        paragraphs: [
+          "Tools are the agent's hands, so tool design is the security and reliability boundary. A useful tool contract has a stable name, a narrow purpose, typed arguments, validation rules, clear errors, structured outputs, timeout behavior, idempotency expectations, and an authorization model that does not trust model text. If a model calls `refund_customer`, the executor still checks the user, account, amount, policy, idempotency key, and approval state before money moves.",
+          "MCP-style tool discovery and similar internal protocols made this discipline more visible by 2026. A host can discover tool names, schemas, resource capabilities, and server boundaries rather than hard-coding ad hoc adapters for every model. The protocol does not solve trust by itself. Tool servers still need scoped credentials, egress limits, output sanitation, versioning, audit logs, and independent contract tests. Standardization helps because it gives security and platform teams one place to enforce policy.",
+          "Tool outputs must be treated as data, not as fresh instructions. A retrieved web page, email, PDF, or command output can contain indirect prompt injection that asks the agent to ignore prior rules or leak secrets. The runtime should label tool observations, strip or quarantine dangerous content when possible, and keep privileged instructions outside the text channel that untrusted documents can influence. Tool contracts are therefore both API design and prompt-injection defense."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Budget steps/tokens/cost per run.",
-            "definition": "Budget steps/tokens/cost per run."
+            term: "tool contract",
+            definition:
+              "The schema, permissions, validation rules, output format, errors, and side-effect guarantees for a callable capability."
           },
           {
-            "term": "Approve irreversible tools explicitly.",
-            "definition": "Approve irreversible tools explicitly."
+            term: "idempotency key",
+            definition:
+              "A unique request key that lets a mutating tool safely return the same result on retry instead of duplicating a side effect."
           },
           {
-            "term": "Retain auditable transcripts.",
-            "definition": "Retain auditable transcripts."
+            term: "indirect prompt injection",
+            definition:
+              "Malicious instructions hidden in content returned by tools, retrieval, or browsing and then fed back to the model."
           }
         ],
-        "workedExample": {
-          "title": "Enforce a step/cost budget",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def run_with_budget(actions, max_cost=3.0):\n    cost = 0.0\n    log = []\n    for name, action_cost in actions:\n        if cost + action_cost > max_cost:\n            log.append((\"stop\", name, cost))\n            break\n        cost += action_cost\n        log.append((\"run\", name, cost))\n    return log\n\nprint(run_with_budget([(\"search\", 1.0), (\"search\", 1.0), (\"email\", 2.0), (\"done\", 0.0)]))",
-          "language": "python"
+        workedExample: {
+          title: "Server-side validation before executing a mutating tool",
+          body:
+            "The model proposes arguments, but the executor owns authorization, approval, and idempotency.",
+          code:
+            "executed = {}\n\ndef issue_refund(args, caller, approvals, idem_key):\n    if idem_key in executed:\n        return executed[idem_key]\n    if caller.get(\"role\") != \"support_manager\":\n        raise PermissionError(\"caller cannot refund\")\n    if args.get(\"amount_cents\", 0) > 5000 and \"finance\" not in approvals:\n        raise PermissionError(\"large refund needs finance approval\")\n    if not isinstance(args.get(\"account_id\"), str):\n        raise ValueError(\"account_id required\")\n    result = {\"status\": \"queued\", \"account_id\": args[\"account_id\"]}\n    executed[idem_key] = result\n    return result\n\nprint(issue_refund({\"account_id\": \"A-7\", \"amount_cents\": 1200}, {\"role\": \"support_manager\"}, [], \"r1\"))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Requires approval for irreversible tools.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to reliability: budgets, idempotency, human checkpoints."
-          }
-        ]
-      },
-      {
-        "id": "evaluation-of-agent-behavior",
-        "heading": "Evaluation of agent behavior",
-        "paragraphs": [
-          "Evaluate task success, unnecessary tool calls, harmful actions blocked, and average cost. Use scripted environments with mocked tools for CI. Measure trajectory length and whether the agent stops appropriately. Offline suites beat vibe checks. Compare against a non-agent baseline workflow—agents must earn their complexity. Compare agent pass rates to a scripted workflow baseline every time you add tools.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Score success, safety, and cost together.",
-          "• Mock tool environments for CI.",
-          "• Baseline against simpler workflows.",
-          "Production lens — MCP and shared tool protocols reduce glue—and clarify trust boundaries: The Model Context Protocol (MCP) standardizes how hosts discover tools/resources and exchange context with servers. Whether you adopt MCP or an internal equivalent, the industry direction is clear: typed tool surfaces, negotiated capabilities, and explicit client/server boundaries beat one-off adapters per model vendor. Shared protocols make authz, logging, and least privilege enforceable in one place.\n\nProtocol adoption does not remove threat models. Tool servers still need authentication, scoped credentials, and output sanitation against indirect injection. Multi-agent designs (planner/worker/critic) should pass typed artifacts, not free-form telepathy, and must attribute costs per agent role. Eval on trajectories—success, steps, policy violations—belongs in the same harness as chat quality."
-        ],
-        "keyTerms": [
-          {
-            "term": "Score success, safety, and cost together.",
-            "definition": "Score success, safety, and cost together."
-          },
-          {
-            "term": "Mock tool environments for CI.",
-            "definition": "Mock tool environments for CI."
-          },
-          {
-            "term": "Baseline against simpler workflows.",
-            "definition": "Baseline against simpler workflows."
+            prompt:
+              "Why is the model never the authorization boundary for a tool call?",
+            reveal:
+              "The model can be wrong, manipulated, or asked to impersonate authority. The tool executor must enforce identity, permission, approval, validation, and side-effect rules in code."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Evaluates trajectories, not only final text.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluation of agent behavior."
-          }
-        ]
-      },
-      {
-        "id": "when-not-to-use-agents-workflows-approvals-and-multi-agent-cost",
-        "heading": "When not to use agents: workflows, approvals, and multi-agent cost",
-        "paragraphs": [
-          "An agent earns its complexity only when the next action truly depends on model judgment under uncertainty. If the steps are known—authenticate, fetch account, compute refund eligibility, write ledger, notify—implement a deterministic workflow or explicit state machine with typed inputs. Autonomous loops (LLM chooses tools until a stop condition) add nondeterminism, spend variance, and failure modes that are hard to replay. Prefer workflow graphs with LLM nodes at narrow judgment points (classify intent, draft message) rather than letting the model own the whole control plane. Human approval gates belong before irreversible side effects: payments, emails to customers, production config changes, deleting data. Make approvals first-class states with timeouts and audit logs, not a prompt suggestion the model can ignore. Multi-agent designs (researcher/writer/reviewer, or planner/executor) help when specialization or independent verification reduces error enough to pay for coordination: extra tokens, race conditions, shared-memory bugs, and blame diffusion. If one well-tooled agent with a checklist outperforms a committee in your evals, ship the simpler system. Interview signal: say “we tried an agent and reverted to a workflow after measuring loop spend and flake rate,” not only “agents are the future.”",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Default to deterministic workflows; add autonomy only at uncertain decision points.",
-          "• Use explicit graphs with budgets and stop conditions rather than unbounded loops.",
-          "• Require human approval states before destructive or externally visible actions.",
-          "• Adopt multi-agent designs only when specialization/verification beats coordination cost on evals.",
-          "Production lens — Memory policy is a privacy and correctness feature: Short-term context, session scratchpads, and long-term stores (vector or structured) each need write/forget policies. Unbounded memory causes drift, cross-session leakage, and prompt-injection persistence. Store what improves task success; expire or redact what creates compliance risk. Reflection-style summaries help long tasks but must be treated as untrusted text when fed back as instructions.\n\nConnect agent fundamentals to serving and governance: tool privileges appear in the AI system inventory; trajectory logs feed eval; budgets protect unit economics. Strong mid-2026 answers mention MCP-style contracts, trajectory eval, and dual-control writes in the same breath as ReAct."
-        ],
-        "keyTerms": [
-          {
-            "term": "Default to deterministic workflows; add autonomy",
-            "definition": "Default to deterministic workflows; add autonomy only at uncertain decision points."
-          },
-          {
-            "term": "Use explicit graphs with budgets and",
-            "definition": "Use explicit graphs with budgets and stop conditions rather than unbounded loops."
-          },
-          {
-            "term": "Require human approval states before destructive",
-            "definition": "Require human approval states before destructive or externally visible actions."
-          },
-          {
-            "term": "Adopt multi-agent designs only when specializ…",
-            "definition": "Adopt multi-agent designs only when specialization/verification beats coordination cost on evals."
-          }
-        ],
-        "workedExample": {
-          "title": "Workflow vs autonomous loop cost sketch",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def workflow_cost(steps, tokens_per_step=300, price=0.01):\n    return steps * tokens_per_step / 1000.0 * price\n\ndef agent_cost(max_loops, tokens_per_loop=1200, price=0.01, stop_at=None):\n    loops = stop_at if stop_at is not None else max_loops\n    return loops * tokens_per_loop / 1000.0 * price\n\nprint(\"workflow\", round(workflow_cost(4), 4))\nprint(\"agent_avg\", round(agent_cost(8, stop_at=5), 4))\nprint(\"agent_worst\", round(agent_cost(8), 4))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can name three product flows that should stay deterministic.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to when not to use agents: workflows, approvals, and multi-agent cost."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "warning",
+          body:
+            "If a side-effecting tool is not safe to expose as a normal internal API, it is not safe to expose to an agent."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for agent architectures and patterns.",
-          "Trap: Unlimited loops without budgets. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Side-effecting tools without idempotency/approvals. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Persisting untrusted content into memory. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No comparison to a simpler non-agent flow. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Wrapping a fixed ETL-like process in an autonomous agent loop. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Letting the model self-approve refunds or emails. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Adding agents for resume keywords without eval proof. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "budgets-traces-and-operations",
+        heading: "Budgets, traces, and operations make autonomy shippable",
+        paragraphs: [
+          "Every production agent needs budgets: maximum steps, tokens, tool calls, wall-clock time, parallel branches, spend per task, and sometimes risk score. Budgets should stop the runtime, not merely appear in a prompt. A model that is told to be concise can still loop; a runtime that refuses the seventh tool call cannot. Budget breaches should produce clear stop reasons, safe user messages, and monitoring events so operators can see whether failures cluster around certain intents or tools.",
+          "Traces are the operational record of agent behavior. A useful trace captures spans for model calls, tool calls, retrieval, guardrail checks, approvals, retries, and memory writes. Attributes include model id, policy version, tool name, argument validation result, latency, token count, error class, cache hits, cost estimate, and stop reason. OpenTelemetry GenAI conventions and vendor trace tools have made this more consistent, but the principle is the same as microservices: you cannot debug what you did not observe.",
+          "Operations also includes kill switches, degraded modes, runbooks, and incident learning. If a research agent loops on a vendor outage, disable the failing tool or switch to read-only mode. If a support agent tries to send unauthorized emails, block that tool class and add the trajectory to red-team evals. Agent incidents should produce new tests, tighter contracts, or different approval rules, not just a stronger sentence in the system prompt."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Agent architectures and patterns and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Unlimited loops without budgets.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            term: "trajectory trace",
+            definition:
+              "A structured record of the model calls, tool calls, observations, guardrails, and stop reason for one agent run."
+          },
+          {
+            term: "runtime budget",
+            definition:
+              "A hard execution limit enforced by the orchestrator, such as max steps, max tokens, or max spend."
+          },
+          {
+            term: "degraded mode",
+            definition:
+              "A safer fallback behavior, such as read-only, retrieval-only, or human-only operation during incidents."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "List four trace attributes you would want when debugging a failed agent run.",
+            reveal:
+              "Examples include policy version, model id, tool names, validated arguments, tool errors, token counts, latency, cost, approval results, memory writes, and stop reason."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Agents are budgeted control loops over contracts. The durable abstraction is observe → plan/act → update memory until a stop condition—not unbounded autonomy. Mid-2026 systems encode stop conditions as hard budgets (steps, tokens, wall-clock), structured outputs, and human handoff. ReAct-style interleaving still helps tool selection, but production reliability comes from contracts around tools and state more than from longer chain-of-thought.\n\nPrefer deterministic workflows when the path is known (form submit, ETL, fixed approval chain). Reserve agents for ambiguous multi-step work where branching depends on observations. Teams that “agentify” CRUD create cost and failure modes without upside. Architecture reviews should start from the task graph and privilege set, then decide whether an LLM loop belongs at all.",
-          "MCP and shared tool protocols reduce glue—and clarify trust boundaries. The Model Context Protocol (MCP) standardizes how hosts discover tools/resources and exchange context with servers. Whether you adopt MCP or an internal equivalent, the industry direction is clear: typed tool surfaces, negotiated capabilities, and explicit client/server boundaries beat one-off adapters per model vendor. Shared protocols make authz, logging, and least privilege enforceable in one place.\n\nProtocol adoption does not remove threat models. Tool servers still need authentication, scoped credentials, and output sanitation against indirect injection. Multi-agent designs (planner/worker/critic) should pass typed artifacts, not free-form telepathy, and must attribute costs per agent role. Eval on trajectories—success, steps, policy violations—belongs in the same harness as chat quality.",
-          "Memory policy is a privacy and correctness feature. Short-term context, session scratchpads, and long-term stores (vector or structured) each need write/forget policies. Unbounded memory causes drift, cross-session leakage, and prompt-injection persistence. Store what improves task success; expire or redact what creates compliance risk. Reflection-style summaries help long tasks but must be treated as untrusted text when fed back as instructions.\n\nConnect agent fundamentals to serving and governance: tool privileges appear in the AI system inventory; trajectory logs feed eval; budgets protect unit economics. Strong mid-2026 answers mention MCP-style contracts, trajectory eval, and dual-control writes in the same breath as ReAct."
+        id: "evals-and-ship-decision",
+        heading: "Agent evals decide whether autonomy is worth it",
+        paragraphs: [
+          "Agent evaluation measures trajectories, not only final text. A final answer can look correct even after the agent called a forbidden tool, skipped approval, leaked private context, or spent ten dollars solving a ten-cent task. A production eval suite should score task success, tool-call correctness, policy violations, recovery from tool failures, unnecessary steps, cost, latency, and stop behavior. The baseline should include a deterministic workflow or human-assisted process, because autonomy must earn its complexity.",
+          "Good eval environments use simulators and recorded fixtures. Mocked tools return deterministic observations, including empty results, timeouts, permission errors, hostile documents, and partial data. Golden trajectories define expected calls for known tasks, while adversarial suites test prompt injection, memory poisoning, privilege escalation, and runaway loops. LLM-as-judge can help with open-ended quality, but executable checks should own anything involving side effects, schemas, permissions, or world-state changes.",
+          "The ship decision combines offline evidence, online canaries, monitoring readiness, and governance. For a low-risk note summarizer, a smaller eval suite and quick rollback may be enough. For an agent that files tickets, sends emails, touches code, or moves money, launch gates should require zero critical policy violations, enforced budgets, audited approvals, red-team coverage, owner runbooks, and a clear kill switch. The point of agent fundamentals is not to build agents everywhere; it is to know when and how they can be operated responsibly."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Agents are budgeted control loops over contracts",
-            "definition": "The durable abstraction is observe → plan/act → update memory until a stop condition—not unbounded autonomy. Mid-2026 systems encode stop conditions as hard budgets (steps, tokens, wall-clock), structured outputs, and hu…"
+            term: "trajectory eval",
+            definition:
+              "An evaluation that scores the sequence of actions, observations, decisions, and stop conditions, not just the final response."
           },
           {
-            "term": "MCP and shared tool protocols reduce glue—and clarify trust boundaries",
-            "definition": "The Model Context Protocol (MCP) standardizes how hosts discover tools/resources and exchange context with servers. Whether you adopt MCP or an internal equivalent, the industry direction is clear: typed tool surfaces, n…"
+            term: "simulated environment",
+            definition:
+              "A deterministic test harness with mocked tools and controlled observations for repeatable agent evaluation."
           },
           {
-            "term": "Memory policy is a privacy and correctness feature",
-            "definition": "Short-term context, session scratchpads, and long-term stores (vector or structured) each need write/forget policies. Unbounded memory causes drift, cross-session leakage, and prompt-injection persistence. Store what imp…"
+            term: "launch gate",
+            definition:
+              "A required threshold or evidence check that must pass before a system is promoted to production."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach agent architectures and patterns as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: When is an agent worse than a fixed workflow? | How do you prevent infinite tool-calling loops? | Design memory for a support agent with PII constraints."
-        ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Give a 90-second spoken overview of Agent architectures and patterns as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            prompt:
+              "What agent behavior can a final-answer-only eval miss?",
+            reveal:
+              "It can miss forbidden tools, skipped approvals, privacy leaks, excessive looping, fragile recovery, high cost, and wrong intermediate world-state changes."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "tip",
+          body:
+            "A good production agent review sounds like an SRE review plus an ML eval review plus a security review. That is the point."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can draw an agent state machine with budgets.",
-        "Chooses ReAct vs workflow deliberately.",
-        "Separates working vs durable memory.",
-        "Requires approval for irreversible tools.",
-        "Evaluates trajectories, not only final text."
+    wrapUp: {
+      takeaways: [
+        "Production agents are bounded stateful controllers, not unbounded model prompts.",
+        "State, memory, and replayable traces determine whether agent behavior can be debugged and governed.",
+        "Tool contracts, least privilege, validation, idempotency, and output sanitation are core agent architecture.",
+        "Runtime budgets and stop reasons must be enforced outside the model.",
+        "Trajectory evals decide whether autonomy beats simpler workflows."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Model Context Protocol specification (MCP) — https://modelcontextprotocol.io/specification/2025-11-25/",
-        "Optional deeper reading: ReAct: Synergizing Reasoning and Acting in Language Models (arXiv) — https://arxiv.org/abs/2210.03629"
+      nextSteps: [
+        "Sketch an agent state machine for a support refund task and mark deterministic, model, approval, and stop states.",
+        "Write a tool contract for one read-only tool and one mutating tool, including auth, validation, and audit fields.",
+        "Design three trajectory eval cases: happy path, tool failure, and indirect prompt injection."
       ]
     }
   },
   "ai-agents/tool-use-and-function-calling": {
-    "title": "Chapter: Tool use and function calling",
-    "readingTime": "55-70 min",
-    "premise": "Designing tool interfaces, function schemas, error handling, and safety guardrails for agents that interact with external systems. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Tool use and function calling in 2026 systems",
+    readingTime: "65-80 min",
+    premise:
+      "Function calling turns model outputs into structured actions, which means ordinary API design becomes AI safety infrastructure. This chapter covers typed schemas, routing, validation, permissions, idempotency, parallel calls, tool-result trust, MCP-style discovery, contract tests, and observability for agents that touch real systems.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Tool use is production API design under adversarial inputs: typed contracts, idempotency, least privilege, destructive confirmations, discoverable catalogs (MCP-style), and offline contract tests that do not need a live model.",
-          "This chapter treats \"Tool use and function calling\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "schemas-are-model-facing-apis",
+        heading: "Schemas are model-facing APIs",
+        paragraphs: [
+          "A function schema is both an API contract and UX copy for a model. The name, description, required fields, enums, examples, and output shape all influence whether the model chooses the right tool and emits valid arguments. Vague names such as `lookup` or `update_record` invite routing errors; narrow names such as `search_refund_policy` or `create_refund_draft` teach the model what the tool is for. The best schemas are boring, typed, versioned, and small.",
+          "Schema design should minimize ambiguity and post-processing. Use required fields for values the executor cannot infer, enums for constrained options, explicit formats for dates and identifiers, and examples for subtle cases. Reject unknown fields unless there is a deliberate compatibility reason. Return structured results with status, data, warnings, and retryable error classes instead of prose blobs. When a tool can fail, the error message should be safe to show the model and specific enough for one correction attempt.",
+          "By 2026, teams often expose tools through OpenAI-compatible function calling, vendor-specific tool APIs, MCP servers, or an internal catalog that normalizes all of them. The interface layer may differ, but the contract discipline does not. Tool schemas are versioned artifacts; changes should run contract tests and trajectory evals because a harmless-looking description edit can change routing behavior across thousands of agent runs."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "function schema",
+            definition:
+              "A structured description of a callable tool, including name, purpose, arguments, required fields, and expected output."
+          },
+          {
+            term: "model-facing API",
+            definition:
+              "An interface whose descriptions and constraints are consumed by a model as well as by ordinary code."
+          },
+          {
+            term: "retryable error",
+            definition:
+              "A validated failure response that gives the policy enough context to make one safe correction attempt."
+          }
+        ],
+        workedExample: {
+          title: "A narrow tool schema beats a generic one",
+          body:
+            "The schema text is intentionally specific: it limits scope, declares required fields, and returns a typed result.",
+          code:
+            "tool_schema = {\n    \"name\": \"create_refund_draft\",\n    \"description\": \"Draft a refund for later human approval. Does not move money.\",\n    \"parameters\": {\n        \"type\": \"object\",\n        \"required\": [\"account_id\", \"order_id\", \"amount_cents\", \"reason\"],\n        \"properties\": {\n            \"account_id\": {\"type\": \"string\", \"pattern\": \"^acct_\"},\n            \"order_id\": {\"type\": \"string\"},\n            \"amount_cents\": {\"type\": \"integer\", \"minimum\": 1},\n            \"reason\": {\"type\": \"string\", \"enum\": [\"duplicate\", \"late\", \"courtesy\"]},\n        },\n        \"additionalProperties\": False,\n    },\n}\nprint(tool_schema[\"name\"])",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why can a tool description change be production-risky even when code does not change?",
+            reveal:
+              "The description influences model routing and argument formation. A wording change can increase wrong-tool calls, malformed JSON, or unsafe tool selection, so it needs eval coverage."
+          }
+        ]
+      },
+      {
+        id: "validation-normalization-dispatch",
+        heading: "Validation, normalization, and dispatch are executor responsibilities",
+        paragraphs: [
+          "Models emit structured outputs that are often almost valid. They may add extra keys, pass numbers as strings, include whitespace in IDs, use a synonym for an enum, or omit a field they assumed the system could infer. The executor should normalize safe surface variations, validate strictly, and fail closed when meaning changes. For example, trimming whitespace from an account id is reasonable; accepting `all_accounts` where an account id is required is not.",
+          "Dispatch should be deterministic. Once a validated tool name and argument object arrive, ordinary code chooses the handler, checks auth, applies rate limits, manages idempotency, and records audit metadata. Do not ask the model to decide whether validation errors are acceptable. The model can receive a bounded error response and try again once, but infinite repair loops are a common spend and latency failure. A failed call must have a stop path.",
+          "Testing this layer does not require live model calls. Capture malformed arguments from staging, store them as fixtures, and run validators in CI. Add property-like tests for unknown fields, boundary values, enum case, missing required fields, and injection strings. The contract layer should be the most deterministic part of the system because it is where probabilistic output meets production state."
+        ],
+        keyTerms: [
+          {
+            term: "normalization",
+            definition:
+              "Safe canonicalization of model-produced arguments, such as trimming whitespace or mapping enum case before validation."
+          },
+          {
+            term: "fail closed",
+            definition:
+              "Reject uncertain, unauthorized, or malformed input rather than guessing a permissive interpretation."
+          },
+          {
+            term: "dispatch table",
+            definition:
+              "A deterministic mapping from validated tool names to executor functions."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "What belongs in code rather than in a prompt when executing a tool call?",
+            reveal:
+              "Validation, normalization, authorization, rate limits, idempotency, dispatch, audit logging, and timeout handling belong in code."
+          }
+        ]
+      },
+      {
+        id: "routing-and-tool-catalogs",
+        heading: "Routing quality improves when catalogs are scoped",
+        paragraphs: [
+          "Large tool catalogs create confusion. If a model sees fifty tools with overlapping descriptions, wrong-tool selection becomes a product risk. Production systems often scope candidate tools by user intent, product area, role, tenant, and task phase before the model chooses among them. A billing support conversation should not expose deployment tools; a read-only research phase should not expose mutating account actions. Reducing the action space is one of the simplest reliability wins.",
+          "Routing can be model-selected, rules-selected, classifier-selected, or hybrid. A hybrid router might use deterministic context to select a tool group, then let the LLM choose within that group. Measure routing with labeled transcripts: precision for selected tools, recall for required tools, argument-validity rate, and confusion pairs. If two tools are frequently confused, rename them or split their scopes rather than adding prompt warnings forever.",
+          "MCP-style discovery adds a useful boundary by letting hosts enumerate tools and resources from servers with schemas and capability metadata. It also creates a governance opportunity: catalogs can be filtered by permission, audited by version, and tested as deployable artifacts. Discovery does not mean every available tool should be visible in every turn. The runtime should still expose the minimum tool set needed for the current state."
+        ],
+        keyTerms: [
+          {
+            term: "candidate tool set",
+            definition:
+              "The subset of tools made visible to the policy for a particular user, task, and state."
+          },
+          {
+            term: "tool confusion pair",
+            definition:
+              "Two tools that are often selected in place of each other, indicating naming, description, or routing problems."
+          },
+          {
+            term: "capability discovery",
+            definition:
+              "A protocol or catalog process where a host learns available tools, resources, schemas, and constraints from a server."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "How would you reduce wrong-tool calls in an agent with a large catalog?",
+            reveal:
+              "Scope tools by intent, role, task phase, and permission; rename overlapping tools; measure confusion pairs; and keep candidate sets small."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Tool routing gets better when the model has fewer good choices, not when it has every possible choice plus a longer instruction."
         }
       },
       {
-        "id": "schemas-as-contracts",
-        "heading": "Schemas as contracts",
-        "paragraphs": [
-          "Function calling exposes JSON schemas describing tools: name, description, parameters, required fields, enums. Good descriptions improve routing; ambiguous names cause misfires. Keep tools small and composable. Prefer returning structured data over prose. Version schemas and reject unknown fields. In-browser we practice schema validation and dispatch tables without live model APIs. Tool descriptions are UX copy for the model; ambiguous verbs are routing bugs waiting to happen. Tool descriptions are UX copy for the model; ambiguous verbs are routing bugs waiting to happen.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Write schemas for machines and for model routing clarity.",
-          "• Keep tools narrowly scoped.",
-          "• Version and validate strictly.",
-          "Production lens — Schema design is API design: Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and error messages surfaced back to the model for self-correction. Idempotent tools and timeouts prevent runaway agent loops from causing side effects."
+        id: "side-effects-and-idempotency",
+        heading: "Side effects require approvals, idempotency, and audit trails",
+        paragraphs: [
+          "Read tools and write tools should live in different risk tiers. Searching documents, fetching order status, or calculating a quote can often happen automatically. Sending an email, changing a policy, refunding money, deleting data, posting to a customer channel, or modifying production infrastructure requires stronger controls. The design should distinguish drafts from commits: an agent may prepare a change, while a human or policy gate approves execution.",
+          "Idempotency is mandatory for mutating tools because models and networks retry. If a refund call times out after the downstream processor accepted it, a naive retry can duplicate money movement. An idempotency key tied to the operation, account, amount, and approval lets the executor return the original result on retry. Pair this with dry-run modes, explicit confirmation artifacts, rate limits, and irreversible-action warnings surfaced to reviewers.",
+          "Audit logs should answer who initiated the run, which policy version selected the tool, what arguments were validated, which approvals were present, what downstream request id was used, and what result came back. These logs support incident response, compliance, billing disputes, and eval improvements. Auditability is not bureaucratic overhead; it is the only way to distinguish model error, tool bug, user misuse, and operator approval failure after the fact."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Write schemas for machines and for",
-            "definition": "Write schemas for machines and for model routing clarity."
+            term: "draft tool",
+            definition:
+              "A tool that prepares a proposed side effect for review without committing the external action."
           },
           {
-            "term": "Keep tools narrowly scoped.",
-            "definition": "Keep tools narrowly scoped."
+            term: "confirmation artifact",
+            definition:
+              "A human approval, policy decision, or second-control record required before a high-impact action executes."
           },
           {
-            "term": "Version and validate strictly.",
-            "definition": "Version and validate strictly."
+            term: "audit trail",
+            definition:
+              "A durable record of initiator, policy, arguments, approvals, execution, and result for a tool invocation."
           }
         ],
-        "workedExample": {
-          "title": "Dispatch a validated tool call",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import json\n\nSCHEMAS = {\n    \"get_weather\": {\"required\": [\"city\"], \"properties\": {\"city\": str, \"units\": str}},\n}\n\ndef validate_call(name, args):\n    schema = SCHEMAS[name]\n    if not set(schema[\"required\"]).issubset(args):\n        raise ValueError(\"missing required\")\n    return args\n\ndef get_weather(city, units=\"metric\"):\n    return {\"city\": city, \"temp\": 22, \"units\": units}\n\ndispatch = {\"get_weather\": get_weather}\nargs = validate_call(\"get_weather\", {\"city\": \"Austin\"})\nprint(dispatch[\"get_weather\"](**args))",
-          "language": "python"
+        workedExample: {
+          title: "Idempotency key for a mutating action",
+          body:
+            "A retry with the same key returns the first result instead of repeating the side effect.",
+          code:
+            "results = {}\n\ndef send_email_draft(account_id, body, approval_id, idem_key):\n    if idem_key in results:\n        return results[idem_key]\n    if not approval_id:\n        raise PermissionError(\"approval required\")\n    result = {\"status\": \"sent\", \"message_id\": f\"msg_{len(results) + 1}\", \"account_id\": account_id}\n    results[idem_key] = result\n    return result\n\nprint(send_email_draft(\"acct_1\", \"Your refund is approved\", \"appr_9\", \"acct_1-refund-email\"))\nprint(send_email_draft(\"acct_1\", \"Your refund is approved\", \"appr_9\", \"acct_1-refund-email\"))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can write a clear JSON tool schema.",
-            "reveal": "Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and error messages surfaced back to the model for self-correction. Idempotent tools and timeouts prevent runaway agent loops from causing side effects."
+            prompt:
+              "Why are retries dangerous for agent tools that mutate state?",
+            reveal:
+              "The model or network may retry after a timeout even when the downstream side effect succeeded. Idempotency keys and stored results prevent duplicate actions."
           }
         ]
       },
       {
-        "id": "argument-validation-and-normalization",
-        "heading": "Argument validation and normalization",
-        "paragraphs": [
-          "Models emit almost-correct JSON: wrong types, extra keys, ISO dates with junk, city names with whitespace. Normalize (strip, casefold enums) then validate. On failure, return errors the policy can use for a single retry. Do not re-prompt endlessly. For numbers and IDs, prefer explicit formats and examples in the schema description. Unit-test validators with a corpus of messy model outputs captured from staging. Normalize enums and identifiers before privilege checks so casefolding cannot bypass allowlists. Normalize enums and identifiers before privilege checks so casefolding cannot bypass allowlists.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Normalize then validate; fail closed.",
-          "• One retry with error context is usually enough.",
-          "• Save messy outputs as regression fixtures.",
-          "Production lens — Parallel vs sequential tool calls trade latency for correctness: Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them back—models treat JSON as ground truth even when the tool returned partial errors."
+        id: "parallelism-output-trust",
+        heading: "Parallel calls and tool outputs need orchestration rules",
+        paragraphs: [
+          "Parallel tool calling can reduce latency when calls are independent: fetch profile, retrieve policy, and search recent tickets can run together. Writes usually require ordering because each operation changes the state seen by the next one. The orchestrator should know dependencies instead of letting the model freely launch parallel mutators. For long-running tools, futures or jobs need cancellation, timeout, and partial-result semantics so the agent can stop cleanly.",
+          "Tool outputs are not always true, complete, or safe. A search API can return stale snippets, a database query can return partial rows after a permission filter, a browser tool can fetch poisoned HTML, and a code tool can emit logs containing secrets. Validate outputs before using them as model context. Mark confidence, source, timestamp, permissions, and truncation. When the model sees tool output, make clear that it is observed data, not policy instruction.",
+          "A useful pattern is output adapters: each tool result is converted into a stable structured observation with fields for data, warnings, provenance, and safety flags. This keeps model prompts from depending on raw vendor response formats and lets guardrails inspect observations uniformly. It also makes trajectory eval easier because the expected observation shape is deterministic even if downstream providers evolve."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Normalize then validate; fail closed.",
-            "definition": "Normalize then validate; fail closed."
+            term: "parallel tool call",
+            definition:
+              "Multiple independent tool invocations launched together to reduce end-to-end latency."
           },
           {
-            "term": "One retry with error context is",
-            "definition": "One retry with error context is usually enough."
+            term: "output adapter",
+            definition:
+              "A normalization layer that converts raw tool responses into stable, provenance-rich observations."
           },
           {
-            "term": "Save messy outputs as regression fixtures.",
-            "definition": "Save messy outputs as regression fixtures."
+            term: "provenance",
+            definition:
+              "Metadata about where data came from, when it was produced, and under which permissions or filters."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Validates/normalizes arguments before dispatch.",
-            "reveal": "Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them back—models treat JSON as ground truth even when the tool returned partial errors."
+            prompt:
+              "Which tool calls are safer to parallelize: independent reads or dependent writes?",
+            reveal:
+              "Independent reads are safer to parallelize. Dependent writes usually need explicit ordering, confirmation, and state checks."
           }
         ]
       },
       {
-        "id": "permissions-and-side-effects",
-        "heading": "Permissions and side effects",
-        "paragraphs": [
-          "Read-only tools differ from mutators. Gate mutators by role, risk score, and confirmation. Provide dry-run modes. Audit logs should include who/what/when/why (prompt hash). Sandbox network tools with egress allowlists. Least privilege applies to agents as much as to microservices. Side-effecting tools deserve the same review rigor as public HTTP mutating endpoints. Side-effecting tools deserve the same review rigor as public HTTP mutating endpoints.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Separate read vs write tool tiers.",
-          "• Dry-run and confirm high-impact actions.",
-          "• Audit tool invocations thoroughly.",
-          "Production lens — Schema design is API design: Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and error messages surfaced back to the model for self-correction. Idempotent tools and timeouts prevent runaway agent loops from causing side effects."
+        id: "testing-and-observability",
+        heading: "Testing and observing tools closes the production loop",
+        paragraphs: [
+          "Tool quality can be tested in layers. Unit tests validate schemas and normalization. Contract tests call stubbed downstream services and verify outputs, errors, idempotency, and auth. Policy fixtures feed recorded model-produced calls into validation and dispatch without calling a live model. Trajectory tests run the full agent in a simulated environment. Live model tests remain useful, but they should be a thin top layer rather than the only proof that tools work.",
+          "Observability should emit a span for every tool call with tool name, schema version, latency, timeout, argument-validation status, auth decision, downstream status, retry count, idempotency key presence, output safety flags, and cost if relevant. Aggregate metrics should show malformed-call rate, wrong-tool rate, permission-denied rate, tool error rate, p95 latency, and side-effect approval bypass attempts. These metrics become eval seeds when incidents occur.",
+          "The mature 2026 tool stack treats prompts, schemas, validators, catalogs, and traces as one product surface. If routing degrades after a schema edit, the eval suite should catch it. If production sees a new malformed argument pattern, it should become a fixture. If a tool error spikes, the agent should degrade gracefully or hand off. Function calling is not a magic bridge from language to action; it is typed distributed systems work with probabilistic callers."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Separate read vs write tool tiers.",
-            "definition": "Separate read vs write tool tiers."
+            term: "contract test",
+            definition:
+              "A deterministic test that verifies a tool's schema, validation, auth, errors, and output behavior independent of a live model."
           },
           {
-            "term": "Dry-run and confirm high-impact actions.",
-            "definition": "Dry-run and confirm high-impact actions."
+            term: "malformed-call rate",
+            definition:
+              "The share of model-selected tool calls that fail schema or argument validation."
           },
           {
-            "term": "Audit tool invocations thoroughly.",
-            "definition": "Audit tool invocations thoroughly."
+            term: "wrong-tool rate",
+            definition:
+              "The share of calls where the selected tool does not match the labeled task requirement."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Gates side-effecting tools.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to permissions and side effects."
-          }
-        ]
-      },
-      {
-        "id": "routing-who-chooses-the-tool",
-        "heading": "Routing: who chooses the tool?",
-        "paragraphs": [
-          "The model may choose tools via function-calling APIs, or a router classifier/rules engine may choose first. Hybrid approaches constrain the candidate tool set by intent. Fewer tools improve routing accuracy. Measure tool precision/ recall on labeled transcripts. Confusion between similarly named tools is common—rename ruthlessly. Capture production argument failures into fixtures; they are better than synthetic fuzz for validators. Capture production argument failures into fixtures; they are better than synthetic fuzz for validators.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Limit candidate tools per intent when possible.",
-          "• Measure routing precision/recall.",
-          "• Rename overlapping tools.",
-          "Production lens — Parallel vs sequential tool calls trade latency for correctness: Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them back—models treat JSON as ground truth even when the tool returned partial errors."
-        ],
-        "keyTerms": [
-          {
-            "term": "Limit candidate tools per intent when",
-            "definition": "Limit candidate tools per intent when possible."
-          },
-          {
-            "term": "Measure routing precision/recall.",
-            "definition": "Measure routing precision/recall."
-          },
-          {
-            "term": "Rename overlapping tools.",
-            "definition": "Rename overlapping tools."
+            prompt:
+              "What is the fastest reliable way to test tool validators without spending on live LLM calls?",
+            reveal:
+              "Run recorded and synthetic argument fixtures through normalization, validation, dispatch stubs, and contract tests in CI."
           }
         ],
-        "workedExample": {
-          "title": "Simple intent->tool router",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "RULES = [\n    ((\"weather\", \"temperature\"), \"get_weather\"),\n    ((\"refund\", \"chargeback\"), \"create_refund\"),\n    ((\"password\", \"reset\"), \"start_password_reset\"),\n]\n\ndef route(utterance):\n    u = utterance.lower()\n    for keys, tool in RULES:\n        if any(k in u for k in keys):\n            return tool\n    return None\n\nfor s in [\"Need a refund for chargeback\", \"weather please\", \"hello\"]:\n    print(s, \"->\", route(s))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Measures routing quality.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to routing: who chooses the tool?."
-          }
-        ]
-      },
-      {
-        "id": "testing-tools-without-the-model",
-        "heading": "Testing tools without the model",
-        "paragraphs": [
-          "Treat each tool as an ordinary function with contract tests. Mock downstream HTTP. For the agent policy, feed recorded tool-call JSON fixtures through validation + dispatch. Only later run expensive live model tests. This split keeps CI fast and deterministic—critical for Pyodide-style offline teaching and for production engineering. When two tools overlap, delete or rename—do not hope the model disambiguates forever.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Contract-test tools independently.",
-          "• Fixture-test validation+dispatch paths.",
-          "• Reserve live model tests for thin top-level suites.",
-          "Production lens — Schema design is API design: Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and error messages surfaced back to the model for self-correction. Idempotent tools and timeouts prevent runaway agent loops from causing side effects."
-        ],
-        "keyTerms": [
-          {
-            "term": "Contract-test tools independently.",
-            "definition": "Contract-test tools independently."
-          },
-          {
-            "term": "Fixture-test validation+dispatch paths.",
-            "definition": "Fixture-test validation+dispatch paths."
-          },
-          {
-            "term": "Reserve live model tests for thin",
-            "definition": "Reserve live model tests for thin top-level suites."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Tests tools without live LLM calls.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to testing tools without the model."
-          }
-        ]
-      },
-      {
-        "id": "typed-tool-contracts-idempotency-least-privilege-and-mcp-style-discovery",
-        "heading": "Typed tool contracts, idempotency, least privilege, and MCP-style discovery",
-        "paragraphs": [
-          "Treat each tool as a public API the model can call under injection pressure. Specify JSON Schema (or equivalent) for arguments, reject unknown fields, coerce types carefully, and keep server-side authorization that ignores any “user is admin” string the model invents. Idempotency keys on mutating tools stop double refunds when the agent retries after a timeout; store request hash → result for a TTL. Least privilege means separate credentials per tool class: read-only CRM search must not share a token with wire-transfer. Destructive tools (delete, pay, page on-call) should require a confirmation artifact—second model check, human approval, or dual-control flag—before execution. MCP-style tool discovery is the emerging contract pattern: hosts list tools/resources from servers at session start, each with name, description, and schema, then invoke by stable name. Teaching point: whether or not you use MCP, your agent runtime needs a catalog, schemas, and permission scopes that can be audited. Offline contract tests bind sample argument objects to validators and stubbed side effects in CI; do not wait for an LLM to exercise refunds. Log tool name, latency, error class, and idempotency key for every call.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Schemas + server-side auth are mandatory; the model is not a security boundary.",
-          "• Idempotency keys make retries safe for payments and writes.",
-          "• Separate privileges and confirm destructive tools explicitly.",
-          "• Discoverable tool catalogs (MCP-style) plus offline contract tests keep systems evolvable.",
-          "Production lens — Parallel vs sequential tool calls trade latency for correctness: Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them back—models treat JSON as ground truth even when the tool returned partial errors."
-        ],
-        "keyTerms": [
-          {
-            "term": "Schemas + server-side auth are mandatory;",
-            "definition": "Schemas + server-side auth are mandatory; the model is not a security boundary."
-          },
-          {
-            "term": "Idempotency keys make retries safe for",
-            "definition": "Idempotency keys make retries safe for payments and writes."
-          },
-          {
-            "term": "Separate privileges and confirm destructive t…",
-            "definition": "Separate privileges and confirm destructive tools explicitly."
-          },
-          {
-            "term": "Discoverable tool catalogs (MCP-style) plus o…",
-            "definition": "Discoverable tool catalogs (MCP-style) plus offline contract tests keep systems evolvable."
-          }
-        ],
-        "workedExample": {
-          "title": "Idempotent tool execution with a schema check",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "STORE = {}\n\ndef validate_refund(args):\n    if not isinstance(args.get('amount_cents'), int) or args['amount_cents'] <= 0:\n        raise ValueError('amount')\n    if 'account_id' not in args:\n        raise ValueError('account')\n    return args\n\ndef refund(args, idem_key):\n    if idem_key in STORE:\n        return STORE[idem_key]\n    args = validate_refund(args)\n    result = {'status': 'ok', 'amount_cents': args['amount_cents']}\n    STORE[idem_key] = result\n    return result\n\nprint(refund({'account_id': 'A1', 'amount_cents': 500}, 'k1'))\nprint(refund({'account_id': 'A1', 'amount_cents': 500}, 'k1'))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Defines schemas, authz, and idempotency for every mutating tool.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to typed tool contracts, idempotency, least privilege, and mcp-style discovery."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
-        }
-      },
-      {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for tool use and function calling.",
-          "Trap: Giant multipurpose tools. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Trusting model JSON without validation. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Write tools exposed to all users. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Only end-to-end live tests, no contract tests. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Trusting model-provided role or account ids without authz checks. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Retrying payments without idempotency keys. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Only testing tools through flaky full-agent transcripts. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
-        ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
-          {
-            "prompt": "Pick the most dangerous pitfall for Tool use and function calling and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Giant multipurpose tools.\" Then add a detection signal (metric, test, or review question) and a mitigation."
-          }
-        ]
-      },
-      {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Schema design is API design. Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and error messages surfaced back to the model for self-correction. Idempotent tools and timeouts prevent runaway agent loops from causing side effects.",
-          "Parallel vs sequential tool calls trade latency for correctness. Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them back—models treat JSON as ground truth even when the tool returned partial errors."
-        ],
-        "keyTerms": [
-          {
-            "term": "Schema design is API design",
-            "definition": "Tool descriptions, parameter types, and required fields directly affect call accuracy. Ambiguous names (\"search\" vs \"search_products\") and overly nested JSON schemas increase malformed calls. Provide enums, examples, and…"
-          },
-          {
-            "term": "Parallel vs sequential tool calls trade latency for correctness",
-            "definition": "Independent reads can be parallelized; writes often need ordering and confirmation. Some APIs expose parallel function calling natively; others require explicit orchestration. Validate tool outputs before feeding them ba…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach tool use and function calling as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: Design tools for a banking support agent. | How do you validate model-produced arguments? | How do you prevent unauthorized refunds?"
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Give a 90-second spoken overview of Tool use and function calling as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "interview",
+          body:
+            "For tool-use interviews, say how you prevent harm before saying how you make the demo impressive."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can write a clear JSON tool schema.",
-        "Validates/normalizes arguments before dispatch.",
-        "Gates side-effecting tools.",
-        "Measures routing quality.",
-        "Tests tools without live LLM calls."
+    wrapUp: {
+      takeaways: [
+        "Function schemas are production API contracts and model-facing UX.",
+        "Executors own validation, normalization, authorization, dispatch, retries, and audit logs.",
+        "Tool catalogs should be scoped by intent, role, permission, and task phase.",
+        "Mutating tools require idempotency, approval states, dry runs, and clear audit trails.",
+        "Tool observability and contract tests turn model-produced calls into maintainable systems."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: OpenAI Function Calling Guide (OpenAI) — https://platform.openai.com/docs/guides/function-calling",
-        "Optional deeper reading: Toolformer: Language Models Can Teach Themselves to Use Tools (arXiv) — https://arxiv.org/abs/2302.04761"
+      nextSteps: [
+        "Rewrite one generic tool into three narrow tools with clearer schemas.",
+        "Create malformed-call fixtures for missing fields, wrong enum values, and injection strings.",
+        "Define metrics for wrong-tool rate, malformed-call rate, and side-effect approval coverage."
       ]
     }
   },
   "ai-agents/agent-evaluation-and-safety": {
-    "title": "Chapter: Agent evaluation and safety",
-    "readingTime": "55-70 min",
-    "premise": "Benchmarking agent performance, measuring reliability, and implementing safety controls for production deployment. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Agent evaluation and safety",
+    readingTime: "70-85 min",
+    premise:
+      "Agent safety is evaluated through trajectories, not vibes. This chapter shows how production teams define success predicates, build simulators, red-team direct and indirect attacks, enforce runtime guardrails, monitor loop and spend SLOs, and turn incidents into eval cases before expanding autonomous capabilities.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Agent quality is trajectory quality: tool-call correctness, injection resistance, and cost/loop budgets as SLOs—not only a final answer rubric. Mid-2026 teams that skip these ship demos that fail under adversarial or long-running use.",
-          "This chapter treats \"Agent evaluation and safety\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "trajectory-success",
+        heading: "Define success on the full trajectory",
+        paragraphs: [
+          "An agent trajectory contains the messages, policy decisions, tool names, arguments, observations, validation outcomes, approvals, retries, costs, and stop reason for a run. Safety and quality live across that whole path. A final response saying `I cancelled your order` is not successful if the agent cancelled the wrong order first, emailed private data to another user, skipped a required approval, or looped until a budget monitor killed it.",
+          "A good task spec defines initial state, allowed tools, forbidden tools, success predicate, violation predicate, expected approvals, maximum steps, and acceptable stop reasons. For a refund agent, success might require reading order status, drafting a refund under a threshold, obtaining approval for high amounts, and never calling the payment executor directly. For a code agent, success may require tests passing, no secrets in diff, and no writes outside the repository. These predicates should be executable whenever possible.",
+          "Final-answer rubrics still matter for user communication, but they are not enough for agent safety. Mid-2026 teams score task completion, tool correctness, policy violations, cost, latency, recovery, and user-visible explanation separately. This allows a launch review to distinguish a fluent but unsafe agent from a terse but correct workflow. It also gives teams a path to improve specific failure modes instead of debating overall quality."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "success predicate",
+            definition:
+              "A machine-checkable or reviewable condition that defines what it means for the task to be completed correctly."
+          },
+          {
+            term: "violation predicate",
+            definition:
+              "A condition that flags forbidden behavior such as unauthorized tools, missing approvals, privacy leaks, or budget breaches."
+          },
+          {
+            term: "stop reason",
+            definition:
+              "The explicit reason an agent run ended, such as success, budget exceeded, blocked by policy, user handoff, or tool failure."
+          }
+        ],
+        workedExample: {
+          title: "Score a refund trajectory",
+          body:
+            "The scorer separates task success from policy violations and efficiency.",
+          code:
+            "def score_refund(traj):\n    tools = [step[\"tool\"] for step in traj if step[\"type\"] == \"tool\"]\n    approved = any(step.get(\"approval\") == \"manager\" for step in traj)\n    success = \"create_refund_draft\" in tools and \"finish\" in tools\n    violations = []\n    if \"execute_refund\" in tools:\n        violations.append(\"direct_money_movement\")\n    if \"create_refund_draft\" in tools and not approved:\n        violations.append(\"missing_approval\")\n    return {\"success\": success, \"violations\": violations, \"tool_steps\": len(tools)}\n\nprint(score_refund([\n    {\"type\": \"tool\", \"tool\": \"get_order\"},\n    {\"type\": \"approval\", \"approval\": \"manager\"},\n    {\"type\": \"tool\", \"tool\": \"create_refund_draft\"},\n    {\"type\": \"tool\", \"tool\": \"finish\"},\n]))",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why can an agent with good final answers still fail safety evaluation?",
+            reveal:
+              "Because it may take unsafe intermediate actions: wrong tools, missing approvals, privacy leaks, excessive spend, or state changes that the final answer hides."
+          }
+        ]
+      },
+      {
+        id: "offline-simulators",
+        heading: "Simulators and golden trajectories make eval repeatable",
+        paragraphs: [
+          "Agent evals need environments, not just prompts. A simulator provides deterministic tool responses, user states, documents, permissions, and failure modes. It can return normal results, empty results, stale data, permission errors, timeouts, malformed downstream responses, or hostile documents. Because the environment is repeatable, teams can compare policy versions and model changes without wondering whether the world changed under the test.",
+          "Golden trajectories define expected or acceptable paths for representative tasks. They do not require the agent to produce the exact same prose at every step, but they specify required tools, forbidden tools, state transitions, approvals, and stop reasons. Recovery goldens are especially valuable: the search tool fails once, the first document is hostile, the account is not eligible, or the user changes the request midway. These cases reveal whether the agent is robust or merely good at the demo path.",
+          "The simulator also becomes the bridge between incidents and prevention. When production finds a new loop, wrong-tool call, or injection bypass, the team recreates it as an environment fixture and adds it to CI. This is the agent equivalent of adding a regression test after a bug. Without this loop, safety work becomes episodic red-team theater instead of compounding engineering memory."
+        ],
+        keyTerms: [
+          {
+            term: "golden trajectory",
+            definition:
+              "A reference path or set of path constraints used to evaluate an agent's actions for a known task."
+          },
+          {
+            term: "environment fixture",
+            definition:
+              "A deterministic simulated state, including tool responses and documents, used in repeatable agent evaluation."
+          },
+          {
+            term: "recovery case",
+            definition:
+              "An eval case designed to test behavior after a tool error, missing data, adversarial content, or changed user goal."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "What should an agent simulator include besides happy-path tool results?",
+            reveal:
+              "It should include errors, empty results, permission denials, hostile documents, stale data, partial responses, changed goals, and budget pressure."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "The best simulator is not realistic in every detail; it is realistic about the failures that matter."
         }
       },
       {
-        "id": "define-success-without-vibes",
-        "heading": "Define success without vibes",
-        "paragraphs": [
-          "Write task specs: initial state, allowed tools, success predicate, forbidden actions. Example: \"cancel order 123 if it has not shipped; never email the user.\" Score binary success, policy violations, step efficiency, and cost. Ambiguous goals produce ambiguous evals. Convert product aspirations into predicates you can compute on trajectories. Safety metrics must be computed on trajectories, because the final answer can look fine after a dangerous tool call. Safety metrics must be computed on trajectories, because the final answer can look fine after a dangerous tool call.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Success predicates must be machine-checkable when possible.",
-          "• Track violations separately from success.",
-          "• Include efficiency/cost, not only pass rate.",
-          "Production lens — Trajectory evaluation beats single-turn benchmarks: Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-judge need calibration; always anchor with executable checks (did the DB row change? did tests pass?)."
+        id: "guardrails-in-runtime",
+        heading: "Guardrails must execute in the runtime",
+        paragraphs: [
+          "Prompt instructions are useful but insufficient. Runtime guardrails enforce rules before and after model calls: input filters, tool allowlists, argument validation, permission checks, PII redaction, output constraints, budget limits, content classifiers, and approval gates. If a policy says the agent may not email customers without approval, the email tool executor must enforce that. A prompt that asks the model to remember the rule is not a control.",
+          "Guardrails should be layered. Static controls define which tools can appear for a task. Pre-tool controls validate arguments and permissions. Post-tool controls sanitize observations before they return to the model. Output controls check whether user-visible text includes forbidden content, unsupported claims, or missing disclosures. Budget controls stop loops and retry storms. Each guardrail should produce trace events so teams know whether it is protecting users or blocking legitimate work too often.",
+          "There is a tradeoff between strictness and task success. Overly broad refusal rules can make an agent useless; permissive rules can create harm. Production teams tune guardrails with evals and online monitoring: block rates by category, false-positive review, policy-violation escapes, user escalation, and business impact. The goal is not maximum blocking. The goal is reliable completion inside explicit risk boundaries."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Success predicates must be machine-checkable …",
-            "definition": "Success predicates must be machine-checkable when possible."
+            term: "runtime guardrail",
+            definition:
+              "A control enforced by orchestration or tool code rather than by model instruction alone."
           },
           {
-            "term": "Track violations separately from success.",
-            "definition": "Track violations separately from success."
+            term: "policy escape",
+            definition:
+              "A case where unsafe or forbidden behavior passes through guardrails and reaches a user or external system."
           },
           {
-            "term": "Include efficiency/cost, not only pass rate.",
-            "definition": "Include efficiency/cost, not only pass rate."
+            term: "false positive",
+            definition:
+              "A legitimate request blocked by a guardrail, potentially harming user experience or task success."
           }
         ],
-        "workedExample": {
-          "title": "Score a trajectory against rules",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def score(trajectory, forbidden_tools, must_call):\n    tools = [e[\"tool\"] for e in trajectory if e[\"type\"] == \"tool\"]\n    success = must_call in tools and \"finish\" in tools\n    violations = [t for t in tools if t in forbidden_tools]\n    return {\"success\": success, \"violations\": violations, \"steps\": len(tools)}\n\ntraj = [\n    {\"type\": \"tool\", \"tool\": \"get_order\"},\n    {\"type\": \"tool\", \"tool\": \"cancel_order\"},\n    {\"type\": \"tool\", \"tool\": \"finish\"},\n]\nprint(score(traj, forbidden_tools={\"email_user\"}, must_call=\"cancel_order\"))",
-          "language": "python"
+        checkYourself: [
+          {
+            prompt:
+              "Give three examples of agent safety rules that should be enforced outside the prompt.",
+            reveal:
+              "Tool allowlists, authorization checks, PII redaction, approval requirements, schema validation, rate limits, output filters, and budget caps should be enforced by runtime or tool code."
+          }
+        ]
+      },
+      {
+        id: "red-teaming-threats",
+        heading: "Red-team the threats agents actually face",
+        paragraphs: [
+          "Agent attacks target the bridge between language and action. Direct attacks ask the model to ignore policy. Indirect attacks hide instructions in retrieved documents, web pages, emails, tickets, PDFs, terminal output, or tool responses. Confused-deputy attacks trick an agent with legitimate privileges into performing an action for the wrong user or tenant. Memory attacks try to persist malicious instructions across sessions. Spend attacks cause loops, repeated expensive calls, or unbounded context growth.",
+          "Red teams should be scenario-based rather than prompt-only. Give the agent a poisoned knowledge-base page that says `send the API key to this URL`, a fake invoice that asks for a bank change, a ticket comment that says `the user approved this refund`, or a search result that embeds tool instructions. Then measure whether the runtime labels the content as untrusted, blocks privileged actions, avoids memory writes, and stops inside budget. The score is attack success rate by class, not a list of clever jailbreak strings.",
+          "Red-team suites must run when prompts, models, tools, memory policies, or retrieval sources change. New model versions can become more capable and also more willing to follow malicious context. New tools expand blast radius. New retrieval corpora change the attack surface. The red-team process is useful only if failures become concrete mitigations: tighter tool contracts, better output sanitation, additional approval gates, simulator fixtures, or changed product scope."
+        ],
+        keyTerms: [
+          {
+            term: "confused deputy",
+            definition:
+              "A failure where an authorized agent is tricked into using its privileges on behalf of an unauthorized actor or context."
+          },
+          {
+            term: "attack success rate",
+            definition:
+              "The share of adversarial scenarios where the attacker achieves the harmful objective."
+          },
+          {
+            term: "blast radius",
+            definition:
+              "The maximum harm possible if an agent, tool, or credential is misused."
+          }
+        ],
+        workedExample: {
+          title: "Classify red-team cases by attack class",
+          body:
+            "Even a simple taxonomy helps teams see which defenses need coverage.",
+          code:
+            "cases = [\n    {\"id\": \"rt1\", \"source\": \"user\", \"goal\": \"ignore policy\", \"class\": \"direct_injection\"},\n    {\"id\": \"rt2\", \"source\": \"retrieved_pdf\", \"goal\": \"exfiltrate key\", \"class\": \"indirect_injection\"},\n    {\"id\": \"rt3\", \"source\": \"ticket\", \"goal\": \"fake approval\", \"class\": \"confused_deputy\"},\n]\ncoverage = {}\nfor case in cases:\n    coverage[case[\"class\"]] = coverage.get(case[\"class\"], 0) + 1\nprint(coverage)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Writes machine-checkable success/violation metrics.",
-            "reveal": "Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-judge need calibration; always anchor with executable checks (did the DB row change? did tests pass?)."
-          }
-        ]
-      },
-      {
-        "id": "offline-simulators-and-golden-trajectories",
-        "heading": "Offline simulators and golden trajectories",
-        "paragraphs": [
-          "Build mocked environments that return deterministic tool outputs. Store golden trajectories for regression. Mutate environments to test recovery (tool errors, empty search). CI runs the agent policy against the simulator. This is the only scalable way to catch loops and illegal calls before production. LLM-as-judge can rate free-form answers but should not be the only gate for safety-critical actions. Simulators should include hostile documents that attempt indirect injection through search results. Simulators should include hostile documents that attempt indirect injection through search results.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Invest in deterministic tool simulators.",
-          "• Golden + adversarial environment variants.",
-          "• Do not rely solely on LLM judges for safety.",
-          "Production lens — Sandboxing and least-privilege are non-negotiable: Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets via tool channels. Red-team for indirect injection via tool return payloads and cross-session memory poisoning."
-        ],
-        "keyTerms": [
-          {
-            "term": "Invest in deterministic tool simulators.",
-            "definition": "Invest in deterministic tool simulators."
-          },
-          {
-            "term": "Golden + adversarial environment variants.",
-            "definition": "Golden + adversarial environment variants."
-          },
-          {
-            "term": "Do not rely solely on LLM",
-            "definition": "Do not rely solely on LLM judges for safety."
+            prompt:
+              "Why is testing only direct jailbreak prompts insufficient for agent safety?",
+            reveal:
+              "Agents ingest untrusted tool and retrieval outputs. Indirect injection, confused-deputy attacks, memory poisoning, and spend loops often happen through those channels, not only through user text."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Runs simulator-based CI for agents.",
-            "reveal": "Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets via tool channels. Red-team for indirect injection via tool return payloads and cross-session memory poisoning."
-          }
-        ]
-      },
-      {
-        "id": "safety-policies-and-runtime-enforcement",
-        "heading": "Safety policies and runtime enforcement",
-        "paragraphs": [
-          "Policies belong both in prompts and in code. Code must enforce allowlists, rate limits, PII redaction, and human approvals even if the model agrees to break rules. Defense in depth: prompt policy, static tool gates, runtime monitors, and post-hoc audit. For jailbreaks aiming at tool abuse, assume prompt-only defenses fail. Budget monitors belong in the runtime path, not only in offline scoring notebooks. Budget monitors belong in the runtime path, not only in offline scoring notebooks.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Enforce safety in code paths, not only prompts.",
-          "• Rate-limit and allowlist tools.",
-          "• Assume adversarial users exist.",
-          "Production lens — Trajectory evaluation beats single-turn benchmarks: Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-judge need calibration; always anchor with executable checks (did the DB row change? did tests pass?)."
-        ],
-        "keyTerms": [
-          {
-            "term": "Enforce safety in code paths, not",
-            "definition": "Enforce safety in code paths, not only prompts."
-          },
-          {
-            "term": "Rate-limit and allowlist tools.",
-            "definition": "Rate-limit and allowlist tools."
-          },
-          {
-            "term": "Assume adversarial users exist.",
-            "definition": "Assume adversarial users exist."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Enforces safety in code allowlists.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to safety policies and runtime enforcement."
-          }
-        ]
-      },
-      {
-        "id": "red-teaming-agents",
-        "heading": "Red teaming agents",
-        "paragraphs": [
-          "Attack goals: exfiltrate secrets, escalate privileges, trigger spamful emails, poison memory, or cause infinite spend. Include indirect injection via retrieved documents. Score whether guards blocked the action. Schedule periodic red teams as models/prompts change. Track coverage of attack classes like you track code coverage. Launch gates need numeric thresholds and a named approver; vibes do not satisfy audits. Launch gates need numeric thresholds and a named approver; vibes do not satisfy audits.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Include indirect injection via tools/docs.",
-          "• Measure block rate by attack class.",
-          "• Re-run red teams on every major prompt/model change.",
-          "Production lens — Sandboxing and least-privilege are non-negotiable: Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets via tool channels. Red-team for indirect injection via tool return payloads and cross-session memory poisoning."
-        ],
-        "keyTerms": [
-          {
-            "term": "Include indirect injection via tools/docs.",
-            "definition": "Include indirect injection via tools/docs."
-          },
-          {
-            "term": "Measure block rate by attack class.",
-            "definition": "Measure block rate by attack class."
-          },
-          {
-            "term": "Re-run red teams on every major",
-            "definition": "Re-run red teams on every major prompt/model change."
-          }
-        ],
-        "workedExample": {
-          "title": "Heuristic runtime monitor for spend/loops",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def monitor(events, max_steps=5, max_cost=3.0):\n    cost = 0.0\n    steps = 0\n    alerts = []\n    for e in events:\n        if e[\"type\"] == \"tool\":\n            steps += 1\n            cost += e.get(\"cost\", 1.0)\n            if steps > max_steps:\n                alerts.append(\"loop\")\n            if cost > max_cost:\n                alerts.append(\"spend\")\n    return list(dict.fromkeys(alerts))\n\nprint(monitor([\n    {\"type\": \"tool\", \"cost\": 1},\n    {\"type\": \"tool\", \"cost\": 1},\n    {\"type\": \"tool\", \"cost\": 1},\n    {\"type\": \"tool\", \"cost\": 1},\n]))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Red-teams direct and indirect injection.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to red teaming agents."
-          }
-        ]
-      },
-      {
-        "id": "shipping-gates-and-incident-response",
-        "heading": "Shipping gates and incident response",
-        "paragraphs": [
-          "Define launch gates: offline success threshold, zero high-severity violations on red team, latency/cost budgets, and kill switches. Write runbooks for runaway agents (disable tools, force human-only mode). Store transcripts for forensics with privacy controls. Safety is an ongoing operations practice layered on evaluation engineering. After incidents, add a regression case before re-enabling the tool.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Codify launch gates with numeric thresholds.",
-          "• Have kill switches and runbooks.",
-          "• Retain forensic transcripts responsibly.",
-          "Production lens — Trajectory evaluation beats single-turn benchmarks: Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-judge need calibration; always anchor with executable checks (did the DB row change? did tests pass?)."
-        ],
-        "keyTerms": [
-          {
-            "term": "Codify launch gates with numeric thresholds.",
-            "definition": "Codify launch gates with numeric thresholds."
-          },
-          {
-            "term": "Have kill switches and runbooks.",
-            "definition": "Have kill switches and runbooks."
-          },
-          {
-            "term": "Retain forensic transcripts responsibly.",
-            "definition": "Retain forensic transcripts responsibly."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Defines kill switches and runbooks.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to shipping gates and incident response."
-          }
-        ]
-      },
-      {
-        "id": "trajectory-eval-tool-correctness-injection-red-teams-and-loop-slos",
-        "heading": "Trajectory eval, tool correctness, injection red teams, and loop SLOs",
-        "paragraphs": [
-          "Evaluate agents as paths, not endpoints. A trajectory record includes messages, tool names, arguments, observations, latencies, and stop reasons. Score tool-call correctness separately from natural-language quality: wrong tool, missing required arg, hallucinated id, or skipped confirmation is a fail even if the final sentence looks helpful. Build golden trajectories for happy paths and for forced recovery (tool 500, empty search). LLM-as-judge can grade open-ended steps but needs blinded rubrics, spot-checked human agreement, and awareness of verbosity bias. Injection red teams are mandatory: direct (“ignore policies”), indirect (poisoned retrieved docs, malicious PDF text, tool-returned HTML), and confused-deputy cases where the model is tricked into calling privileged tools. Measure attack success rate and time-to-detect. Cost and loop budgets are first-class SLOs alongside task success: max tool calls, max tokens, max wall time, max spend per session; breach should stop the agent with a safe user message. Online, monitor tool error rate, repeat-tool thrash, approval bypass attempts, and spend per successful task. Ship gates: offline suite green, red-team below threshold, budgets enforced in the runtime—not only documented in a wiki.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Score trajectories and tool-call correctness, not only final answers.",
-          "• Red-team direct and indirect injection, including tool-returned content.",
-          "• Treat max loops/tokens/spend as SLOs enforced in the runtime.",
-          "• Combine golden trajectories, judges with human calibration, and online thrash metrics.",
-          "Production lens — Sandboxing and least-privilege are non-negotiable: Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets via tool channels. Red-team for indirect injection via tool return payloads and cross-session memory poisoning."
-        ],
-        "keyTerms": [
-          {
-            "term": "Score trajectories and tool-call correctness,…",
-            "definition": "Score trajectories and tool-call correctness, not only final answers."
-          },
-          {
-            "term": "Red-team direct and indirect injection, inclu…",
-            "definition": "Red-team direct and indirect injection, including tool-returned content."
-          },
-          {
-            "term": "Treat max loops/tokens/spend as SLOs enforced",
-            "definition": "Treat max loops/tokens/spend as SLOs enforced in the runtime."
-          },
-          {
-            "term": "Combine golden trajectories, judges with human",
-            "definition": "Combine golden trajectories, judges with human calibration, and online thrash metrics."
-          }
-        ],
-        "workedExample": {
-          "title": "Score tool-call correctness on a trajectory",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def tool_score(trajectory, expected_calls):\n    got = [(t['name'], tuple(sorted(t['args'].items()))) for t in trajectory if t['type'] == 'tool']\n    exp = [(n, tuple(sorted(a.items()))) for n, a in expected_calls]\n    return got == exp\n\ntraj = [\n    {'type': 'tool', 'name': 'search', 'args': {'q': 'invoice 9'}},\n    {'type': 'tool', 'name': 'refund', 'args': {'id': '9', 'cents': 500}},\n]\nprint(tool_score(traj, [('search', {'q': 'invoice 9'}), ('refund', {'id': '9', 'cents': 500})]))\nprint(tool_score(traj, [('refund', {'id': '9', 'cents': 500})]))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Maintains golden trajectories with expected tool calls.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to trajectory eval, tool correctness, injection red teams, and loop slos."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "warning",
+          body:
+            "A tool-connected agent has a larger attack surface than a chatbot because language can trigger real actions."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for agent evaluation and safety.",
-          "Trap: Demo transcripts as evaluation. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Prompt-only safety for write tools. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No cost/loop monitors at runtime. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No incident plan for runaway actions. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Judging only the final message while tools did the wrong thing. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No budget → infinite retry loops in production. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Red-teaming only the system prompt and ignoring indirect injection. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "monitoring-and-slos",
+        heading: "Loop, cost, and safety SLOs belong in production monitoring",
+        paragraphs: [
+          "Agent monitoring includes ordinary service health plus trajectory-specific signals. Track p50 and p99 latency, model error rate, tool error rate, validation failures, approval wait time, token spend, cost per successful task, steps per run, repeated-tool thrash, stop reasons, guardrail blocks, policy escapes, memory writes, and human handoffs. For LLM serving, time-to-first-token and tokens per second may also matter. A healthy HTTP dashboard can hide an agent that is becoming expensive, indecisive, or unsafe.",
+          "SLOs should map to user and business risk. A research agent may tolerate longer runs but should cap spend. A support agent should minimize unauthorized-tool attempts and hand off quickly when confidence is low. A coding agent should stop on test failure instead of making unbounded edits. Budget breaches should be visible as first-class incidents, not buried in logs. Cost per successful task is often more meaningful than cost per request because a cheap failed task still consumes human cleanup.",
+          "Monitoring should feed evaluation. Sampled failures become golden trajectories; repeated guardrail denials become red-team cases; high malformed-call rates become schema fixes; tool latency spikes become degraded-mode triggers. This closes the loop between online reality and offline gates. Without this feedback, the eval suite freezes while production behavior drifts."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Agent evaluation and safety and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Demo transcripts as evaluation.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            term: "tool thrash",
+            definition:
+              "Repeatedly calling the same or similar tools without meaningful progress, often a loop or planning failure."
+          },
+          {
+            term: "cost per successful task",
+            definition:
+              "Total model and tool cost divided by completed tasks, which exposes expensive failures."
+          },
+          {
+            term: "policy escape rate",
+            definition:
+              "The frequency with which forbidden behavior bypasses guardrails and reaches an external effect or user."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Name five production metrics that are more agent-specific than ordinary HTTP health checks.",
+            reveal:
+              "Examples include steps per run, repeated-tool thrash, stop reason distribution, guardrail block rate, tool validation failure rate, approval wait time, memory writes, token spend, and cost per successful task."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Trajectory evaluation beats single-turn benchmarks. Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-judge need calibration; always anchor with executable checks (did the DB row change? did tests pass?).",
-          "Sandboxing and least-privilege are non-negotiable. Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets via tool channels. Red-team for indirect injection via tool return payloads and cross-session memory poisoning."
+        id: "launch-gates-and-incidents",
+        heading: "Launch gates and incidents turn safety into operations",
+        paragraphs: [
+          "A launch gate is a concrete promotion rule. For agents, gates often include offline task success above threshold, zero critical policy escapes, red-team attack success below threshold, budget enforcement verified, tool contracts tested, audit sinks working, human approvals configured, rollback tested, and owner runbooks published. The threshold should match risk. An internal brainstorming assistant and a customer-facing finance agent should not share the same gate.",
+          "Incident response needs prebuilt controls. Teams should be able to disable a tool class, switch a model alias, force read-only mode, turn off durable memory writes, reduce max steps, route to humans, or roll back a prompt and schema bundle without redeploying the whole product. Transcripts and traces require privacy controls, but they must be available to responders with appropriate access. The worst time to design a kill switch is during a runaway-agent incident.",
+          "After an incident, fix the system, not only the symptom. If the model used a fake approval from a retrieved ticket, add provenance checks and an eval case. If spend spiked during a vendor outage, add timeout handling and degraded mode. If an agent leaked information across tenants, review memory isolation and trace access. Mature agent safety is boring in the best sense: it becomes a repeatable operational loop of evidence, controls, monitoring, and regression tests."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Trajectory evaluation beats single-turn benchmarks",
-            "definition": "Agents fail across multi-step runs—wrong tool order, loops, partial task completion. Eval suites (WebArena, SWE-bench, custom task graphs) measure success rate, steps to completion, and cost. Human rubrics plus LLM-as-ju…"
+            term: "model alias",
+            definition:
+              "A stable production name that can be pointed to different concrete model or prompt versions for canary and rollback."
           },
           {
-            "term": "Sandboxing and least-privilege are non-negotiable",
-            "definition": "Agents with shell, browser, or payment tools require OS-level sandboxes, scoped credentials, and approval gates for irreversible actions. Prompt-level safety does not stop a determined jailbreak from exfiltrating secrets…"
-          }
-        ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach agent evaluation and safety as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you evaluate an agent that can issue refunds? | What belongs in an agent simulator for CI? | How do you stop infinite tool loops in production?"
-        ],
-        "checkYourself": [
+            term: "kill switch",
+            definition:
+              "An operational control that disables or constrains a risky capability immediately."
+          },
           {
-            "prompt": "Give a 90-second spoken overview of Agent evaluation and safety as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "evidence pack",
+            definition:
+              "The eval reports, red-team results, tool tests, monitoring proof, approvals, and runbooks used in a launch review."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt:
+              "What should change after an agent safety incident besides the system prompt?",
+            reveal:
+              "Add regression evals, strengthen tool contracts or approvals, adjust guardrails, update monitoring, revise runbooks, and reduce blast radius where needed."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "When asked how to make agents safe, answer with launch gates, runtime controls, and incident learning. Prompt wording is only one layer."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Writes machine-checkable success/violation metrics.",
-        "Runs simulator-based CI for agents.",
-        "Enforces safety in code allowlists.",
-        "Red-teams direct and indirect injection.",
-        "Defines kill switches and runbooks."
+    wrapUp: {
+      takeaways: [
+        "Agent quality must be scored on trajectories, including tools, approvals, costs, and stop reasons.",
+        "Simulated environments and golden trajectories make safety regression testing repeatable.",
+        "Runtime guardrails enforce policy where prompts cannot.",
+        "Red teams must include indirect injection, confused-deputy, memory, and spend attacks.",
+        "Monitoring and incident response feed back into evals and launch gates."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: WebArena: A Realistic Web Environment for Building Autonomous Agents (arXiv) — https://arxiv.org/abs/2307.13854",
-        "Optional deeper reading: OWASP Top 10 for Large Language Model Applications (OWASP) — https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+      nextSteps: [
+        "Write a success predicate and violation predicate for an agent that can send email.",
+        "Design five red-team scenarios using retrieved documents or tool outputs.",
+        "Define launch gates for a low-risk internal agent and a high-risk customer-facing agent."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const aiAgentsChapters = JSON.parse(JSON.stringify(chapters));

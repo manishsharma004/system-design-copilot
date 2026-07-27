@@ -1,873 +1,760 @@
-/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
-export const aiSafetyChapters = {
+const chapters = {
   "ai-safety-and-ethics/bias-and-fairness": {
-    "title": "Chapter: Bias detection and fairness",
-    "readingTime": "55-70 min",
-    "premise": "Sources of bias, fairness metrics, debiasing techniques, and testing practices for building equitable AI systems. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Bias, fairness, and production accountability",
+    readingTime: "65-80 min",
+    premise:
+      "Fairness is a production practice: define harms, inspect data and labels, choose metrics aligned with the decision, evaluate slices with uncertainty, mitigate across the lifecycle, monitor after launch, and connect findings to governance. This chapter treats bias work as engineering evidence and organizational responsibility rather than a one-time metric checkbox.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Biased systems harm users and create legal/product risk. Fairness work is measurement, tradeoff analysis, and process—not a single checkbox metric.",
-          "This chapter treats \"Bias detection and fairness\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "start-from-harms",
+        heading: "Start with harms, stakeholders, and decision context",
+        paragraphs: [
+          "Bias work begins before metric selection. The team must identify who is affected, what decision the system informs, which errors are costly, who can contest the outcome, and how the model changes human process. A hiring screener, credit model, fraud detector, medical triage assistant, and content recommender all raise different fairness questions. The same false positive can be an inconvenience in one domain and a serious rights-impacting harm in another.",
+          "Stakeholder mapping should include people directly scored by the model, people indirectly affected, operators who rely on the output, and groups represented poorly in historical data. It should also define intended use and out-of-scope use. A model trained to prioritize support tickets should not quietly become an employee performance score. Many fairness failures are scope failures: a system built for one context becomes persuasive in another where its assumptions no longer hold.",
+          "This framing matters in 2026 because governance programs increasingly require risk classification, impact assessment, and evidence that mitigations match actual harms. Engineers do not need to become lawyers, but they do need to translate product risks into measurable requirements. A launch gate that says `equalized odds gap under 5 percentage points for approved slices` is more useful than a slide saying `we care about fairness`."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "harm mapping",
+            definition:
+              "A process for identifying affected stakeholders, possible errors, severity, recourse, and misuse scenarios before choosing metrics."
+          },
+          {
+            term: "intended use",
+            definition:
+              "The documented context, population, and decision support role for which a model or AI system was designed."
+          },
+          {
+            term: "impact assessment",
+            definition:
+              "A structured review of risks, affected groups, mitigations, residual risks, and operational controls."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why should fairness work start with harm mapping rather than a metric library?",
+            reveal:
+              "Different decisions create different harms. The metric should reflect the error type and stakeholder impact that matter in the actual product context."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "In interviews, do not start by naming a fairness metric. Start by naming the decision, affected groups, error costs, and recourse."
         }
       },
       {
-        "id": "where-bias-enters-the-lifecycle",
-        "heading": "Where bias enters the lifecycle",
-        "paragraphs": [
-          "Bias can enter via historical labels, sampling frames, feature availability, proxy variables, annotation guidelines, and deployment context. A model can be accurate on average and still systematically fail a group. Start by naming stakeholders and harms, not by picking a metric in the abstract. Document intended use and out-of-scope uses. Fairness work starts with harm narratives grounded in how decisions affect people, not with a library call. Fairness work starts with harm narratives grounded in how decisions affect people, not with a library call. Fairness work starts with harm narratives grounded in how decisions affect people, not with a library call.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Map harms and stakeholders before metrics.",
-          "• Inspect data collection and labeling processes.",
-          "• Document intended use boundaries.",
-          "Production lens — Fairness metrics conflict—pick one aligned with harm: Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder input on which errors are costliest. Proxy features (ZIP code, language) can reintroduce bias even when protected attributes are removed."
+        id: "where-bias-enters",
+        heading: "Bias enters through data, labels, features, and feedback loops",
+        paragraphs: [
+          "Historical labels often encode historical decisions rather than objective truth. If prior loan approvals reflected discrimination, a model trained on approvals may learn the old process. If police stops were concentrated in certain neighborhoods, a crime-risk model may confuse enforcement patterns with crime patterns. If support tickets from some languages are under-labeled, a classifier may appear accurate globally while failing those users. Data provenance is fairness evidence.",
+          "Feature availability can also create bias. Some groups may have thinner credit files, less device metadata, different language patterns, or lower representation in training corpora. Proxy variables such as ZIP code, school, employment history, browsing behavior, or language can reintroduce protected attributes even when those attributes are removed. Removing sensitive fields can make measurement harder without removing disparate impact. The team needs lawful, privacy-aware ways to evaluate slices, including missingness.",
+          "Deployment can amplify disparities through feedback loops. A recommender that shows fewer opportunities to a group gets less engagement data from that group, which justifies showing even fewer opportunities later. A fraud model that sends one population to manual review more often may create more labels for that group and fewer for others. Monitoring must look for these loops after launch because a fair offline model can become unfair under product dynamics."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Map harms and stakeholders before metrics.",
-            "definition": "Map harms and stakeholders before metrics."
+            term: "historical bias",
+            definition:
+              "Bias inherited from past decisions, institutions, or measurement practices reflected in training labels or features."
           },
           {
-            "term": "Inspect data collection and labeling processes.",
-            "definition": "Inspect data collection and labeling processes."
+            term: "proxy variable",
+            definition:
+              "A feature that is not itself protected but correlates with protected status and can reproduce disparate effects."
           },
           {
-            "term": "Document intended use boundaries.",
-            "definition": "Document intended use boundaries."
+            term: "feedback loop",
+            definition:
+              "A cycle where model decisions influence future data collection, which then reinforces the model's behavior."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Maps harms before choosing metrics.",
-            "reveal": "Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder input on which errors are costliest. Proxy features (ZIP code, language) can reintroduce bias even when protected attributes are removed."
-          }
-        ]
-      },
-      {
-        "id": "metrics-and-inevitable-tradeoffs",
-        "heading": "Metrics and inevitable tradeoffs",
-        "paragraphs": [
-          "Demographic parity, equalized odds, equal opportunity, calibration within groups—these capture different notions and can conflict. Choosing among them is an ethical/product decision constrained by law and domain. Always report uncertainty and base rates. Intersectional slices matter: aggregated \"group fairness\" can hide subgroup harm. Conflicting metrics are normal; leadership must choose and document the chosen definition. Conflicting metrics are normal; leadership must choose and document the chosen definition.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Know what each fairness metric claims and ignores.",
-          "• Expect tradeoffs; make them explicit.",
-          "• Check intersectional slices, not only coarse groups.",
-          "Production lens — Bias enters through data and deployment context: Historical labels encode past discrimination; undersampled groups yield high-variance models; feedback loops amplify disparities (predictive policing, hiring). Mitigations span resampling, constrained optimization, human review for edge cases, and post-deployment auditing—not a single preprocessing trick. Document limitations and intended use to meet regulatory expectations."
-        ],
-        "keyTerms": [
-          {
-            "term": "Know what each fairness metric claims",
-            "definition": "Know what each fairness metric claims and ignores."
-          },
-          {
-            "term": "Expect tradeoffs; make them explicit.",
-            "definition": "Expect tradeoffs; make them explicit."
-          },
-          {
-            "term": "Check intersectional slices, not only coarse",
-            "definition": "Check intersectional slices, not only coarse groups."
-          }
-        ],
-        "workedExample": {
-          "title": "Compute simple group positive rates",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"group\": [\"A\", \"A\", \"B\", \"B\", \"B\"],\n    \"y_pred\": [1, 0, 1, 1, 0],\n    \"y_true\": [1, 0, 0, 1, 0],\n})\nprint(df.groupby(\"group\")[\"y_pred\"].mean())\nprint(df.groupby(\"group\").apply(lambda g: ((g.y_pred == 1) & (g.y_true == 1)).sum() / max((g.y_true == 1).sum(), 1)))",
-          "language": "python"
+        workedExample: {
+          title: "Compare group error rates",
+          body:
+            "This tiny example separates false-positive and false-negative rates because different harms attach to each error.",
+          code:
+            "def rates(rows, group):\n    subset = [r for r in rows if r[\"group\"] == group]\n    negatives = [r for r in subset if r[\"y\"] == 0]\n    positives = [r for r in subset if r[\"y\"] == 1]\n    fpr = sum(r[\"pred\"] == 1 for r in negatives) / max(len(negatives), 1)\n    fnr = sum(r[\"pred\"] == 0 for r in positives) / max(len(positives), 1)\n    return {\"fpr\": fpr, \"fnr\": fnr, \"n\": len(subset)}\n\nrows = [\n    {\"group\": \"A\", \"y\": 1, \"pred\": 1}, {\"group\": \"A\", \"y\": 0, \"pred\": 1},\n    {\"group\": \"B\", \"y\": 1, \"pred\": 0}, {\"group\": \"B\", \"y\": 0, \"pred\": 0},\n]\nprint(rates(rows, \"A\"), rates(rows, \"B\"))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Computes group metrics with uncertainty.",
-            "reveal": "Historical labels encode past discrimination; undersampled groups yield high-variance models; feedback loops amplify disparities (predictive policing, hiring). Mitigations span resampling, constrained optimization, human review for edge cases, and post-deployment auditing—not a single preprocessing trick. Document limitations and intended use to meet regulatory expectations."
+            prompt:
+              "Why does removing protected attributes not automatically remove bias?",
+            reveal:
+              "Other variables can act as proxies, historical labels can encode past discrimination, and removing attributes can prevent measurement of disparate impact."
           }
         ]
       },
       {
-        "id": "mitigations-across-the-stack",
-        "heading": "Mitigations across the stack",
-        "paragraphs": [
-          "Mitigations include better sampling, removing proxies, reweighting, constrained optimization, post-processing thresholds per group (careful with legal context), and human review for uncertain cases. Sometimes the right fix is not deploying automated decisions. Measure side effects on overall utility and on each group after mitigation. Missing sensitive attributes do not remove disparate impact—they only remove easy measurement. Missing sensitive attributes do not remove disparate impact—they only remove easy measurement.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Prefer upstream data fixes when possible.",
-          "• Re-evaluate utility and group metrics after mitigation.",
-          "• Consider non-automation as a mitigation.",
-          "Production lens — Fairness metrics conflict—pick one aligned with harm: Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder input on which errors are costliest. Proxy features (ZIP code, language) can reintroduce bias even when protected attributes are removed."
+        id: "fairness-metrics-tradeoffs",
+        heading: "Fairness metrics encode tradeoffs",
+        paragraphs: [
+          "Fairness metrics represent different definitions of parity. Demographic parity asks whether positive outcomes occur at similar rates across groups. Equal opportunity compares true-positive rates. Equalized odds compares both true-positive and false-positive rates. Calibration asks whether a score means the same risk level across groups. Predictive parity compares positive predictive value. These metrics can conflict, especially when base rates differ. There is rarely a single mathematically perfect answer.",
+          "Choosing a metric is therefore a product, ethical, legal, and domain decision. In hiring, false negatives may deny opportunity; in fraud, false positives may block legitimate access; in medical triage, false negatives may delay care. A metric that equalizes one error can worsen another. The team should document why the chosen criterion matches the harm model, what tradeoffs remain, and who approved the residual risk.",
+          "Uncertainty matters. Small slices can produce volatile metrics, and intersectional slices can become sparse quickly. Report confidence intervals or volume floors instead of pretending every subgroup estimate is equally stable. If a slice is too small for reliable automated metrics, combine quantitative monitoring with qualitative review, targeted data collection, or human oversight. Fairness analysis should be honest about what is known and unknown."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Prefer upstream data fixes when possible.",
-            "definition": "Prefer upstream data fixes when possible."
+            term: "demographic parity",
+            definition:
+              "A criterion comparing positive prediction or decision rates across groups, regardless of true outcome labels."
           },
           {
-            "term": "Re-evaluate utility and group metrics after",
-            "definition": "Re-evaluate utility and group metrics after mitigation."
+            term: "equalized odds",
+            definition:
+              "A criterion comparing true-positive and false-positive rates across groups."
           },
           {
-            "term": "Consider non-automation as a mitigation.",
-            "definition": "Consider non-automation as a mitigation."
+            term: "calibration",
+            definition:
+              "A property where predicted scores correspond to observed outcome frequencies, often checked within groups."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Understands metric tradeoffs.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to mitigations across the stack."
-          }
-        ]
-      },
-      {
-        "id": "evaluation-protocol-for-fairness-audits",
-        "heading": "Evaluation protocol for fairness audits",
-        "paragraphs": [
-          "Define groups carefully (privacy, consent, missingness). Use confidence intervals. Test under shifts. Include qualitative review of explanations and user complaints. Version the audit like code. Fairness is continuous monitoring, not a one-time report before launch. Mitigation that tanks overall recall may be unacceptable in safety-critical detection domains. Mitigation that tanks overall recall may be unacceptable in safety-critical detection domains.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Treat audits as versioned artifacts.",
-          "• Monitor fairness metrics in production slices.",
-          "• Combine quantitative and qualitative evidence.",
-          "Production lens — Bias enters through data and deployment context: Historical labels encode past discrimination; undersampled groups yield high-variance models; feedback loops amplify disparities (predictive policing, hiring). Mitigations span resampling, constrained optimization, human review for edge cases, and post-deployment auditing—not a single preprocessing trick. Document limitations and intended use to meet regulatory expectations."
-        ],
-        "keyTerms": [
-          {
-            "term": "Treat audits as versioned artifacts.",
-            "definition": "Treat audits as versioned artifacts."
-          },
-          {
-            "term": "Monitor fairness metrics in production slices.",
-            "definition": "Monitor fairness metrics in production slices."
-          },
-          {
-            "term": "Combine quantitative and qualitative evidence.",
-            "definition": "Combine quantitative and qualitative evidence."
+            prompt:
+              "Why can two reasonable fairness metrics disagree?",
+            reveal:
+              "They encode different goals, and with different base rates it is often impossible to satisfy calibration, parity of outcomes, and parity of errors simultaneously."
           }
         ],
-        "workedExample": {
-          "title": "Equalized odds gaps (TPR/FPR)",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\ndef rates(y_true, y_pred):\n    tpr = ((y_pred == 1) & (y_true == 1)).sum() / max((y_true == 1).sum(), 1)\n    fpr = ((y_pred == 1) & (y_true == 0)).sum() / max((y_true == 0).sum(), 1)\n    return tpr, fpr\n\ny_true = np.array([1,1,0,0,1,0])\ny_a = np.array([1,0,0,0,1,1])\ny_b = np.array([1,1,1,0,1,0])\nprint(\"A\", rates(y_true, y_a), \"B\", rates(y_true, y_b))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Re-evaluates after mitigations.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to evaluation protocol for fairness audits."
-          }
-        ]
-      },
-      {
-        "id": "governance-touchpoints",
-        "heading": "Governance touchpoints",
-        "paragraphs": [
-          "Model cards, datasheets, review boards, and escalation paths institutionalize fairness work. Engineers should know how to raise concerns and what evidence reviewers expect. Link fairness findings to launch gates. Ethics is not an appendix; it changes ship decisions. Continuous monitoring prevents 'fair at launch, unfair after drift' failures. Continuous monitoring prevents 'fair at launch, unfair after drift' failures.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Connect fairness metrics to launch gates.",
-          "• Use model cards to communicate limits.",
-          "• Know escalation paths for harmful failures.",
-          "Production lens — Fairness metrics conflict—pick one aligned with harm: Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder input on which errors are costliest. Proxy features (ZIP code, language) can reintroduce bias even when protected attributes are removed."
-        ],
-        "keyTerms": [
-          {
-            "term": "Connect fairness metrics to launch gates.",
-            "definition": "Connect fairness metrics to launch gates."
-          },
-          {
-            "term": "Use model cards to communicate limits.",
-            "definition": "Use model cards to communicate limits."
-          },
-          {
-            "term": "Know escalation paths for harmful failures.",
-            "definition": "Know escalation paths for harmful failures."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Ties fairness to governance artifacts.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to governance touchpoints."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "warning",
+          body:
+            "A metric choice without a documented harm model is a hidden policy decision."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for bias detection and fairness.",
-          "Trap: Optimizing one fairness metric blindly. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Using race/gender proxies casually. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: One-time audits without monitoring. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring intersectional slices. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "mitigation-options",
+        heading: "Mitigation can happen before, during, or after modeling",
+        paragraphs: [
+          "Pre-processing mitigations improve data before training. They include better sampling, label audits, measurement repair, reweighting, balancing, removing or transforming problematic features, and collecting more data for underrepresented contexts. These are often the most durable fixes because they address the source of failure. They are also the slowest when the organization must change data collection or labeling operations.",
+          "In-processing mitigations change training. They include fairness constraints, adversarial debiasing, multi-objective optimization, calibrated thresholds by slice where legally appropriate, and model choices that trade a small accuracy loss for interpretability or controllability. Post-processing mitigations adjust outputs or decisions after training, such as threshold changes, human review for uncertain cases, or fallback to rules. Each mitigation must be evaluated for utility, fairness, stability, and legal acceptability.",
+          "Sometimes the right mitigation is not to automate. A high-impact decision with poor labels, weak recourse, and large slice uncertainty may require human-centered redesign rather than a better loss function. Fairness work should preserve the option to narrow scope, delay launch, add human oversight, or remove a feature. Production maturity includes knowing when a model should not own a decision."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Bias detection and fairness and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Optimizing one fairness metric blindly.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            term: "pre-processing mitigation",
+            definition:
+              "A fairness intervention applied to data, labels, or features before model training."
+          },
+          {
+            term: "in-processing mitigation",
+            definition:
+              "A fairness intervention built into the training objective, constraints, or model selection."
+          },
+          {
+            term: "post-processing mitigation",
+            definition:
+              "A fairness intervention applied to scores, thresholds, decisions, or review flows after training."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why should mitigations be evaluated after implementation rather than assumed beneficial?",
+            reveal:
+              "A mitigation can improve one slice while harming another, reduce utility too much, introduce instability, or violate domain policy. It needs evidence."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Fairness metrics conflict—pick one aligned with harm. Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder input on which errors are costliest. Proxy features (ZIP code, language) can reintroduce bias even when protected attributes are removed.",
-          "Bias enters through data and deployment context. Historical labels encode past discrimination; undersampled groups yield high-variance models; feedback loops amplify disparities (predictive policing, hiring). Mitigations span resampling, constrained optimization, human review for edge cases, and post-deployment auditing—not a single preprocessing trick. Document limitations and intended use to meet regulatory expectations."
+        id: "monitoring-and-governance",
+        heading: "Fairness must be monitored and governed after launch",
+        paragraphs: [
+          "Fairness at launch is not fairness forever. Product scope expands, user populations shift, labels mature, upstream data changes, and feedback loops develop. Monitor fairness metrics by approved slices, with volume floors and privacy controls. Track complaints, appeals, overrides, and human-review outcomes. If fairness data is sensitive, access should be governed, but absence of measurement should not become an excuse to ignore disparate impact.",
+          "Governance artifacts make fairness review durable. Model cards, system cards, data sheets, impact assessments, eval reports, and launch approvals should record intended use, known limitations, slice metrics, chosen fairness definitions, mitigation decisions, and monitoring plans. When a model or prompt bundle changes, the artifacts should update with the release. A model card that describes last year's behavior is a liability.",
+          "Escalation paths matter. A fairness alert should specify who reviews it, what evidence they need, which mitigations are available, and how decisions are recorded. A high-severity regression may require alias rollback, threshold adjustment, human review expansion, or product pause. Fairness work becomes operational when it has owners, metrics, runbooks, and authority to change launch decisions."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Fairness metrics conflict—pick one aligned with harm",
-            "definition": "Demographic parity, equalized odds, and calibration are mathematically incompatible in general. Disaggregated evaluation (performance by subgroup) is the minimum bar; choosing a fairness criterion requires stakeholder in…"
+            term: "model card",
+            definition:
+              "A document describing intended use, performance, limitations, fairness evaluation, risks, and operational context for a model."
           },
           {
-            "term": "Bias enters through data and deployment context",
-            "definition": "Historical labels encode past discrimination; undersampled groups yield high-variance models; feedback loops amplify disparities (predictive policing, hiring). Mitigations span resampling, constrained optimization, human…"
+            term: "appeal signal",
+            definition:
+              "Evidence from user contestation, human override, or complaint processes that may reveal decision harm."
+          },
+          {
+            term: "residual risk",
+            definition:
+              "Risk that remains after mitigations and must be accepted, monitored, or further reduced."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
+        checkYourself: [
+          {
+            prompt:
+              "What should a fairness monitoring alert include besides the metric value?",
+            reveal:
+              "It should include slice definition, volume, uncertainty, recent changes, owner, runbook, possible mitigations, and escalation criteria."
+          }
+        ]
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach bias detection and fairness as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you audit a lending model for fairness? | Compare demographic parity and equalized odds. | What if fairness and accuracy conflict?"
+        id: "fairness-in-generative-and-agent-systems",
+        heading: "Generative and agent systems add new fairness surfaces",
+        paragraphs: [
+          "Generative systems can produce representational harms, language-quality gaps, unequal refusal behavior, stereotype amplification, or different helpfulness across dialects and languages. Retrieval systems can underrepresent some groups because the corpus is incomplete or ranking favors majority-language documents. LLM judges can inherit preferences for verbosity, standard dialect, or culturally familiar framing. Fairness evaluation must include generated content, retrieved evidence, and evaluation tools themselves.",
+          "Agents add action fairness. If an agent has tools for refunds, escalation, scheduling, code review, or hiring workflows, measure whether different groups receive different actions, delay, approval requirements, or handoff rates under similar circumstances. Tool availability and memory policies can create disparities: one tenant may have richer context, one language may trigger more refusals, or one group may be routed to human review more often. Trajectory-level fairness is broader than output text fairness.",
+          "Production practice is to combine offline slice evals, red-team prompts, multilingual and dialect coverage, human review, trace sampling, and post-launch monitoring. Do not rely on a general-purpose fairness claim from a foundation model provider. The deployer owns application context, data, tools, users, and harms. Fairness in AI systems is therefore shared between model choice, product design, data quality, and operations."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Bias detection and fairness as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "representational harm",
+            definition:
+              "Harm caused by stereotyping, erasure, demeaning portrayal, or unequal quality in generated content."
+          },
+          {
+            term: "trajectory-level fairness",
+            definition:
+              "Fairness analysis over the actions, tools, delays, approvals, and handoffs in an agent run, not only final text."
+          },
+          {
+            term: "judge bias",
+            definition:
+              "Systematic preference or error in a human or automated evaluator that skews quality measurement across groups or styles."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt:
+              "Why is fairness evaluation for an agent broader than fairness evaluation for a classifier?",
+            reveal:
+              "Agents choose actions over time. Fairness can differ in tool use, approvals, delays, handoffs, memory, refusals, and final outputs, so trajectories must be evaluated."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "For 2026 systems, fairness analysis follows the whole AI workflow: data, retrieval, generation, tools, human review, and outcomes."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Maps harms before choosing metrics.",
-        "Computes group metrics with uncertainty.",
-        "Understands metric tradeoffs.",
-        "Re-evaluates after mitigations.",
-        "Ties fairness to governance artifacts."
+    wrapUp: {
+      takeaways: [
+        "Fairness starts with harms, stakeholders, decision context, and recourse.",
+        "Bias enters through labels, features, proxies, sampling, deployment, and feedback loops.",
+        "Fairness metrics conflict, so choices must be documented with uncertainty and slice context.",
+        "Mitigations span data, training, decisions, human review, and sometimes non-automation.",
+        "Generative and agent systems require fairness analysis over content, retrieval, tools, and trajectories."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Fairness and Machine Learning textbook (fairmlbook.org) — https://fairmlbook.org/",
-        "Optional deeper reading: Equality of Opportunity in Supervised Learning (arXiv) — https://arxiv.org/abs/1610.02413"
+      nextSteps: [
+        "Pick a high-impact decision and write its harm model before choosing metrics.",
+        "Compute error rates for at least two slices and explain uncertainty.",
+        "Design a fairness monitoring alert with owner, runbook, and mitigation options."
       ]
     }
   },
   "ai-safety-and-ethics/explainability": {
-    "title": "Chapter: Explainability and interpretability",
-    "readingTime": "55-70 min",
-    "premise": "SHAP, LIME, attention visualization, and model-agnostic explanation methods for building trust and debugging models. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: Explainability, interpretability, and evidence",
+    readingTime: "65-80 min",
+    premise:
+      "Explainability helps debugging, user recourse, compliance, and trust, but explanations can also mislead. This chapter teaches how to choose explanation methods for the audience and decision, distinguish intrinsic interpretability from post-hoc attributions, evaluate explanation faithfulness, support counterfactual recourse, and handle LLM explanations without pretending they reveal hidden cognition.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Explanations support debugging, user trust, and compliance—but bad explanations mislead. Learn what common methods actually compute and where they fail.",
-          "This chapter treats \"Explainability and interpretability\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "audience-purpose-and-claim",
+        heading: "Every explanation needs an audience, purpose, and claim boundary",
+        paragraphs: [
+          "An explanation for a model engineer is not the same as an explanation for a rejected applicant, clinician, auditor, or support agent. Engineers may need feature influence to debug drift. Users may need understandable reasons and recourse. Auditors may need traceability from data to decision. Operators may need confidence and escalation guidance. A single plot cannot satisfy every audience, and showing technical attributions to users can create false certainty.",
+          "State what the explanation claims. Is it local or global? Does it explain one prediction, average model behavior, a rule layer, a retrieval result, or a generated answer? Is it faithful to the model's computation, a surrogate approximation, a causal claim, or a user-facing reason code? Many failures come from presenting correlation as causation or a post-hoc approximation as ground truth. Good explanation UX includes limitations.",
+          "The purpose determines the method. Debugging may use permutation importance, slice analysis, counterfactual testing, and feature inspection. User recourse may need actionable counterfactuals and policy reason codes. Compliance may require audit logs, model cards, data provenance, and adverse-action explanations. LLM applications may need citation traces and tool-use logs more than attention maps. The right explanation is the one that supports the decision being made."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "local explanation",
+            definition:
+              "An explanation of a specific prediction, answer, or decision instance."
+          },
+          {
+            term: "global explanation",
+            definition:
+              "An explanation of broad model behavior across many examples or the whole input space."
+          },
+          {
+            term: "faithfulness",
+            definition:
+              "The degree to which an explanation accurately reflects the behavior of the system it claims to explain."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "What question should you ask before choosing SHAP, LIME, a model card, or a counterfactual?",
+            reveal:
+              "Ask who the explanation is for, what decision it supports, and what claim it is allowed to make."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "A strong explainability answer names the audience and decision before naming an algorithm."
         }
       },
       {
-        "id": "why-explain-and-for-whom",
-        "heading": "Why explain, and for whom",
-        "paragraphs": [
-          "Audiences differ: engineers debugging features, users seeking recourse, auditors checking compliance. An explanation that helps an engineer may harm a user if overclaimed. State whether an explanation is local (one prediction) or global (model behavior), and whether it is faithful to the model or a separate interpretable surrogate. Explanations are themselves models of models; they need evaluation just like predictors do. Explanations are themselves models of models; they need evaluation just like predictors do.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Match explanation type to audience and decision.",
-          "• Disclose local vs global and faithfulness limits.",
-          "• Avoid implying causality from correlational attributions.",
-          "Production lens — Explanation method ≠ ground truth: SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLMs, chain-of-thought may rationalize rather than reveal actual computation—use explanations to aid human review, not as legal proof."
+        id: "intrinsic-vs-posthoc",
+        heading: "Intrinsic interpretability and post-hoc explanations solve different problems",
+        paragraphs: [
+          "Intrinsically interpretable models expose behavior through their structure: sparse linear models, monotonic models, generalized additive models, small decision trees, scorecards, and rule systems. They are not automatically fair or correct, but their reasoning can be inspected more directly. In high-stakes domains, a slightly less accurate interpretable model may be preferable when recourse, review, and governance matter more than a small benchmark gain.",
+          "Post-hoc methods approximate explanations for complex models. Permutation importance measures performance drop when a feature is shuffled. LIME fits local surrogate models around one point. SHAP-style attributions distribute a prediction difference from a baseline across features. Partial dependence and accumulated local effects describe feature-response patterns. These methods answer different questions and can disagree. Disagreement is a diagnostic signal, not an inconvenience to hide.",
+          "Interpretability also includes system-level transparency. A credit decision may combine a model score, policy rules, manual review, data eligibility, and regulatory thresholds. Explaining only the model score can misrepresent the actual decision. AI application explanations should include the rule path, model version, features used, retrieval sources, tool actions, and human approvals where relevant. The system, not just the estimator, makes the decision."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Match explanation type to audience and",
-            "definition": "Match explanation type to audience and decision."
+            term: "intrinsic interpretability",
+            definition:
+              "Interpretability arising from a model's structure, such as sparse coefficients, monotonic constraints, or small trees."
           },
           {
-            "term": "Disclose local vs global and faithfulness",
-            "definition": "Disclose local vs global and faithfulness limits."
+            term: "post-hoc explanation",
+            definition:
+              "An explanation computed after model training to approximate behavior of an opaque model."
           },
           {
-            "term": "Avoid implying causality from correlational a…",
-            "definition": "Avoid implying causality from correlational attributions."
+            term: "surrogate model",
+            definition:
+              "A simpler model trained to approximate another model globally or around a specific point."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Chooses explanation methods for a stated audience.",
-            "reveal": "SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLMs, chain-of-thought may rationalize rather than reveal actual computation—use explanations to aid human review, not as legal proof."
-          }
-        ]
-      },
-      {
-        "id": "intrinsic-interpretability-vs-post-hoc-methods",
-        "heading": "Intrinsic interpretability vs post-hoc methods",
-        "paragraphs": [
-          "Linear models and short trees are intrinsically inspectable. Post-hoc methods (permutation importance, SHAP-style attributions, LIME-like local surrogates) approximate influence for opaque models. They can disagree. Use multiple methods and sanity checks: does removing a top feature change the prediction? For high stakes, prefer models that are interpretable enough by design when performance allows. If an explanation cannot survive a simple removal test, do not show it to end users as truth. If an explanation cannot survive a simple removal test, do not show it to end users as truth.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Prefer intrinsically interpretable models when they suffice.",
-          "• Cross-check post-hoc explanations with interventions.",
-          "• Expect disagreements across explainers.",
-          "Production lens — Regulatory contexts demand traceability: GDPR \"right to explanation,\" credit adverse action notices, and medical device rules push toward interpretable models or supplementary documentation. Counterfactual explanations (\"change income by X to flip decision\") resonate with users but must respect feasibility constraints. Maintain audit logs linking predictions to model version, features, and policy rules applied."
-        ],
-        "keyTerms": [
-          {
-            "term": "Prefer intrinsically interpretable models whe…",
-            "definition": "Prefer intrinsically interpretable models when they suffice."
-          },
-          {
-            "term": "Cross-check post-hoc explanations with interv…",
-            "definition": "Cross-check post-hoc explanations with interventions."
-          },
-          {
-            "term": "Expect disagreements across explainers.",
-            "definition": "Expect disagreements across explainers."
-          }
-        ],
-        "workedExample": {
-          "title": "Permutation importance with sklearn",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.inspection import permutation_importance\nfrom sklearn.model_selection import train_test_split\n\nX, y = make_classification(n_samples=400, n_features=5, n_informative=3, random_state=0)\nXtr, Xte, ytr, yte = train_test_split(X, y, random_state=0)\nclf = RandomForestClassifier(random_state=0).fit(Xtr, ytr)\nr = permutation_importance(clf, Xte, yte, n_repeats=5, random_state=0)\nprint(np.round(r.importances_mean, 3))",
-          "language": "python"
+        workedExample: {
+          title: "Linear attribution from a baseline",
+          body:
+            "For a linear model, feature contribution from a baseline is transparent and easy to audit.",
+          code:
+            "weights = {\"income\": 0.4, \"debt_ratio\": -0.8, \"late_payments\": -1.2}\nexample = {\"income\": 2.0, \"debt_ratio\": 1.5, \"late_payments\": 1.0}\nbaseline = {\"income\": 0.0, \"debt_ratio\": 0.0, \"late_payments\": 0.0}\n\ncontrib = {k: (example[k] - baseline[k]) * weights[k] for k in weights}\nscore = sum(contrib.values())\nprint(contrib, score)",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can compute permutation importance.",
-            "reveal": "GDPR \"right to explanation,\" credit adverse action notices, and medical device rules push toward interpretable models or supplementary documentation. Counterfactual explanations (\"change income by X to flip decision\") resonate with users but must respect feasibility constraints. Maintain audit logs linking predictions to model version, features, and policy rules applied."
+            prompt:
+              "Why might a team choose a more interpretable model with slightly lower benchmark accuracy?",
+            reveal:
+              "For high-impact decisions, auditability, recourse, debugging, stability, and governance may outweigh a small aggregate accuracy gain."
           }
         ]
       },
       {
-        "id": "additive-attributions-in-practice-shap-intuition",
-        "heading": "Additive attributions in practice (SHAP intuition)",
-        "paragraphs": [
-          "SHAP-style values distribute a prediction's difference from a baseline across features using cooperative game theoretic ideas. Exact SHAP is expensive; approximations abound. In this lab we compute a teaching version for a linear model where attributions reduce to coefficient times centered feature values. Understanding the linear case prevents magical thinking about black-box attributions. Baseline choice changes SHAP-style stories; disclose baselines in UI and docs. Baseline choice changes SHAP-style stories; disclose baselines in UI and docs.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Linear attributions are coefficient times centered inputs.",
-          "• Black-box SHAP is approximate and baseline-dependent.",
-          "• Always state the baseline explanation compares to.",
-          "Production lens — Explanation method ≠ ground truth: SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLMs, chain-of-thought may rationalize rather than reveal actual computation—use explanations to aid human review, not as legal proof."
+        id: "attribution-methods-and-baselines",
+        heading: "Attributions depend on baselines, correlations, and assumptions",
+        paragraphs: [
+          "Feature attributions are tempting because they produce ranked reasons, but they are easy to overclaim. A SHAP-style value explains contribution relative to a chosen baseline distribution. Change the baseline and the story can change. Correlated features share credit in ways that may not match causal intuition. A feature can receive high attribution because it is a proxy, not because changing it would change the real-world outcome. Explanation consumers need these limitations.",
+          "Sanity checks are essential. If removing or perturbing a top-attributed feature does not change the model output, the explanation is suspect. If nearly identical inputs receive wildly different attributions, stability is poor. If a random model produces plausible-looking explanations, the visualization may be storytelling rather than evidence. Explanation evaluation should test faithfulness, stability, sensitivity, and usefulness for the intended audience.",
+          "For production, keep explanations versioned with the model, features, and baseline data. An attribution computed against last quarter's population may not describe today's traffic. Feature names, transformations, and scaling must be understandable; a coefficient on a normalized interaction feature is not user-friendly without translation. Explanation services should log model version, feature vector, baseline version, explanation method, and any rule layer applied."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Linear attributions are coefficient times cen…",
-            "definition": "Linear attributions are coefficient times centered inputs."
+            term: "baseline",
+            definition:
+              "The reference input or population against which an attribution method compares a prediction."
           },
           {
-            "term": "Black-box SHAP is approximate and baseline-de…",
-            "definition": "Black-box SHAP is approximate and baseline-dependent."
+            term: "stability",
+            definition:
+              "The degree to which explanations remain similar for similar inputs when model behavior is similar."
           },
           {
-            "term": "Always state the baseline explanation compares",
-            "definition": "Always state the baseline explanation compares to."
+            term: "sensitivity test",
+            definition:
+              "A check that changing important features affects model output in a way consistent with the explanation."
           }
         ],
-        "workedExample": {
-          "title": "Exact attributions for a linear model",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "import numpy as np\n\nw = np.array([0.5, -1.0, 2.0])\nb = 0.1\nx = np.array([1.0, 2.0, 0.5])\nbaseline = np.zeros(3)\npred = b + x @ w\nbase_pred = b + baseline @ w\nattr = (x - baseline) * w\nprint(pred, base_pred, attr, attr.sum() + base_pred)",
-          "language": "python"
-        },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Understands linear attribution baselines.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to additive attributions in practice (shap intuition)."
-          }
-        ]
-      },
-      {
-        "id": "counterfactuals-and-actionable-recourse",
-        "heading": "Counterfactuals and actionable recourse",
-        "paragraphs": [
-          "Counterfactual explanations answer \"what minimal change would flip the decision?\" Actionability constraints matter: telling someone to change immutable attributes is useless or harmful. Optimize counterfactuals with constraints and validate them through the real model, not only a surrogate. For regulators, process evidence (tests, reviews) matters as much as colorful plots. For regulators, process evidence (tests, reviews) matters as much as colorful plots.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Optimize counterfactuals under actionability constraints.",
-          "• Validate by re-scoring through the true model.",
-          "• Mind ethical issues around recourse suggestions.",
-          "Production lens — Regulatory contexts demand traceability: GDPR \"right to explanation,\" credit adverse action notices, and medical device rules push toward interpretable models or supplementary documentation. Counterfactual explanations (\"change income by X to flip decision\") resonate with users but must respect feasibility constraints. Maintain audit logs linking predictions to model version, features, and policy rules applied."
-        ],
-        "keyTerms": [
-          {
-            "term": "Optimize counterfactuals under actionability …",
-            "definition": "Optimize counterfactuals under actionability constraints."
-          },
-          {
-            "term": "Validate by re-scoring through the true",
-            "definition": "Validate by re-scoring through the true model."
-          },
-          {
-            "term": "Mind ethical issues around recourse suggestions.",
-            "definition": "Mind ethical issues around recourse suggestions."
+            prompt:
+              "Why is a feature attribution not the same thing as a causal explanation?",
+            reveal:
+              "Attributions describe model behavior under assumptions and baselines. They do not prove that changing the real-world feature would cause the outcome to change."
           }
         ],
-        "checkYourself": [
-          {
-            "prompt": "Designs actionable counterfactuals carefully.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to counterfactuals and actionable recourse."
-          }
-        ]
-      },
-      {
-        "id": "explanation-pitfalls-and-evaluation",
-        "heading": "Explanation pitfalls and evaluation",
-        "paragraphs": [
-          "Explanations can be unstable under tiny input changes, or can be manipulated. Evaluate explanation methods with faithfulness tests, stability tests, and human usefulness studies when relevant. Do not ship colorful plots as compliance theater. Document limitations next to every explanation UI. Stable, slightly incomplete explanations beat unstable precise-looking ones. Stable, slightly incomplete explanations beat unstable precise-looking ones.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Test faithfulness and stability.",
-          "• Document explanation limitations in UX copy.",
-          "• Avoid compliance theater without evidence.",
-          "Production lens — Explanation method ≠ ground truth: SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLMs, chain-of-thought may rationalize rather than reveal actual computation—use explanations to aid human review, not as legal proof."
-        ],
-        "keyTerms": [
-          {
-            "term": "Test faithfulness and stability.",
-            "definition": "Test faithfulness and stability."
-          },
-          {
-            "term": "Document explanation limitations in UX copy.",
-            "definition": "Document explanation limitations in UX copy."
-          },
-          {
-            "term": "Avoid compliance theater without evidence.",
-            "definition": "Avoid compliance theater without evidence."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Evaluates explanations, not only models.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to explanation pitfalls and evaluation."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "warning",
+          body:
+            "A colorful attribution chart can be less honest than a plain reason code if users treat it as causal truth."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for explainability and interpretability.",
-          "Trap: Treating SHAP values as causal truth. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Explaining a model different from the one deployed. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Unstable explanations without disclosure. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Recourse that requires immutable attribute changes. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "counterfactuals-and-recourse",
+        heading: "Counterfactual explanations must be actionable and feasible",
+        paragraphs: [
+          "Counterfactual explanations answer `what would need to change for a different decision?` They are useful for recourse because they can translate a score into possible user action. However, a counterfactual that suggests changing age, disability status, race, family history, or other immutable attributes is harmful. Even apparently mutable suggestions can be infeasible, such as doubling income in thirty days or moving to a different city.",
+          "Good counterfactuals include constraints. They respect immutable features, monotonic policy rules, causal relationships, feasibility, cost to the user, and legal requirements. They should be validated through the actual decision system, not only an explainer surrogate. If the decision includes rules plus model score plus human review, the counterfactual should reflect the whole path. Otherwise the system may promise recourse that does not work.",
+          "Recourse should be monitored. Track whether users understand explanations, whether suggested actions are realistic, whether different groups receive different quality of recourse, and whether appeals succeed. In some contexts, explanation quality itself is a fairness issue. A system that gives clear actionable reasons to one group and vague refusals to another creates unequal ability to contest decisions."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for Explainability and interpretability and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Treating SHAP values as causal truth.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            term: "counterfactual explanation",
+            definition:
+              "An explanation describing changes that would alter a model or system decision."
+          },
+          {
+            term: "actionable recourse",
+            definition:
+              "A feasible path a person can take to improve or contest an outcome."
+          },
+          {
+            term: "feasibility constraint",
+            definition:
+              "A rule that prevents explanations from recommending impossible, immutable, illegal, or unrealistic changes."
+          }
+        ],
+        workedExample: {
+          title: "Filter counterfactual suggestions",
+          body:
+            "A recourse system should reject immutable or infeasible changes before showing suggestions.",
+          code:
+            "suggestions = [\n    {\"feature\": \"income\", \"change\": \"+5000\", \"mutable\": True, \"feasible\": True},\n    {\"feature\": \"age\", \"change\": \"-5 years\", \"mutable\": False, \"feasible\": False},\n    {\"feature\": \"debt_ratio\", \"change\": \"-0.1\", \"mutable\": True, \"feasible\": True},\n]\nallowed = [s for s in suggestions if s[\"mutable\"] and s[\"feasible\"]]\nprint(allowed)",
+          language: "python"
+        },
+        checkYourself: [
+          {
+            prompt:
+              "Why should counterfactual recourse be validated through the real decision system?",
+            reveal:
+              "A surrogate may miss rules, thresholds, policy constraints, or human review steps. Users need suggestions that would actually change the decision path."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Explanation method ≠ ground truth. SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLMs, chain-of-thought may rationalize rather than reveal actual computation—use explanations to aid human review, not as legal proof.",
-          "Regulatory contexts demand traceability. GDPR \"right to explanation,\" credit adverse action notices, and medical device rules push toward interpretable models or supplementary documentation. Counterfactual explanations (\"change income by X to flip decision\") resonate with users but must respect feasibility constraints. Maintain audit logs linking predictions to model version, features, and policy rules applied."
+        id: "explaining-llm-and-agent-systems",
+        heading: "LLM and agent explanations rely on evidence, not hidden reasoning claims",
+        paragraphs: [
+          "For LLMs, generated rationales are not reliable windows into internal computation. A model can produce a plausible explanation after the fact that does not reflect how tokens were generated. Chain-of-thought may improve performance in some settings, but exposing it as proof can mislead users and leak sensitive policy details. Production explanations should emphasize evidence the system can substantiate: sources retrieved, tool calls made, checks applied, uncertainty, and limitations.",
+          "RAG explanations often use citations, but citations need evaluation. A cited document may be irrelevant, stale, incorrectly chunked, or used to support a claim it does not actually contain. Monitor citation precision, answer-without-citation rate, stale-source usage, and whether cited passages contain the answer. For agent systems, explain which tools were used, what approvals were required, what state changed, and why the agent stopped or handed off. This supports user trust and incident review.",
+          "LLM judges and explanation generators also need governance. If an automated judge evaluates faithfulness or helpfulness, calibrate it against humans and audit bias. If a model generates user-facing reasons, ensure the reasons are grounded in decision data and policy, not invented. The explanation pipeline should be evaluated like any other AI component because misleading explanations can create their own harm even when the underlying answer is correct."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Explanation method ≠ ground truth",
-            "definition": "SHAP, LIME, and attention maps provide post-hoc narratives that can be unstable across similar inputs. Tree models offer native feature importance; linear coefficients are interpretable only with scaled features. For LLM…"
+            term: "rationale",
+            definition:
+              "A natural-language explanation produced by a model, which may or may not faithfully represent its actual computation."
           },
           {
-            "term": "Regulatory contexts demand traceability",
-            "definition": "GDPR \"right to explanation,\" credit adverse action notices, and medical device rules push toward interpretable models or supplementary documentation. Counterfactual explanations (\"change income by X to flip decision\") re…"
+            term: "citation precision",
+            definition:
+              "The share of cited sources or passages that actually support the generated claim."
+          },
+          {
+            term: "tool provenance",
+            definition:
+              "A record of which tools were called, with what arguments, under what permissions, and with what results."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
+        checkYourself: [
+          {
+            prompt:
+              "What is safer to show users than an LLM's claimed hidden reasoning?",
+            reveal:
+              "Show retrieved sources, tool actions, decision rules, uncertainty, limitations, and auditable evidence that supports the output."
+          }
+        ]
       },
       {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach explainability and interpretability as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: How would you explain a denied loan decision? | Compare permutation importance and coefficient inspection. | What makes a counterfactual explanation actionable?"
+        id: "evaluation-documentation-and-governance",
+        heading: "Evaluate explanations and document their limits",
+        paragraphs: [
+          "Explanation systems need their own tests. Faithfulness checks ask whether the explanation changes when the model behavior changes. Stability checks ask whether similar inputs with similar outputs receive similar explanations. Human-usefulness studies ask whether the explanation helps the intended audience make better decisions without overtrust. Fairness checks ask whether explanation quality differs across groups, languages, or accessibility needs.",
+          "Documentation should describe the method, audience, model version, data version, baseline, known limitations, and prohibited interpretations. For regulated or high-impact contexts, link explanations to audit logs, adverse-action reason codes, model cards, and decision policies. If explanations are approximate, say so. If they are not causal, say so. If they exclude features for privacy or security reasons, explain the limitation without exposing sensitive details.",
+          "Governance should decide when explanations are required, reviewed, or blocked. Some internal debugging explanations should never be shown to end users. Some user-facing explanations require legal or compliance review. Some generated explanations should be disabled if grounding or citation checks fail. The mature posture is not `explain everything`; it is `provide the right evidence to the right audience with tested limits`."
         ],
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Give a 90-second spoken overview of Explainability and interpretability as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            term: "usefulness study",
+            definition:
+              "An evaluation of whether an explanation helps its target audience make better, safer, or more informed decisions."
+          },
+          {
+            term: "adverse-action reason code",
+            definition:
+              "A regulated or policy-defined reason communicated to a person for an unfavorable decision."
+          },
+          {
+            term: "overtrust",
+            definition:
+              "A failure mode where users place more confidence in an explanation or system than evidence supports."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        checkYourself: [
+          {
+            prompt:
+              "Name three tests for an explanation method.",
+            reveal:
+              "Faithfulness, stability, sensitivity, human usefulness, fairness of explanation quality, and grounding/citation precision are common tests."
+          }
+        ],
+        callout: {
+          tone: "tip",
+          body:
+            "Explanations are part of the product. If they can change user decisions, they deserve product-quality evaluation."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Chooses explanation methods for a stated audience.",
-        "Can compute permutation importance.",
-        "Understands linear attribution baselines.",
-        "Designs actionable counterfactuals carefully.",
-        "Evaluates explanations, not only models."
+    wrapUp: {
+      takeaways: [
+        "Explanations must be chosen for a specific audience, purpose, and claim boundary.",
+        "Intrinsic interpretability and post-hoc explanations answer different questions.",
+        "Attributions depend on baselines and assumptions and should not be sold as causality.",
+        "Counterfactual recourse must be feasible, actionable, and validated through the real system.",
+        "LLM and agent explanations should emphasize sources, tools, provenance, and tested limitations."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: A Unified Approach to Interpreting Model Predictions (SHAP) (arXiv) — https://arxiv.org/abs/1705.07874",
-        "Optional deeper reading: \"Why Should I Trust You?\": Explaining the Predictions of Any Classifier (LIME) (arXiv) — https://arxiv.org/abs/1602.04938"
+      nextSteps: [
+        "Pick one model decision and write separate explanations for an engineer, user, and auditor.",
+        "Define faithfulness and stability tests for an attribution method.",
+        "Design a user-facing recourse explanation with immutable-feature constraints."
       ]
     }
   },
   "ai-safety-and-ethics/ai-governance": {
-    "title": "Chapter: AI governance and regulation",
-    "readingTime": "50-65 min",
-    "premise": "EU AI Act, GDPR implications, model documentation, risk assessment, and organizational AI governance frameworks. This Learn chapter expands the short lesson summary into a full study unit you can read continuously, with interactive checks and selection-based AI search when a phrase needs a second opinion.",
-    "parts": [
+    title: "Chapter: AI governance and regulation in practice",
+    readingTime: "70-85 min",
+    premise:
+      "AI governance turns legal, ethical, security, and operational expectations into shipped controls. This chapter covers risk-tiered inventories, EU AI Act and NIST AI RMF operating language, model and system cards, vendor and supply-chain responsibilities, data residency, audit logs, incident response, and continuous evidence for AI systems that include models, prompts, tools, retrieval, and agents.",
+    parts: [
       {
-        "id": "orientation",
-        "heading": "Why this chapter exists",
-        "paragraphs": [
-          "Governance in 2026 is risk-tiered and operational: EU AI Act-style intuition (educational, not legal advice), model/system cards for LLM apps, audit logs for tool actions, and data residency constraints shape architecture as much as accuracy does.",
-          "This chapter treats \"AI governance and regulation\" as a readable study unit: intuition first, then the mechanics you must be able to explain, then the failure modes that show up in interviews and production, and finally how to talk about the topic under time pressure.",
-          "Read it like a book chapter. When a phrase is unclear, select it inside the Learn reader and use Search with AI to open Google, Perplexity, or DuckDuckGo without abandoning the chapter."
+        id: "governance-as-operating-system",
+        heading: "Governance is an operating system for AI change",
+        paragraphs: [
+          "AI governance is the set of roles, policies, evidence, controls, and escalation paths that decide how AI systems are built, launched, monitored, and changed. It is not a final legal review after engineering is done. It shapes product scope, data access, model choice, evaluation depth, human oversight, logging, retention, vendor contracts, and incident response. Good governance lets teams ship predictably because the evidence required for each risk tier is known early.",
+          "A production inventory is the foundation. Each AI system should have an owner, purpose, users, affected populations, model or provider, data sources, tools, risk tier, deployment regions, evaluation artifacts, monitoring links, and rollback path. This includes LLM apps and agents, not only classic predictive models. A prompt connected to tools and user data is an AI system even if the company did not train the foundation model.",
+          "Risk tiering sizes the control set. An internal writing assistant may need transparency, security, privacy, and feedback paths. A hiring, credit, education, biometric, medical, or safety-impacting system needs stronger impact assessment, human oversight, documentation, monitoring, and approval. The exact legal classification belongs with counsel, but engineering must make the classification real through technical controls and evidence."
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "Target reading time is paced for depth, not skimming. Pause at each Check yourself prompt and answer out loud before revealing the guide answer."
+        keyTerms: [
+          {
+            term: "AI system inventory",
+            definition:
+              "A maintained catalog of AI systems, owners, purpose, components, data, risk tier, controls, and operational links."
+          },
+          {
+            term: "risk tier",
+            definition:
+              "A classification that determines the amount of evaluation, oversight, documentation, and monitoring required."
+          },
+          {
+            term: "control set",
+            definition:
+              "The technical and process safeguards required for a system, such as evals, approvals, logging, and human oversight."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "Why should an LLM feature that uses third-party models still appear in an AI inventory?",
+            reveal:
+              "The deployer owns application context, data handling, prompts, retrieval, tools, user impact, monitoring, and incident response even if a vendor owns the base model."
+          }
+        ],
+        callout: {
+          tone: "interview",
+          body:
+            "Governance answers should connect inventory, risk tier, controls, evidence, and rollback. That is the operational story."
         }
       },
       {
-        "id": "governance-as-a-product-constraint",
-        "heading": "Governance as a product constraint",
-        "paragraphs": [
-          "Governance defines who can approve models, what evidence is required, and how incidents escalate. It is not only legal theater: clear gates prevent late surprises. Map systems by risk tier (impact on rights, safety, finances). Higher tiers need stronger evals, monitoring, and human oversight. Engineers should know their system's tier and the artifacts expected at review time. Governance scales when evidence is generated by CI, not copied into slides the night before launch. Governance scales when evidence is generated by CI, not copied into slides the night before launch.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Risk-tier systems early in design.",
-          "• Know required artifacts per tier.",
-          "• Treat gates as enablers of predictable shipping.",
-          "Production lens — Mid-2026 means operational EU AI Act readiness: Regulation (EU) 2024/1689 (AI Act) entered into force in 2024 with phased applicability; by mid-2026 organizations serving the EU need working inventories, risk classifications, and evidence for high-risk and GPAI-related duties—not slideware. Map each deployed system to a risk tier, owner, and control set: evals, human oversight, transparency, logging, and incident response proportionate to impact.\n\nHiring, credit, and biometric use cases demand deeper impact assessment and monitoring than internal writing assistants. GPAI/provider obligations may sit with model vendors, but deployers still own application-level misuse, data handling, and downstream harm. Contracts and technical controls must reflect that split of responsibility."
+        id: "regulatory-landscape-2026",
+        heading: "The 2026 landscape is risk-tiered and evidence-driven",
+        paragraphs: [
+          "By mid-2026, organizations serving the EU are preparing for phased obligations under Regulation (EU) 2024/1689, the AI Act. Educationally, its structure is useful even outside legal analysis: some uses are prohibited, high-risk systems require stronger controls, transparency duties apply to some user-facing AI, and general-purpose AI obligations may affect providers. This chapter is not legal advice, but engineers should understand why risk classification, logging, documentation, human oversight, and post-market monitoring are not optional decorations.",
+          "The NIST AI Risk Management Framework remains a common operating language, especially for organizations that need a flexible internal program across jurisdictions. Govern, Map, Measure, and Manage translate well into engineering practice. Govern defines roles and policy. Map identifies systems, context, data, and harms. Measure produces evals, red teams, and monitoring. Manage applies gates, mitigations, rollback, and incident learning. It complements legal obligations by providing a control vocabulary.",
+          "Sector rules and contracts also matter. Finance, healthcare, employment, education, children's privacy, biometric systems, and government procurement can impose additional requirements. Enterprise buyers may ask for model cards, data residency, retention guarantees, audit logs, subprocessors, training-data opt-out, security reviews, and evaluation rights. Governance is therefore not only public regulation; it is also market access and trust infrastructure."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Risk-tier systems early in design.",
-            "definition": "Risk-tier systems early in design."
+            term: "EU AI Act",
+            definition:
+              "Regulation (EU) 2024/1689, a risk-based AI regulatory framework with phased obligations for certain AI systems and providers."
           },
           {
-            "term": "Know required artifacts per tier.",
-            "definition": "Know required artifacts per tier."
+            term: "NIST AI RMF",
+            definition:
+              "A voluntary risk-management framework organized around Govern, Map, Measure, and Manage functions."
           },
           {
-            "term": "Treat gates as enablers of predictable",
-            "definition": "Treat gates as enablers of predictable shipping."
+            term: "post-market monitoring",
+            definition:
+              "Ongoing observation of system performance, risks, incidents, and control effectiveness after deployment."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Can risk-tier an AI feature.",
-            "reveal": "Regulation (EU) 2024/1689 (AI Act) entered into force in 2024 with phased applicability; by mid-2026 organizations serving the EU need working inventories, risk classifications, and evidence for high-risk and GPAI-related duties—not slideware. Map each deployed system to a risk tier, owner, and control set: evals, human oversight, transparency, logging, and incident response proportionate to impact.\n\nHiring, credit, and biometric use cases demand deeper impact assessment and monitoring than internal writing assistants. GPAI/provider obligations may sit with model vendors, but deployers still own application-level misuse, data handling, and downstream harm. Contracts and technical controls must reflect that split of responsibility."
+            prompt:
+              "How does the NIST AI RMF help engineering teams even when legal obligations come from another source?",
+            reveal:
+              "It provides an operating vocabulary for roles, system mapping, measurement, mitigation, monitoring, and governance evidence across regimes."
           }
         ]
       },
       {
-        "id": "model-cards-and-datasheets",
-        "heading": "Model cards and datasheets",
-        "paragraphs": [
-          "Model cards communicate intended use, metrics, limitations, fairness evaluations, and ethical considerations. Datasheets describe dataset provenance, collection, and known gaps. Write them so a new on-call engineer and an external auditor can both understand limits. Keep them versioned with the model. Empty marketing language fails review; concrete failure modes pass. Risk tiers should change when tools gain side effects or when audiences expand. Risk tiers should change when tools gain side effects or when audiences expand.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Be concrete about out-of-scope uses and failure modes.",
-          "• Version cards with model releases.",
-          "• Link to evaluation evidence, not slogans.",
-          "Production lens — NIST AI RMF remains the operating language for many teams: The NIST AI RMF (Govern, Map, Measure, Manage) is voluntary but widely used to structure programs that produce evidence useful under multiple regimes. Map: know systems, data, and harm scenarios. Measure: evals, red teams, monitoring. Manage: gates, rollback, incident learning. Govern: roles, policies, and third-party oversight. Use it as an internal control catalog even when legal obligations come from the EU Act or sector rules.\n\nModel cards, data sheets, and system cards only work if they stay synchronized with production versions. A card that describes last year’s model while canaries run a new prompt is a liability. Tie documentation updates to the same promote pipeline as code."
+        id: "documentation-evidence-packs",
+        heading: "Documentation must be synchronized with production artifacts",
+        paragraphs: [
+          "Model cards, system cards, data sheets, risk assessments, evaluation reports, and release notes are governance artifacts. They should describe intended use, out-of-scope use, data provenance, evaluation results, fairness slices, robustness tests, limitations, human oversight, monitoring, and incident contacts. For LLM applications, system cards should include prompts or prompt bundle ids, model aliases, retrieval indexes, tool permissions, memory policy, guardrails, and red-team summaries.",
+          "The most common documentation failure is staleness. A model card written for version 2 does not govern version 5. A system card that omits a newly added email-sending tool hides the real risk. A RAG evaluation report that references an old index does not prove current groundedness. Documentation should be tied to promotion pipelines so artifact ids and evidence update together. Manual prose can remain, but release metadata should be generated or checked automatically.",
+          "Evidence packs help review boards move quickly. Instead of debating abstractions, reviewers see the inventory entry, risk tier, eval report, red-team results, fairness analysis, privacy review, monitoring dashboard, runbook, approvals, and rollback plan. The pack should also include known residual risks and who accepted them. A governance process that rewards concrete limitations will produce safer systems than one that pressures teams to claim perfection."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Be concrete about out-of-scope uses and",
-            "definition": "Be concrete about out-of-scope uses and failure modes."
+            term: "system card",
+            definition:
+              "Documentation for a complete AI application, including components, tools, data flows, evaluations, limitations, and operations."
           },
           {
-            "term": "Version cards with model releases.",
-            "definition": "Version cards with model releases."
+            term: "evidence pack",
+            definition:
+              "A launch or audit bundle containing evaluations, documentation, approvals, monitoring, risk analysis, and rollback evidence."
           },
           {
-            "term": "Link to evaluation evidence, not slogans.",
-            "definition": "Link to evaluation evidence, not slogans."
+            term: "residual risk acceptance",
+            definition:
+              "A recorded decision that remaining risk after mitigations is acceptable under defined conditions."
           }
         ],
-        "workedExample": {
-          "title": "Generate a minimal model card dict",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def model_card(name, intended_use, metrics, limitations):\n    return {\n        \"name\": name,\n        \"intended_use\": intended_use,\n        \"metrics\": metrics,\n        \"limitations\": limitations,\n        \"out_of_scope\": [\"medical diagnosis\", \"criminal justice scoring\"],\n    }\n\nprint(model_card(\"churn-v3\", \"email retention offers\", {\"auc\": 0.84}, [\"unstable for new markets\"]))",
-          "language": "python"
+        workedExample: {
+          title: "Evidence pack checklist",
+          body:
+            "A launch review can fail fast when required evidence is missing.",
+          code:
+            "required = {\n    \"inventory_id\", \"risk_tier\", \"eval_report\", \"redteam_report\",\n    \"monitoring_dashboard\", \"owner\", \"rollback_plan\", \"system_card\"\n}\npack = {\n    \"inventory_id\": \"ai-042\",\n    \"risk_tier\": \"limited\",\n    \"eval_report\": \"eval-rag-v12\",\n    \"redteam_report\": \"rt-v5\",\n    \"monitoring_dashboard\": \"dash-77\",\n    \"owner\": \"support-ai\",\n    \"rollback_plan\": \"alias_flip\",\n}\nprint(\"missing\", sorted(required - set(pack)))",
+          language: "python"
         },
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Writes a concrete model card.",
-            "reveal": "The NIST AI RMF (Govern, Map, Measure, Manage) is voluntary but widely used to structure programs that produce evidence useful under multiple regimes. Map: know systems, data, and harm scenarios. Measure: evals, red teams, monitoring. Manage: gates, rollback, incident learning. Govern: roles, policies, and third-party oversight. Use it as an internal control catalog even when legal obligations come from the EU Act or sector rules.\n\nModel cards, data sheets, and system cards only work if they stay synchronized with production versions. A card that describes last year’s model while canaries run a new prompt is a liability. Tie documentation updates to the same promote pipeline as code."
+            prompt:
+              "Why should a system card include tool permissions for an agent?",
+            reveal:
+              "Tools determine what external actions the system can take. They affect risk tier, approvals, audit logs, red-team scope, and incident response."
           }
         ]
       },
       {
-        "id": "risk-assessments-and-launch-reviews",
-        "heading": "Risk assessments and launch reviews",
-        "paragraphs": [
-          "Risk assessments identify hazards, likelihood, severity, mitigations, and residual risk. Launch reviews check that mitigations are implemented (evals, monitoring, kill switches, privacy reviews). Record decisions and dissent. For LLM apps, include prompt injection, data leakage, and unsafe tool use as first-class hazards. Model cards that admit limitations increase trust more than cards that claim universality. Model cards that admit limitations increase trust more than cards that claim universality.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• List hazards with mitigations and residual risk.",
-          "• Verify mitigations exist before launch.",
-          "• Record decisions for later audits.",
-          "Production lens — Runtime controls and supply chain are governance: Access control on tools/data, retention limits on prompts, regional routing, and audit logs are governance primitives. So is vendor diligence for hosted models: training-data opt-out, subprocessors, uptime, and eval rights on your tasks. Open-weight self-hosting shifts some risks (exfiltration, fine-tune misuse) onto your perimeter without removing responsibility for outputs.\n\nIncidents should change gates. If an agent issues an out-of-policy refund, the fix is dual-control tools plus a new offline case—not only a sterner system prompt. Cross-functional review boards unblock high-risk launches when they demand evidence packs, not unanimous philosophy. Mid-2026 competence is showing the inventory, the tier, the metrics, and the rollback in one coherent story."
+        id: "runtime-controls-and-auditability",
+        heading: "Runtime controls are governance in code",
+        paragraphs: [
+          "Governance becomes real when enforced by runtime systems. Access controls define who can use a feature and which data or tools it can reach. Guardrails enforce output constraints, PII handling, and tool allowlists. Human oversight gates require approval before high-impact actions. Rate limits and budgets control abuse and cost. Retention rules decide what prompts, traces, embeddings, and tool logs can persist. Regional routing enforces data residency. These are not merely platform details; they are compliance controls.",
+          "Audit logs should cover significant AI decisions and agent actions. For a tool-connected agent, record user, tenant, policy version, model alias, tool name, validated arguments, authorization result, approval id, idempotency key, downstream request id, outcome, and trace id. For decision systems, record model version, feature snapshot, score, rule layer, human override, and reason codes where appropriate. Logs must be protected because they may contain sensitive data, but they must be available for authorized investigations.",
+          "Runtime controls should fail safely. If the approval service is unavailable, a money-moving tool should not silently proceed. If regional routing cannot guarantee residency, the request should fail or degrade. If a guardrail cannot evaluate a high-risk response, the system may need human handoff. Governance requirements should appear in architecture diagrams and tests because they change how the service behaves under failure."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "List hazards with mitigations and residual",
-            "definition": "List hazards with mitigations and residual risk."
+            term: "human oversight gate",
+            definition:
+              "A required human review or approval step before a system completes a high-impact action or decision."
           },
           {
-            "term": "Verify mitigations exist before launch.",
-            "definition": "Verify mitigations exist before launch."
+            term: "audit log",
+            definition:
+              "A protected record of decisions, actions, inputs, approvals, versions, and outcomes used for investigation and compliance."
           },
           {
-            "term": "Record decisions for later audits.",
-            "definition": "Record decisions for later audits."
+            term: "regional routing",
+            definition:
+              "Directing data processing and storage to approved geographic regions to satisfy residency or contractual requirements."
           }
         ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Participates in hazard-driven launch reviews.",
-            "reveal": "Access control on tools/data, retention limits on prompts, regional routing, and audit logs are governance primitives. So is vendor diligence for hosted models: training-data opt-out, subprocessors, uptime, and eval rights on your tasks. Open-weight self-hosting shifts some risks (exfiltration, fine-tune misuse) onto your perimeter without removing responsibility for outputs.\n\nIncidents should change gates. If an agent issues an out-of-policy refund, the fix is dual-control tools plus a new offline case—not only a sterner system prompt. Cross-functional review boards unblock high-risk launches when they demand evidence packs, not unanimous philosophy. Mid-2026 competence is showing the inventory, the tier, the metrics, and the rollback in one coherent story."
-          }
-        ]
-      },
-      {
-        "id": "policies-for-data-privacy-and-retention",
-        "heading": "Policies for data, privacy, and retention",
-        "paragraphs": [
-          "Governance includes data minimization, consent, retention, and deletion (including \"right to be forgotten\" impacts on models). Know whether your system can delete or retrain, and how embeddings/logs retain personal data. Coordinate with legal/security early when planning durable memories or training on user content. Deletion and retention are governance issues that intersect model retraining cost—plan both. Deletion and retention are governance issues that intersect model retraining cost—plan both.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Minimize and retain data with purpose limits.",
-          "• Plan deletion impacts on models and indexes.",
-          "• Review user-content training/memory explicitly.",
-          "Production lens — Mid-2026 means operational EU AI Act readiness: Regulation (EU) 2024/1689 (AI Act) entered into force in 2024 with phased applicability; by mid-2026 organizations serving the EU need working inventories, risk classifications, and evidence for high-risk and GPAI-related duties—not slideware. Map each deployed system to a risk tier, owner, and control set: evals, human oversight, transparency, logging, and incident response proportionate to impact.\n\nHiring, credit, and biometric use cases demand deeper impact assessment and monitoring than internal writing assistants. GPAI/provider obligations may sit with model vendors, but deployers still own application-level misuse, data handling, and downstream harm. Contracts and technical controls must reflect that split of responsibility."
-        ],
-        "keyTerms": [
-          {
-            "term": "Minimize and retain data with purpose",
-            "definition": "Minimize and retain data with purpose limits."
-          },
-          {
-            "term": "Plan deletion impacts on models and",
-            "definition": "Plan deletion impacts on models and indexes."
-          },
-          {
-            "term": "Review user-content training/memory explicitly.",
-            "definition": "Review user-content training/memory explicitly."
+            prompt:
+              "Give three examples of governance requirements that should be enforced at runtime.",
+            reveal:
+              "Examples include tool authorization, human approval, PII redaction, retention limits, audit logging, data residency routing, rate limits, and budget caps."
           }
         ],
-        "workedExample": {
-          "title": "Check whether a request requires model retrain",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def deletion_impact(user_id, trained_on_users, hard_delete_logs=True):\n    in_train = user_id in trained_on_users\n    return {\n        \"remove_logs\": hard_delete_logs,\n        \"retrain_required\": in_train,\n        \"reembed_required\": in_train,\n    }\n\nprint(deletion_impact(\"u9\", {\"u1\", \"u9\"}))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Plans deletion/retention for user data in AI systems.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to policies for data, privacy, and retention."
-          }
-        ]
-      },
-      {
-        "id": "continuous-compliance-and-culture",
-        "heading": "Continuous compliance and culture",
-        "paragraphs": [
-          "Governance fails when it is a one-time PDF. Tie policies to CI checks (eval suites, license scans), recurring audits, and blameless incident learning. Empower engineers to pause launches. Celebrate well-written limitations sections—they are signs of maturity, not weakness. Empower engineers to halt launches; culture is part of the control system. Empower engineers to halt launches; culture is part of the control system.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Automate evidence collection in CI where possible.",
-          "• Revisit risk tiers when product scope expands.",
-          "• Build culture that rewards surfacing risks early.",
-          "Production lens — NIST AI RMF remains the operating language for many teams: The NIST AI RMF (Govern, Map, Measure, Manage) is voluntary but widely used to structure programs that produce evidence useful under multiple regimes. Map: know systems, data, and harm scenarios. Measure: evals, red teams, monitoring. Manage: gates, rollback, incident learning. Govern: roles, policies, and third-party oversight. Use it as an internal control catalog even when legal obligations come from the EU Act or sector rules.\n\nModel cards, data sheets, and system cards only work if they stay synchronized with production versions. A card that describes last year’s model while canaries run a new prompt is a liability. Tie documentation updates to the same promote pipeline as code."
-        ],
-        "keyTerms": [
-          {
-            "term": "Automate evidence collection in CI where",
-            "definition": "Automate evidence collection in CI where possible."
-          },
-          {
-            "term": "Revisit risk tiers when product scope",
-            "definition": "Revisit risk tiers when product scope expands."
-          },
-          {
-            "term": "Build culture that rewards surfacing risks",
-            "definition": "Build culture that rewards surfacing risks early."
-          }
-        ],
-        "checkYourself": [
-          {
-            "prompt": "Connects governance to CI and incidents.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to continuous compliance and culture."
-          }
-        ]
-      },
-      {
-        "id": "risk-tiered-governance-system-cards-audit-logs-and-residency",
-        "heading": "Risk-tiered governance, system cards, audit logs, and residency",
-        "paragraphs": [
-          "Regulators and enterprise buyers increasingly expect risk-tiered controls. Using EU AI Act-style intuition for education—not as legal advice—helps structure reviews: unacceptable-use categories (e.g., social scoring-like patterns) are blocked; high-risk decision systems need stronger documentation, human oversight, and quality management; limited-risk apps emphasize transparency (user knows they interact with AI); minimal-risk freer iteration still needs basic security and privacy hygiene. Map your product to a tier with counsel; engineering’s job is to make the tier real in code paths. For LLM apps, publish model cards and system cards: intended use, out-of-scope uses, evaluation summaries, known failure modes, tool permissions, and escalation paths. Audit logs for tool actions (who/what/when/why/idempotency key/approver) are evidence in incidents and compliance reviews. Data residency and cross-border processing constraints may force regional open-weight serving, regional indexes, and prompt/log storage rules—architecture must follow. Retention, deletion, and training-data opt-out commitments should connect to reindex and fine-tune invalidation runbooks. Governance that ends as a slide deck fails; governance that blocks a deploy when cards, evals, or audit sinks are missing actually protects users.",
-          "Hold these points explicitly while you study. Restate each one without looking at the list — recognition is not the interview bar; recall is.",
-          "• Risk-tier systems (unacceptable/high/limited/minimal) to size oversight—educational framing, involve counsel for compliance.",
-          "• Ship model/system cards that cover tools, evals, and out-of-scope uses for LLM apps.",
-          "• Audit-log privileged tool actions with approver and idempotency metadata.",
-          "• Design for data residency: regional inference, indexes, and log storage when required.",
-          "Production lens — Runtime controls and supply chain are governance: Access control on tools/data, retention limits on prompts, regional routing, and audit logs are governance primitives. So is vendor diligence for hosted models: training-data opt-out, subprocessors, uptime, and eval rights on your tasks. Open-weight self-hosting shifts some risks (exfiltration, fine-tune misuse) onto your perimeter without removing responsibility for outputs.\n\nIncidents should change gates. If an agent issues an out-of-policy refund, the fix is dual-control tools plus a new offline case—not only a sterner system prompt. Cross-functional review boards unblock high-risk launches when they demand evidence packs, not unanimous philosophy. Mid-2026 competence is showing the inventory, the tier, the metrics, and the rollback in one coherent story."
-        ],
-        "keyTerms": [
-          {
-            "term": "Risk-tier systems (unacceptable/high/limited/…",
-            "definition": "Risk-tier systems (unacceptable/high/limited/minimal) to size oversight—educational framing, involve counsel for compliance."
-          },
-          {
-            "term": "Ship model/system cards that cover tools,",
-            "definition": "Ship model/system cards that cover tools, evals, and out-of-scope uses for LLM apps."
-          },
-          {
-            "term": "Audit-log privileged tool actions with approver",
-            "definition": "Audit-log privileged tool actions with approver and idempotency metadata."
-          },
-          {
-            "term": "Design for data residency: regional inference,",
-            "definition": "Design for data residency: regional inference, indexes, and log storage when required."
-          }
-        ],
-        "workedExample": {
-          "title": "Toy risk tier classifier for launch review",
-          "body": "Narrate what each shape and step is doing. If you only recognize the API call, you do not own the idea yet — rewrite the example from memory after one pass.",
-          "code": "def risk_tier(feature):\n    if feature.get('prohibited_use'):\n        return 'unacceptable_review_block'\n    if feature.get('affects_legal_or_credit') or feature.get('safety_critical'):\n        return 'high'\n    if feature.get('user_facing_chat'):\n        return 'limited'\n    return 'minimal'\n\nprint(risk_tier({'user_facing_chat': True}))\nprint(risk_tier({'affects_legal_or_credit': True}))\nprint(risk_tier({'prohibited_use': True}))",
-          "language": "python"
-        },
-        "checkYourself": [
-          {
-            "prompt": "Can risk-tier an LLM feature and list required artifacts per tier.",
-            "reveal": "Explain the idea in two sentences, name one metric or invariant you would watch, and state one mistake juniors make. Then connect it back to risk-tiered governance, system cards, audit logs, and residency."
-          }
-        ],
-        "callout": {
-          "tone": "interview",
-          "body": "Interview framing: define the term, give a tiny example, say when you would not use it, and name the metric that proves it worked."
+        callout: {
+          tone: "warning",
+          body:
+            "A policy that exists only in a PDF will not stop an agent from calling a tool."
         }
       },
       {
-        "id": "failure-modes",
-        "heading": "Failure modes and anti-patterns",
-        "paragraphs": [
-          "Most interview answers fail not because the definition is wrong, but because the candidate never names how the approach breaks. Use this section as a trap checklist for ai governance and regulation.",
-          "Trap: Generic cards with no failure modes. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Ignoring LLM tool hazards in risk reviews. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No deletion story for trained user content. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Governance only at the last mile before launch. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Treating a model card as optional marketing copy. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: No audit trail for agent tool actions that move money or data. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first.",
-          "Trap: Sending prompts to a foreign region when contracts require residency. A strong answer preempts it — say what you would monitor, what fallback you would keep, or what simpler baseline you would try first."
+        id: "vendors-open-models-and-supply-chain",
+        heading: "Vendors, open models, and supply chain split responsibility",
+        paragraphs: [
+          "Using a hosted model provider shifts some responsibilities but not all of them. Providers may own base-model training controls, frontier safety testing, infrastructure, and some general-purpose AI obligations. Deployers still own prompts, data sent to the provider, retrieval sources, tool use, user disclosures, downstream decisions, monitoring, and incident response. Contracts should clarify retention, training-data use, subprocessors, regions, uptime, audit rights, security controls, and notification obligations.",
+          "Open-weight and self-hosted models change the risk profile. They may improve data control, latency, cost, or customization, but they require model provenance review, license compliance, vulnerability management, fine-tune data governance, abuse monitoring, and serving security. If a team fine-tunes on customer data, deletion and opt-out commitments become more complex. If a model is deployed regionally for residency, the organization must operate the infrastructure and logs accordingly.",
+          "Supply-chain governance extends to datasets, embeddings, eval tools, prompt libraries, agent frameworks, vector databases, and browser or code-execution tools. A vulnerability in a tool server or a licensing issue in a dataset can create as much risk as a weak model. Procurement and engineering should maintain component inventories and review changes. AI supply chain is not just model cards from vendors; it is the full behavior stack."
         ],
-        "callout": {
-          "tone": "warning",
-          "body": "If you cannot name a failure mode, you do not yet understand the technique well enough to ship or defend it."
-        },
-        "checkYourself": [
+        keyTerms: [
           {
-            "prompt": "Pick the most dangerous pitfall for AI governance and regulation and explain how you would detect it in production or on a whiteboard.",
-            "reveal": "Start with: \"Generic cards with no failure modes.\" Then add a detection signal (metric, test, or review question) and a mitigation."
+            term: "subprocessor",
+            definition:
+              "A third party used by a vendor or service provider to process data under contract."
+          },
+          {
+            term: "model provenance",
+            definition:
+              "Information about a model's origin, license, training process, intended use, and known restrictions."
+          },
+          {
+            term: "component inventory",
+            definition:
+              "A catalog of models, datasets, tools, frameworks, providers, and infrastructure involved in an AI system."
+          }
+        ],
+        checkYourself: [
+          {
+            prompt:
+              "What responsibilities remain with the deployer when using a hosted foundation model?",
+            reveal:
+              "The deployer owns application design, prompts, user data handling, retrieval, tools, disclosures, monitoring, incident response, and downstream harms."
           }
         ]
       },
       {
-        "id": "deeper-lens",
-        "heading": "A deeper production lens",
-        "paragraphs": [
-          "Mid-2026 means operational EU AI Act readiness. Regulation (EU) 2024/1689 (AI Act) entered into force in 2024 with phased applicability; by mid-2026 organizations serving the EU need working inventories, risk classifications, and evidence for high-risk and GPAI-related duties—not slideware. Map each deployed system to a risk tier, owner, and control set: evals, human oversight, transparency, logging, and incident response proportionate to impact.\n\nHiring, credit, and biometric use cases demand deeper impact assessment and monitoring than internal writing assistants. GPAI/provider obligations may sit with model vendors, but deployers still own application-level misuse, data handling, and downstream harm. Contracts and technical controls must reflect that split of responsibility.",
-          "NIST AI RMF remains the operating language for many teams. The NIST AI RMF (Govern, Map, Measure, Manage) is voluntary but widely used to structure programs that produce evidence useful under multiple regimes. Map: know systems, data, and harm scenarios. Measure: evals, red teams, monitoring. Manage: gates, rollback, incident learning. Govern: roles, policies, and third-party oversight. Use it as an internal control catalog even when legal obligations come from the EU Act or sector rules.\n\nModel cards, data sheets, and system cards only work if they stay synchronized with production versions. A card that describes last year’s model while canaries run a new prompt is a liability. Tie documentation updates to the same promote pipeline as code.",
-          "Runtime controls and supply chain are governance. Access control on tools/data, retention limits on prompts, regional routing, and audit logs are governance primitives. So is vendor diligence for hosted models: training-data opt-out, subprocessors, uptime, and eval rights on your tasks. Open-weight self-hosting shifts some risks (exfiltration, fine-tune misuse) onto your perimeter without removing responsibility for outputs.\n\nIncidents should change gates. If an agent issues an out-of-policy refund, the fix is dual-control tools plus a new offline case—not only a sterner system prompt. Cross-functional review boards unblock high-risk launches when they demand evidence packs, not unanimous philosophy. Mid-2026 competence is showing the inventory, the tier, the metrics, and the rollback in one coherent story."
+        id: "continuous-governance-and-incidents",
+        heading: "Continuous governance learns from launches and incidents",
+        paragraphs: [
+          "Governance fails when it is a one-time committee meeting. Systems change after launch: prompts are edited, tools are added, models are swapped, corpora refresh, user populations shift, and regulations evolve. Continuous governance ties release pipelines to recurring audits, monitoring reviews, risk-tier reassessments, incident postmortems, and evidence refresh. A feature that was low-risk as a drafting assistant may become higher-risk when it gains the ability to submit forms or send messages.",
+          "Incident response should update controls. If an AI assistant exposes private data in traces, retention and redaction controls need review. If an agent performs an unauthorized action, tool authorization and approval gates need strengthening. If a model shows fairness regression after market expansion, monitoring slices and data collection may need revision. The postmortem should identify artifact versions, affected users, root causes, mitigations, and new gates or tests.",
+          "Culture is part of governance. Engineers, product managers, legal, security, data science, operations, and support must be able to raise risks without being treated as blockers. A mature organization rewards accurate limitations, clear escalation, and measured rollback. The goal is not to eliminate all AI risk; it is to know which risks exist, who owns them, what evidence supports the decision, and how the system responds when reality changes."
         ],
-        "keyTerms": [
+        keyTerms: [
           {
-            "term": "Mid-2026 means operational EU AI Act readiness",
-            "definition": "Regulation (EU) 2024/1689 (AI Act) entered into force in 2024 with phased applicability; by mid-2026 organizations serving the EU need working inventories, risk classifications, and evidence for high-risk and GPAI-relate…"
+            term: "risk-tier reassessment",
+            definition:
+              "A review triggered by scope, tool, user, geography, model, or data changes that may alter required controls."
           },
           {
-            "term": "NIST AI RMF remains the operating language for many teams",
-            "definition": "The NIST AI RMF (Govern, Map, Measure, Manage) is voluntary but widely used to structure programs that produce evidence useful under multiple regimes. Map: know systems, data, and harm scenarios. Measure: evals, red team…"
+            term: "AI postmortem",
+            definition:
+              "An incident review that includes model, data, prompt, tool, governance, monitoring, and user-impact evidence."
           },
           {
-            "term": "Runtime controls and supply chain are governance",
-            "definition": "Access control on tools/data, retention limits on prompts, regional routing, and audit logs are governance primitives. So is vendor diligence for hosted models: training-data opt-out, subprocessors, uptime, and eval righ…"
+            term: "governance culture",
+            definition:
+              "Organizational norms that encourage surfacing AI risks, documenting limitations, and acting on evidence."
           }
         ],
-        "callout": {
-          "tone": "tip",
-          "body": "These notes stretch past the primer. Reach for them when the interviewer asks what you would worry about at scale."
-        }
-      },
-      {
-        "id": "synthesis",
-        "heading": "Putting it together",
-        "paragraphs": [
-          "You should now be able to teach ai governance and regulation as a story: what problem it solves, how the mechanism works, which assumptions it depends on, and how you would know it failed.",
-          "Close the loop by writing a 90-second spoken answer out loud. If you freeze on definitions, return to the orientation and the first technical part. If you freeze on trade-offs, return to failure modes.",
-          "Practice prompts from this lesson: What belongs in a model card for a credit model? | How do you risk-tier an internal LLM assistant? | How does right-to-be-forgotten affect embeddings?"
-        ],
-        "checkYourself": [
+        checkYourself: [
           {
-            "prompt": "Give a 90-second spoken overview of AI governance and regulation as if starting an interview answer.",
-            "reveal": "Structure: (1) one-sentence definition, (2) one concrete example, (3) one trade-off or limitation, (4) one metric or validation step. Keep jargon only where it earns precision."
+            prompt:
+              "When should an AI system's risk tier be reassessed?",
+            reveal:
+              "When purpose, users, regions, tools, data, model/provider, automation level, human oversight, or potential harm changes."
           }
         ],
-        "callout": {
-          "tone": "interview",
-          "body": "Strong candidates narrate decisions. Weak candidates list buzzwords. Prefer a small correct example over a broad incomplete taxonomy."
+        callout: {
+          tone: "tip",
+          body:
+            "Good governance lets teams move faster because the evidence and controls are clear before the risky change arrives."
         }
       }
     ],
-    "wrapUp": {
-      "takeaways": [
-        "Can risk-tier an AI feature.",
-        "Writes a concrete model card.",
-        "Participates in hazard-driven launch reviews.",
-        "Plans deletion/retention for user data in AI systems.",
-        "Connects governance to CI and incidents."
+    wrapUp: {
+      takeaways: [
+        "AI governance operationalizes roles, risk tiers, controls, evidence, and escalation paths.",
+        "The 2026 landscape is risk-based, with EU AI Act readiness, NIST AI RMF language, sector rules, and enterprise requirements shaping practice.",
+        "System cards, model cards, eval reports, and evidence packs must stay synchronized with production artifacts.",
+        "Runtime controls, audit logs, retention, approvals, and regional routing make governance enforceable.",
+        "Vendor and open-model choices split responsibility but never remove deployer accountability for application behavior."
       ],
-      "nextSteps": [
-        "Return to the lesson page and attempt the practice / topic lab with this chapter still open if needed.",
-        "Revisit any Check yourself prompts you could not answer out loud.",
-        "Optional deeper reading: Regulation (EU) 2024/1689 — Artificial Intelligence Act (EUR-Lex) — https://eur-lex.europa.eu/eli/reg/2024/1689/en",
-        "Optional deeper reading: European Commission — AI Act overview (European Commission) — https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai"
+      nextSteps: [
+        "Create an inventory entry for an LLM feature that uses retrieval and tools.",
+        "Draft an evidence pack checklist for a high-risk AI release.",
+        "Write an incident postmortem template that includes model, prompt, data, tool, and governance artifacts."
       ]
     }
   }
 };
+
+/** @type {Record<string, import('../learnChapters.js').LessonLearnChapter>} */
+export const aiSafetyChapters = JSON.parse(JSON.stringify(chapters));
