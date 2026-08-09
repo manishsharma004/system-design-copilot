@@ -61,6 +61,7 @@ import { dsaMockLoopsChapters } from './learnChapters/dsaMockLoopsChapters.js';
  * @typedef {{ title: string, body: string, code?: string, language?: string }} LearnWorkedExample
  * @typedef {{ prompt: string, reveal: string }} LearnCheckYourself
  * @typedef {{ tone: 'tip' | 'warning' | 'interview', body: string }} LearnCallout
+ * @typedef {{ title?: string, caption?: string, code: string }} LearnMermaid
  * @typedef {{
  *   id: string,
  *   heading: string,
@@ -68,7 +69,8 @@ import { dsaMockLoopsChapters } from './learnChapters/dsaMockLoopsChapters.js';
  *   keyTerms?: LearnKeyTerm[],
  *   workedExample?: LearnWorkedExample,
  *   checkYourself?: LearnCheckYourself[],
- *   callout?: LearnCallout
+ *   callout?: LearnCallout,
+ *   mermaid?: LearnMermaid
  * }} LearnChapterPart
  * @typedef {{ label: string, href: string }} LearnNextStep
  * @typedef {{
