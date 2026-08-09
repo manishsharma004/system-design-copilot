@@ -109,6 +109,8 @@ New and expanded **lessons/modules** for shipping AI applications (design + brow
 
 ## Phase D — Interactive & Learn depth (P1–P2)
 
+**Detailed per-lesson plan:** [`ai-ml-interactive-chapters-plan.md`](ai-ml-interactive-chapters-plan.md) (runnable demos, Mermaid, `nextSteps`, all 44 lessons).
+
 | # | Item | Work | Acceptance | Files |
 |---|------|------|------------|-------|
 | D.1 | Diagrams in Learn chapters | Optional `mermaid` on part or chapter for RAG pipeline, agent loop, serving | ≥10 high-traffic AI chapters get diagrams; `LessonLearnReader` renders `MermaidDiagram` | `learnChapters.js` schema, `LessonLearnReader.svelte`, chapter data |
