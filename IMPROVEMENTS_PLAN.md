@@ -3,13 +3,15 @@
 A phased roadmap focused on **learning experience, content depth, and practice UX**.  
 Status key: **Done** | **Partial** | **Planned** | **Deferred**
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-08-09
 
 ---
 
 ## Current focus
 
-**Learning UX + content** — mock interview pacing, curated hints, solution reveals, hero CTAs, spaced review, company paths.
+**AI Engineer track** — unified topic lab, Learn in sub-nav, aligned start paths, application-builder content (API/streaming, multi-tenant RAG, ship checklist), interactive depth. Full plan: [`docs/ai-engineer-update-plan.md`](docs/ai-engineer-update-plan.md).
+
+**Also in queue:** company paths (4.6), curated answers expansion (4.2), optional live API lane (E.3).
 
 **Deferred (not in active scope):** Playwright/e2e suite (5.2), theme toggle (7.3). Node unit tests remain the quality gate.
 
@@ -59,7 +61,7 @@ Last reviewed: 2026-07-26
 | 4.2 | Curated `likelyAnswerPoints` (heuristic fallback) | P1 | **Partial** | 8 → 17 lessons |
 | 4.3 | Expand solution reveals beyond 9 case studies | P2 | **Partial** | 9 → 12 lessons |
 | 4.4 | Simulation + practice CTAs in lesson hero | P2 | **Done** | Hero deep links to labs |
-| 4.5 | Spaced review queue (resurface completed lessons) | P1 | **Planned** | No review store yet |
+| 4.5 | Spaced review queue (resurface completed lessons) | P1 | **Done** | `reviewQueueStorage.js`, home “Review today” |
 | 4.6 | Company-specific study paths (Amazon/Google JSON data) | P2 | **Planned** | Company JSON backs question bank only |
 
 **Key paths:** `PracticeIDE.svelte`, `practiceTimer.js`, `practicePhaseLimits.js`, `interviewAnswers.js`, `solutionLoader.js`, `lessonEnhancements.js`, `+page.svelte` (lesson)
@@ -131,14 +133,43 @@ Last reviewed: 2026-07-26
 | **5.1** Defer Monaco until editor focus | Gate `getMonaco()` on interaction | **Planned** |
 | **5.2** Playwright smoke | — | **Deferred** |
 
-### Sprint D — Engagement (next)
+### Sprint D — Engagement
 
-| Item | Work | Acceptance |
-|------|------|------------|
-| **4.5** Spaced review | `reviewQueue` store: 1d / 3d / 7d resurfacing | “Review today” card on home |
-| **4.6** Company paths | `companyPaths` in `courseData.js` | Amazon + Google lesson sequences |
-| **5.3** Bundle audit | `rollup-plugin-visualizer` + `npm run analyze` | One-time chunk report |
-| **6.3** Proxy docs | Section in `docs/cursor/llm.mdc` | No runtime code change |
+| Item | Work | Acceptance | Status |
+|------|------|------------|--------|
+| **4.5** Spaced review | `reviewQueue` store: 1d / 3d / 7d resurfacing | “Review today” card on home | **Done** |
+| **4.6** Company paths | `companyPaths` in `courseData.js` | Amazon + Google lesson sequences | **Planned** |
+| **5.3** Bundle audit | `rollup-plugin-visualizer` + `npm run analyze` | One-time chunk report | **Planned** |
+| **6.3** Proxy docs | Section in `docs/cursor/llm.mdc` | No runtime code change | **Planned** |
+
+### Sprint E — AI Engineer track (next)
+
+Detailed breakdown: [`docs/ai-engineer-update-plan.md`](docs/ai-engineer-update-plan.md).
+
+| Sprint | Scope | Priority | Status |
+|--------|--------|----------|--------|
+| **E1** UX foundation | Unify topic lab (A.1), Learn in sub-nav (A.2), start path + CTA (A.3–A.4), flow labels (A.5–A.6) | P0 | **Done** |
+| **E2** Paths & scaffold | Role paths (B.1–B.2), data-eng visibility (B.3–B.4), capstone drills (C.5–C.6) | P1 | **Partial** — paths + RAG prereq badges/callouts |
+| **E3** Application lab module | New `ai-application-lab`: chat API, multi-tenant RAG, shipping (C.1–C.4) | P1 | **Done** |
+| **E4** Interactive depth | Learn diagrams, nextSteps links, fixture tools, eval exercises (D.1–D.7) | P1–P2 | **Partial** — key chapters linked; fixture tool exercises |
+| **E5** Retention | Spaced review (E.1), Learn backup key (E.2), optional live lane + mobile (E.3–E.5) | P2 | **Partial** — review queue + mobile jump menu |
+
+---
+
+## Phase 8 — AI Engineer track (summary)
+
+| # | Item | Priority | Status | Notes |
+|---|------|----------|--------|-------|
+| 8.1 | Unify AI topic lab (no duplicate `#topic-lab`) | P0 | **Done** | `AiTopicLab.svelte` |
+| 8.2 | Learn in lesson sub-nav | P0 | **Done** | `LessonSectionNav.svelte` |
+| 8.3 | Align AI start path (interactive lab vs foundations) | P0 | **Done** | `aiStudyPaths.js`, flow page |
+| 8.4 | Role-based study paths (app / ML / platform) | P1 | **Done** | AI flow page |
+| 8.5 | `ai-application-lab` module (3 lessons) | P1 | **Done** | `aiApplicationLab.js` |
+| 8.6 | Learn chapter diagrams + nextSteps deep links | P1 | **Partial** | RAG + app lab + agent chapters linked |
+| 8.7 | Fixture tool-calling + eval harness exercises | P2 | **Partial** | `fixture-tool-dispatch`, eval gates in app lab |
+| 8.8 | Learn reader position in full backup | P2 | **Done** | `backup.js` |
+
+**Key paths:** `docs/ai-engineer-update-plan.md`, `src/routes/module/…/+page.svelte`, `aiEngineerCourseData.js`, `learnChapters/`
 
 ---
 
@@ -151,6 +182,8 @@ Last reviewed: 2026-07-26
 | 13 interactive topic labs (`interactiveLessons.js`) | Richer than checklist-only framing | Cross-link from sub-nav |
 | Company JSON → study paths | `amazon.json`, `google.json` exist for question bank | Sprint D / 4.6 |
 | PWA runtime cache for visited lessons | Large bank chunks excluded from precache | Extend offline coverage |
+| AI Engineer application-builder gap | API/streaming, tenancy, ship path thin vs model depth | Phase 8 / Sprint E3 |
+| Duplicate AI topic lab sections | Study companion + `LessonExplorer` on same lesson | Sprint E1 / 8.1 |
 
 ---
 
@@ -163,14 +196,16 @@ Last reviewed: 2026-07-26
 | `system-design-copilot-simulation-v1` | Simulation lab sessions |
 | `system-design-copilot-llm-v1` | LLM provider settings |
 | `system-design-copilot-sidebar-v1` | Sidebar expand/collapse + scope preference |
+| `system-design-copilot-learn-position-v1:*` | Learn reader section + scroll per lesson (per-lesson suffix) |
+| `ml-practice:*` | ML IDE drafts per exercise (per-lesson suffix) |
 
-IndexedDB workspaces (DSA drafts, ML worker state) are included in full export via `backup.js`.
+IndexedDB workspaces (DSA drafts, ML worker state) are included in full export via `backup.js`. **Planned (8.8):** include Learn position keys in `exportFullLocalData()`.
 
 ---
 
 ## Current scale
 
-5 flows · 29 modules · 110 lessons · **12** enhanced solution reveals · 13 interactive topic labs · simulation for all HLD lessons (9 authored + generated fallbacks)
+5 flows · **50** modules · **172** lessons · **12** enhanced solution reveals · AI Engineer **14** modules / **41** lessons (all with Learn chapters) · simulation for all HLD lessons (9 authored + generated fallbacks)
 
 ---
 

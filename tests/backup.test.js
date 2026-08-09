@@ -23,7 +23,15 @@ test('backup payload includes version metadata and storage keys', () => {
   const payload = exportLocalData();
   assert.equal(payload.version, 2);
   assert.ok(typeof payload.exportedAt === 'string');
-  assert.deepEqual(Object.keys(BACKUP_STORAGE_KEYS).sort(), ['llm', 'practice', 'progress', 'sidebar', 'simulation']);
+  assert.deepEqual(Object.keys(BACKUP_STORAGE_KEYS).sort(), [
+    'aiStudyPath',
+    'llm',
+    'practice',
+    'progress',
+    'reviewQueue',
+    'sidebar',
+    'simulation'
+  ]);
 });
 
 test('importLocalData rejects invalid payloads in the browser', () => {

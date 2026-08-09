@@ -8,6 +8,12 @@ import { rawAiAdvancedLearningModules } from './aiLearningExpansionAdvanced.js';
 import { rawAiIndustryCurrencyModules } from './aiIndustryCurrencyLabs.js';
 import { applyAiCoreEnrichment } from './aiCoreLessonEnrichment.js';
 import { applyAiIndustryCurrencyPatches } from './aiIndustryCurrencyPatches.js';
+import { rawAiApplicationLabModules, applyAiApplicationLabEnrichment } from './aiApplicationLab.js';
+import {
+  DEFAULT_AI_STUDY_PATH_ID,
+  getNextLessonIdForAiPath,
+  aiStudyPathStartModule
+} from './aiStudyPaths.js';
 import { rawQuestionBankModules } from './questionBankCourseData.js';
 import { rawHldLearningModules } from './hldLearningExpansion.js';
 import { rawLldLearningModules } from './lldLearningExpansion.js';
@@ -3483,6 +3489,7 @@ const dsaModules = [
 ];
 const aiModules = applyAiIndustryCurrencyPatches([
   ...applyAiCoreEnrichment(rawAiEngineerModules),
+  ...applyAiApplicationLabEnrichment(rawAiApplicationLabModules),
   ...rawAiLearningModules,
   ...rawAiAdvancedLearningModules,
   ...rawAiIndustryCurrencyModules
@@ -3571,8 +3578,8 @@ const flowDefinitions = [
     summary: 'Learn machine learning end to end — classical ML, transformers, production RAG, agents, LLMOps evaluation, and serving — aligned to current industry interview expectations.',
     description: 'Use this flow to build skills hiring teams screen for in 2026: classical ML and deep learning foundations, transformers, hybrid RAG with evaluation, tool-calling agents, LLMOps (cost, latency, golden-set gates), and production serving/governance — with runnable NumPy and scikit-learn exercises throughout.',
     audience: 'Best for software engineers transitioning to AI/ML or AI platform roles, data scientists moving to engineering, and candidates preparing for RAG/agents/LLMOps interview loops.',
-    cadence: 'Start with interactive ML labs, deepen foundations, then specialize through transformers, retrieval, agents, LLMOps evaluation, or production labs.',
-    heroGuidance: 'Start with interactive labs, build training and evaluation intuition, then specialize in RAG, agents, LLMOps, or production ML based on the roles you are targeting.',
+    cadence: 'Default path: interactive ML labs, then LLMs, RAG, application architecture, agents, and LLMOps. Or pick theory-first or platform paths on the flow page.',
+    heroGuidance: 'Start with interactive labs if you are building apps; use the flow page to switch paths. Then specialize in RAG, agents, application APIs, or LLMOps based on your target role.',
     focusAreas: [
       'Interactive ML labs, deep learning from scratch, and transformers/attention',
       'Production RAG, prompt/tool contracts, agents, and LLM evaluation harnesses',
@@ -3802,9 +3809,18 @@ export function getLessonPracticeSteps(lesson) {
       {
         id: 'design',
         kind: 'design',
-        title: 'Implementation deep dive',
-        objective: 'Design the architecture, pipeline, or implementation for a real-world application of this topic.',
-        prompt: `Design a production system that applies "${lesson.title}". Describe the architecture, key implementation decisions, data/compute requirements, and how it integrates with other systems.`,
+        title:
+          lesson.moduleSlug === 'ai-application-lab'
+            ? 'Sketch the application'
+            : 'Implementation deep dive',
+        objective:
+          lesson.moduleSlug === 'ai-application-lab'
+            ? 'Design the end-to-end AI application: API surface, data paths, eval gates, and deploy rollback.'
+            : 'Design the architecture, pipeline, or implementation for a real-world application of this topic.',
+        prompt:
+          lesson.moduleSlug === 'ai-application-lab'
+            ? `Sketch a production AI application for "${lesson.title}". Cover API/streaming, session or tenancy, retrieval or tools, evaluation gates, and rollback.`
+            : `Design a production system that applies "${lesson.title}". Describe the architecture, key implementation decisions, data/compute requirements, and how it integrates with other systems.`,
         guardrails: [
           ...sectionHeadings,
           prompts[1] ?? `Identify the critical implementation decision and one scaling constraint for ${lesson.title}.`,
@@ -4009,4 +4025,37 @@ function buildLldPracticeTemplate(lessonTitle, structure, prompt) {
  */
 export function getResumeLesson(completedLessonIds) {
   return allLessons.find((lesson) => !completedLessonIds.includes(lesson.id)) ?? allLessons[0] ?? null;
+}
+
+/**
+ * Flow-aware resume lesson (AI Engineer respects study path preference).
+ * @param {string} flowSlug
+ * @param {string[]} completedLessonIds
+ * @param {{ aiStudyPathId?: string }} [options]
+ */
+export function getFlowResumeLesson(flowSlug, completedLessonIds, options = {}) {
+  if (flowSlug === 'ai-engineer') {
+    const pathId = options.aiStudyPathId ?? DEFAULT_AI_STUDY_PATH_ID;
+    const nextId = getNextLessonIdForAiPath(pathId, completedLessonIds);
+    const fromPath = lessonIndex[nextId];
+    if (fromPath) return fromPath;
+    const startModule = aiStudyPathStartModule[pathId] ?? aiStudyPathStartModule[DEFAULT_AI_STUDY_PATH_ID];
+    const module = moduleIndex[startModule];
+    if (module?.lessons?.length) {
+      const lesson = module.lessons.find((l) => !completedLessonIds.includes(`${module.slug}/${l.slug}`));
+      if (lesson) {
+        return lessonIndex[`${module.slug}/${lesson.slug}`] ?? getResumeLesson(completedLessonIds);
+      }
+    }
+  }
+  const flow = getFlowBySlug(flowSlug);
+  if (!flow) return getResumeLesson(completedLessonIds);
+  for (const module of flow.modules) {
+    for (const lesson of module.lessons) {
+      if (!completedLessonIds.includes(lesson.id)) {
+        return lesson;
+      }
+    }
+  }
+  return flow.modules[0]?.lessons[0] ?? getResumeLesson(completedLessonIds);
 }

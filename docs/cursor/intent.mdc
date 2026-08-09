@@ -34,7 +34,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 |------|--------|
 | Curriculum / home | `src/routes/+page.svelte`, `courseData.js` → `siteOverview` (+ `learningPaths`) |
 | Flow / module / lesson | `src/routes/flow/…`, `module/…`, `module/…/lesson/…` |
-| Topic lab | `LessonExplorer.svelte`, `AiLessonStudyGuide.svelte` |
+| Topic lab | `AiTopicLab.svelte` (AI Engineer), `LessonExplorer.svelte`, `AiLessonStudyGuide.svelte` (non-AI exercises) |
 | Simulation | `SimulationIDE.svelte`, `src/lib/simulation/` |
 | Markdown practice | `PracticeIDE.svelte` |
 | DSA / banks | `DsaPracticeIDE.svelte`, `QuestionBankIDE.svelte` |
@@ -43,7 +43,7 @@ Setup/commands: `README.md`, `AGENTS.md`.
 | LLM panel / Check (AI) | `LlmAssistantPanel.svelte`, `llm/checkPrompts.js` |
 | Progress / backup | `progress.js`, `backup.js`, `ProgressControls.svelte` |
 
-Scale today: **5 flows · 50 modules · 172 lessons**.
+Scale today: **5 flows · 51 modules · 175 lessons** (AI Engineer: 15 modules / 44 lessons, role paths on flow page).
 
 ## Attribution
 

@@ -12,6 +12,7 @@
     siteOverview,
     allLessons
   } from '$lib/data/courseData';
+  import { reviewDueToday } from '$lib/stores/reviewQueue';
 
   const featuredModules = defaultFlow.modules.slice(0, 3);
   let showExtendedResources = false;
@@ -56,8 +57,8 @@
         </article>
         <article class="hero-stat-card">
           <span class="eyebrow">Interactive labs</span>
-          <strong>4</strong>
-          <p>Simulation, markdown practice, DSA WASM runtimes, and in-browser ML with Pyodide.</p>
+          <strong>Learn + labs</strong>
+          <p>Learn chapters, topic labs, Python ML IDE, simulation, and interview practice — all in-browser.</p>
         </article>
       </div>
     </div>
@@ -107,6 +108,31 @@
         Continue lesson
       </a>
     </div>
+  </section>
+{/if}
+
+{#if $reviewDueToday.length}
+  <section class="panel hero-card home-resume-card">
+    <div class="curriculum-map-header">
+      <div>
+        <p class="eyebrow">Review today</p>
+        <h2>Resurface lessons you completed earlier</h2>
+        <p class="hero-subtitle">Spaced review prioritizes AI Engineer topics (RAG, agents, LLMOps) when due.</p>
+      </div>
+    </div>
+    <ul class="link-stack">
+      {#each $reviewDueToday as entry}
+        <li>
+          <a
+            class="nav-link"
+            href={`${base}/module/${entry.lesson.moduleSlug}/lesson/${entry.lesson.slug}?learn=1`}
+          >
+            <strong>{entry.lesson.title}</strong>
+            <small>{entry.lesson.moduleTitle}</small>
+          </a>
+        </li>
+      {/each}
+    </ul>
   </section>
 {/if}
 

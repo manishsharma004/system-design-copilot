@@ -1,6 +1,7 @@
 
 import { browser } from '$app/environment';
 import { derived, writable } from 'svelte/store';
+import { scheduleLessonReview } from '$lib/stores/reviewQueueStorage';
 
 const STORAGE_KEY = 'system-design-copilot-progress-v4';
 /** @typedef {{ completedLessonIds: string[] }} ProgressState */
@@ -30,9 +31,13 @@ function createProgressStore() {
     toggleLesson(lessonId) {
       /** @param {ProgressState} state */
       update((state) => {
-        const next = state.completedLessonIds.includes(lessonId)
+        const wasComplete = state.completedLessonIds.includes(lessonId);
+        const next = wasComplete
           ? state.completedLessonIds.filter((id) => id !== lessonId)
           : [...state.completedLessonIds, lessonId];
+        if (!wasComplete) {
+          scheduleLessonReview(lessonId);
+        }
         /** @type {ProgressState} */
         const value = { completedLessonIds: next };
         if (browser) {

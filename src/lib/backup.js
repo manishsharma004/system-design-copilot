@@ -8,8 +8,30 @@ export const BACKUP_STORAGE_KEYS = {
   practice: 'system-design-copilot-practice-v1',
   simulation: 'system-design-copilot-simulation-v1',
   llm: 'system-design-copilot-llm-v1',
-  sidebar: 'system-design-copilot-sidebar-v4'
+  sidebar: 'system-design-copilot-sidebar-v4',
+  aiStudyPath: 'system-design-copilot-ai-study-path-v1',
+  reviewQueue: 'system-design-copilot-review-queue-v1'
 };
+
+const LEARN_POSITION_PREFIX = 'system-design-copilot-learn-position-v1:';
+const ML_PRACTICE_PREFIX = 'ml-practice:';
+
+/**
+ * @param {string} prefix
+ */
+function exportPrefixedLocalStorage(prefix) {
+  if (!isBrowser) return {};
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (key?.startsWith(prefix)) {
+      const raw = window.localStorage.getItem(key);
+      if (raw != null) out[key] = raw;
+    }
+  }
+  return out;
+}
 
 /**
  * @returns {BackupPayload}
@@ -34,6 +56,9 @@ export function exportLocalData() {
       }
     }
   }
+
+  data.learnPositions = exportPrefixedLocalStorage(LEARN_POSITION_PREFIX);
+  data.mlPracticeDrafts = exportPrefixedLocalStorage(ML_PRACTICE_PREFIX);
 
   return {
     version: BACKUP_VERSION,
@@ -76,9 +101,40 @@ export function importLocalData(payload) {
   for (const [name, key] of Object.entries(BACKUP_STORAGE_KEYS)) {
     if (!(name in record.data)) continue;
     try {
-      window.localStorage.setItem(key, JSON.stringify(record.data[name]));
+      const value = record.data[name];
+      if (name === 'aiStudyPath' && typeof value === 'string') {
+        window.localStorage.setItem(key, value);
+      } else {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      }
     } catch {
       return { ok: false, error: `Could not restore ${name}. Storage may be full.` };
+    }
+  }
+
+  const learnPositions = record.data.learnPositions;
+  if (learnPositions && typeof learnPositions === 'object' && !Array.isArray(learnPositions)) {
+    for (const [key, value] of Object.entries(learnPositions)) {
+      if (typeof key === 'string' && typeof value === 'string') {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch {
+          return { ok: false, error: 'Could not restore learn reader positions.' };
+        }
+      }
+    }
+  }
+
+  const mlPracticeDrafts = record.data.mlPracticeDrafts;
+  if (mlPracticeDrafts && typeof mlPracticeDrafts === 'object' && !Array.isArray(mlPracticeDrafts)) {
+    for (const [key, value] of Object.entries(mlPracticeDrafts)) {
+      if (typeof key === 'string' && typeof value === 'string') {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch {
+          return { ok: false, error: 'Could not restore ML practice drafts.' };
+        }
+      }
     }
   }
 
