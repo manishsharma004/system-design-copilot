@@ -136,11 +136,25 @@ plt.show()
       status = 'error'
       statusMessage = e.message ?? 'Worker failed to load. Check browser console for details.'
     }
+    syncExerciseFromHash()
+    window.addEventListener('hashchange', syncExerciseFromHash)
   })
 
   onDestroy(() => {
+    if (browser) window.removeEventListener('hashchange', syncExerciseFromHash)
     worker?.terminate()
   })
+
+  function syncExerciseFromHash() {
+    if (!browser || !codingExercises.length) return
+    const hash = window.location.hash.replace(/^#/, '')
+    const match = hash.match(/^ml-practice-lab(?:\/([^/]+))?/)
+    if (!match?.[1]) return
+    const exerciseId = decodeURIComponent(match[1])
+    if (codingExercises.some((item) => item.id === exerciseId)) {
+      loadExercise(exerciseId)
+    }
+  }
 
   /** @param {MessageEvent} event */
   function handleWorkerMessage(event) {

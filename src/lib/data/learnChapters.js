@@ -55,6 +55,7 @@ import { dsaFoundationsChapters } from './learnChapters/dsaFoundationsChapters.j
 import { dsaCorePatternsChapters } from './learnChapters/dsaCorePatternsChapters.js';
 import { dsaCompanyRoundsChapters } from './learnChapters/dsaCompanyRoundsChapters.js';
 import { dsaMockLoopsChapters } from './learnChapters/dsaMockLoopsChapters.js';
+import { applyAiLearnChapterEnrichment } from './applyAiLearnChapterEnrichment.js';
 
 /**
  * @typedef {{ term: string, definition: string }} LearnKeyTerm
@@ -64,15 +65,31 @@ import { dsaMockLoopsChapters } from './learnChapters/dsaMockLoopsChapters.js';
  * @typedef {{ title?: string, caption?: string, code: string }} LearnMermaid
  * @typedef {{
  *   id: string,
+ *   label: string,
+ *   min: number,
+ *   max: number,
+ *   step: number,
+ *   value: number
+ * }} LearnInteractiveSlider
+ * @typedef {{
+ *   title: string,
+ *   body?: string,
+ *   sliders: LearnInteractiveSlider[],
+ *   codeTemplate: string,
+ *   language?: string
+ * }} LearnInteractiveDemo
+ * @typedef {{
+ *   id: string,
  *   heading: string,
  *   paragraphs: string[],
  *   keyTerms?: LearnKeyTerm[],
  *   workedExample?: LearnWorkedExample,
  *   checkYourself?: LearnCheckYourself[],
  *   callout?: LearnCallout,
- *   mermaid?: LearnMermaid
+ *   mermaid?: LearnMermaid,
+ *   interactiveDemo?: LearnInteractiveDemo
  * }} LearnChapterPart
- * @typedef {{ label: string, href: string }} LearnNextStep
+ * @typedef {{ label: string, href: string, exerciseId?: string }} LearnNextStep
  * @typedef {{
  *   title: string,
  *   readingTime: string,
@@ -138,5 +155,7 @@ export const lessonLearnChapterIndex = {
  * @returns {LessonLearnChapter | null}
  */
 export function getLessonLearnChapter(lessonId) {
-  return lessonLearnChapterIndex[lessonId] ?? null;
+  const chapter = lessonLearnChapterIndex[lessonId];
+  if (!chapter) return null;
+  return applyAiLearnChapterEnrichment(chapter, lessonId);
 }

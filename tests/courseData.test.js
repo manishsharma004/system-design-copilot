@@ -677,3 +677,34 @@ test('AI engineer interactive lessons cover every AI lesson', () => {
     assert.match(interactive.mermaid.code, /flowchart|graph/);
   });
 });
+
+test('AI engineer Learn chapters are interactive (mermaid, runnable code, deep links)', async () => {
+  const { getLessonLearnChapter } = await import('../src/lib/data/learnChapters.js');
+  const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
+  assert.equal(aiLessons.length, 44);
+
+  aiLessons.forEach((lesson) => {
+    const chapter = getLessonLearnChapter(lesson.id);
+    assert.ok(chapter, `missing Learn chapter for ${lesson.id}`);
+
+    const mermaidParts = chapter.parts.filter((part) => part.mermaid?.code);
+    assert.ok(mermaidParts.length >= 2, `expected ≥2 mermaid parts for ${lesson.id}`);
+    mermaidParts.forEach((part) => {
+      assert.match(part.mermaid.code, /flowchart|graph/, `invalid mermaid for ${lesson.id} part ${part.id}`);
+    });
+
+    const runnableParts = chapter.parts.filter((part) => part.workedExample?.code || part.interactiveDemo?.codeTemplate);
+    assert.ok(runnableParts.length >= 3, `expected ≥3 runnable Learn parts for ${lesson.id}`);
+
+    const codingExercises = (lesson.exercises ?? []).filter(
+      (exercise) => exercise?.type === 'coding' && typeof exercise?.starterCode === 'string' && exercise.starterCode.trim()
+    );
+    assert.ok(codingExercises.length >= 1, `expected coding exercise for ${lesson.id}`);
+
+    const nextSteps = chapter.wrapUp?.nextSteps ?? [];
+    const hrefSteps = nextSteps.filter((step) => typeof step === 'object' && step.href);
+    assert.ok(hrefSteps.length >= 2, `expected ≥2 href nextSteps for ${lesson.id}`);
+    const labLink = hrefSteps.find((step) => step.href.includes('#ml-practice-lab') || step.href.includes('#topic-lab'));
+    assert.ok(labLink, `expected topic-lab or Python-lab next step for ${lesson.id}`);
+  });
+});

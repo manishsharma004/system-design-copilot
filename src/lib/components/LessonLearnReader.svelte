@@ -83,6 +83,15 @@
     document.body.style.overflow = 'hidden';
     activeSectionId = 'learn-premise';
     visitedSectionIds = new Set(['learn-premise']);
+    interactiveSliderValues = {};
+    if (learnChapter?.parts) {
+      for (const part of learnChapter.parts) {
+        if (!part.interactiveDemo) continue;
+        for (const slider of part.interactiveDemo.sliders) {
+          interactiveSliderValues[slider.id] = slider.value;
+        }
+      }
+    }
     await tick();
     closeButton?.focus();
     setupSectionObserver();
@@ -210,6 +219,36 @@
   /** @param {string} heading */
   function sectionId(heading) {
     return heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  /** @type {Record<string, number>} */
+  let interactiveSliderValues = {};
+
+  /** @param {import('$lib/data/learnChapters.js').LearnInteractiveDemo} demo */
+  function interactiveDemoCode(demo) {
+    let code = demo.codeTemplate;
+    for (const slider of demo.sliders) {
+      const value = interactiveSliderValues[slider.id] ?? slider.value;
+      code = code.split(`{{${slider.id}}}`).join(String(value));
+    }
+    return code;
+  }
+
+  /** @param {string} sliderId */
+  /** @param {number} value */
+  function setInteractiveSlider(sliderId, value) {
+    interactiveSliderValues = { ...interactiveSliderValues, [sliderId]: value };
+  }
+
+  /** @param {import('$lib/data/learnChapters.js').LearnNextStep} step */
+  function nextStepHref(step) {
+    if (!step.exerciseId) return `${base}${step.href}`;
+    const hashIdx = step.href.indexOf('#');
+    const path = hashIdx >= 0 ? step.href.slice(0, hashIdx) : step.href;
+    const hash = hashIdx >= 0 ? step.href.slice(hashIdx) : '';
+    const baseHash = hash || '#ml-practice-lab';
+    const normalized = baseHash.replace(/#ml-practice-lab.*/, '#ml-practice-lab');
+    return `${base}${path}${normalized}/${step.exerciseId}`;
   }
 
   /** @param {MouseEvent & { currentTarget: HTMLAnchorElement }} event */
@@ -340,6 +379,42 @@
                   </div>
                 {/if}
 
+                {#if part.interactiveDemo}
+                  {@const demo = part.interactiveDemo}
+                  <div class="learn-interactive-demo">
+                    <p class="eyebrow">Interactive demo</p>
+                    <h4>{demo.title}</h4>
+                    {#if demo.body}
+                      <p>{demo.body}</p>
+                    {/if}
+                    <div class="learn-demo-sliders">
+                      {#each demo.sliders as slider}
+                        <label class="learn-demo-slider">
+                          <span>{slider.label}: <strong>{interactiveSliderValues[slider.id] ?? slider.value}</strong></span>
+                          <input
+                            type="range"
+                            min={slider.min}
+                            max={slider.max}
+                            step={slider.step}
+                            value={interactiveSliderValues[slider.id] ?? slider.value}
+                            oninput={(event) =>
+                              setInteractiveSlider(
+                                slider.id,
+                                Number(/** @type {HTMLInputElement} */ (event.currentTarget).value)
+                              )}
+                          />
+                        </label>
+                      {/each}
+                    </div>
+                    <LessonCodeSnippet
+                      title={demo.title}
+                      language={demo.language || 'python'}
+                      languageLabel={(demo.language || 'python').toUpperCase()}
+                      code={interactiveDemoCode(demo)}
+                    />
+                  </div>
+                {/if}
+
                 {#if part.checkYourself?.length}
                   <div class="learn-checks">
                     <p class="eyebrow">Check yourself</p>
@@ -420,7 +495,7 @@
                     {#if typeof step === 'string'}
                       {step}
                     {:else}
-                      <a href={`${base}${step.href}`}>{step.label}</a>
+                      <a href={nextStepHref(step)}>{step.label}</a>
                     {/if}
                   </li>
                 {/each}
@@ -611,8 +686,26 @@
   }
 
   .learn-worked-example,
-  .learn-checks {
+  .learn-checks,
+  .learn-interactive-demo {
     margin-top: 1rem;
+  }
+
+  .learn-demo-sliders {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0.75rem 0;
+  }
+
+  .learn-demo-slider {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+  }
+
+  .learn-demo-slider input[type='range'] {
+    width: 100%;
+    accent-color: var(--accent);
   }
 
   .learn-checks details,
