@@ -3,7 +3,7 @@
   import { useRegisterSW } from 'virtual:pwa-register/svelte';
 
   const { needRefresh, updateServiceWorker, offlineReady } = useRegisterSW({
-    immediate: true,
+    immediate: false,
     onRegisterError(error) {
       console.warn('Service worker registration failed', error);
     }
