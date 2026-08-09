@@ -1,17 +1,21 @@
 
 <!doctype html>
-<html lang="en" data-theme="copilot" data-theme-mode="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <script>
       try {
         var savedTheme = localStorage.getItem('system-design-copilot-theme-v1');
-        var lightThemes = 'copilot-light,ocean-light,ember-light,forest-light,paper,dawn,blush,petal,ballet,rose-light,mint,sand,sky';
-        if (savedTheme) {
-          document.documentElement.dataset.theme = savedTheme;
-          document.documentElement.dataset.themeMode = lightThemes.split(',').indexOf(savedTheme) >= 0 ? 'light' : 'dark';
+        function isLightThemeId(id) {
+          return id.endsWith('-light') || /^(paper|dawn|blush|petal|ballet|mint|sand|sky)$/.test(id);
         }
-      } catch (e) {}
+        var themeId = savedTheme || 'copilot';
+        document.documentElement.dataset.theme = themeId;
+        document.documentElement.dataset.themeMode = isLightThemeId(themeId) ? 'light' : 'dark';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'copilot';
+        document.documentElement.dataset.themeMode = 'dark';
+      }
     </script>
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

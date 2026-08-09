@@ -48,6 +48,7 @@ export const THEME_OPTIONS = THEME_GROUPS.flatMap((group) => group.themes);
 
 /** @type {string[]} */
 export const LIGHT_THEME_IDS = THEME_OPTIONS.filter((theme) => theme.mode === 'light').map((theme) => theme.id);
+// Keep src/app.html isLightThemeId() in sync when adding light themes (suffix -light or explicit list).
 
 export const DEFAULT_THEME_ID = 'copilot';
 
