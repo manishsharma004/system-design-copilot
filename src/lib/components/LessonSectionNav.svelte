@@ -5,6 +5,7 @@
   /** @type {{ id: string, label: string, action?: string }[]} */
   export let sections = [];
   /** When set, renders a Learn pill that calls this instead of scrolling. */
+  /** @type {(() => void) | null} */
   export let onLearnOpen = null;
 
   let activeId = sections[0]?.id ?? '';
@@ -50,9 +51,11 @@
 
   /** @param {Event} event */
   function handleJumpSelect(event) {
-    const value = /** @type {HTMLSelectElement} */ (event.currentTarget).value;
+    const select = event.currentTarget;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const value = select.value;
     if (value) jumpToSection(value);
-    event.currentTarget.value = '';
+    select.value = '';
   }
 </script>
 
@@ -76,7 +79,7 @@
       <button
         class="lesson-section-nav-link learn-nav-button"
         type="button"
-        onclick={() => onLearnOpen()}
+        onclick={() => onLearnOpen?.()}
       >
         Learn
       </button>

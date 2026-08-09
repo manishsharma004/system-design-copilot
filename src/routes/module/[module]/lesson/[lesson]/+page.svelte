@@ -156,7 +156,7 @@
 
 <LessonSectionNav
   sections={lessonSections}
-  onLearnOpen={data.lesson.learnChapter ? () => (learnOpen = true) : null}
+  onLearnOpen={data.lesson.learnChapter ? () => { learnOpen = true; } : null}
 />
 
 <section class="lesson-shell" id="lesson-content">
