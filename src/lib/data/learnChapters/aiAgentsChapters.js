@@ -250,9 +250,15 @@ const chapters = {
         "Trajectory evals decide whether autonomy beats simpler workflows."
       ],
       nextSteps: [
-        "Sketch an agent state machine for a support refund task and mark deterministic, model, approval, and stop states.",
-        "Write a tool contract for one read-only tool and one mutating tool, including auth, validation, and audit fields.",
-        "Design three trajectory eval cases: happy path, tool failure, and indirect prompt injection."
+        {
+          label: 'Simulate the ReAct loop in the Python lab',
+          href: '/module/ai-agents/lesson/agent-fundamentals#ml-practice-lab'
+        },
+        {
+          label: 'Continue to tool use and function calling',
+          href: '/module/ai-agents/lesson/tool-use-and-function-calling?learn=1'
+        },
+        'Design three trajectory eval cases: happy path, tool failure, and indirect prompt injection.'
       ]
     }
   },
@@ -502,9 +508,15 @@ const chapters = {
         "Tool observability and contract tests turn model-produced calls into maintainable systems."
       ],
       nextSteps: [
-        "Rewrite one generic tool into three narrow tools with clearer schemas.",
-        "Create malformed-call fixtures for missing fields, wrong enum values, and injection strings.",
-        "Define metrics for wrong-tool rate, malformed-call rate, and side-effect approval coverage."
+        {
+          label: 'Validate fixture tool calls in the Python lab',
+          href: '/module/ai-agents/lesson/tool-use-and-function-calling#ml-practice-lab'
+        },
+        {
+          label: 'Open interview practice: design banking support tools',
+          href: '/module/ai-agents/lesson/tool-use-and-function-calling#practice-lab'
+        },
+        'Define metrics for wrong-tool rate, malformed-call rate, and side-effect approval coverage.'
       ]
     }
   },

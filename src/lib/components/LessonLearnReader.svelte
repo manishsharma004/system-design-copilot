@@ -1,6 +1,8 @@
 <svelte:options runes={false} />
 <script>
+  import { base } from '$app/paths';
   import { onDestroy, tick } from 'svelte';
+  import MermaidDiagram from '$lib/components/MermaidDiagram.svelte';
   import LessonCodeSnippet from '$lib/components/LessonCodeSnippet.svelte';
   import SelectionSearchPopup from '$lib/components/SelectionSearchPopup.svelte';
   import { buildLessonAnswerContext, getLikelyAnswerPoints } from '$lib/interviewAnswers';
@@ -277,6 +279,11 @@
             {#each learnChapter.parts as part}
               <article class="learn-reader-section" id={`learn-part-${part.id}`}>
                 <h3>{part.heading}</h3>
+                {#if part.mermaid}
+                  <div class="learn-part-diagram">
+                    <MermaidDiagram diagram={part.mermaid} />
+                  </div>
+                {/if}
                 {#each part.paragraphs as paragraph}
                   <p>{paragraph}</p>
                 {/each}
@@ -394,7 +401,13 @@
               <h4>Next steps</h4>
               <ul>
                 {#each learnChapter.wrapUp.nextSteps as step}
-                  <li>{step}</li>
+                  <li>
+                    {#if typeof step === 'string'}
+                      {step}
+                    {:else}
+                      <a href={`${base}${step.href}`}>{step.label}</a>
+                    {/if}
+                  </li>
                 {/each}
               </ul>
             {:else if lesson.pitfalls?.length}

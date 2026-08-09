@@ -664,7 +664,7 @@ test('LLD lessons ship rich study material, coding drills, topic labs, and LLD p
 
 test('AI engineer interactive lessons cover every AI lesson', () => {
   const aiLessons = getModulesByFlow('ai-engineer').flatMap((module) => module.lessons);
-  assert.ok(aiLessons.length >= 41);
+  assert.ok(aiLessons.length >= 44);
 
   aiLessons.forEach((lesson) => {
     const interactive = getInteractiveLesson(lesson.id);

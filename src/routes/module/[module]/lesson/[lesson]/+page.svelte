@@ -6,6 +6,7 @@
   import LessonSolutionPanel from '$lib/components/LessonSolutionPanel.svelte';
   import LessonExplorer from '$lib/components/LessonExplorer.svelte';
   import SimulationIDE from '$lib/components/SimulationIDE.svelte';
+  import AiTopicLab from '$lib/components/AiTopicLab.svelte';
   import AiLessonStudyGuide from '$lib/components/AiLessonStudyGuide.svelte';
   import LessonLearnReader from '$lib/components/LessonLearnReader.svelte';
   import { getFlowBySlug } from '$lib/data/courseData';
@@ -68,10 +69,16 @@
     { id: 'lesson-content', label: 'Read' },
     ...(data.lesson.deepKnowledge ? [{ id: 'deep-knowledge', label: 'Deep dive' }] : []),
     ...(showTopicLab ? [{ id: 'topic-lab', label: 'Topic lab' }] : []),
+    ...(showPythonLab ? [{ id: 'ml-practice-lab', label: 'Python lab' }] : []),
     ...(showSimulationLab ? [{ id: 'simulation-lab', label: 'Simulate' }] : []),
-    { id: 'practice-lab', label: 'Practice' },
+    { id: 'practice-lab', label: isAiLesson ? 'Interview practice' : 'Practice' },
     ...(showSolutionReveal ? [{ id: 'solution-reveal', label: 'Solutions' }] : [])
   ];
+  $: practiceHeroLabel = isAiLesson ? 'Interview practice' : 'Start mock interview';
+  $: showRagPrereqCallout =
+    isAiLesson &&
+    (data.lesson.id === 'prompt-engineering-and-rag/rag-systems' ||
+      data.lesson.id === 'llms-and-nlp/embeddings-and-vector-search');
 
   /** @param {string} heading */
   function sectionId(heading) {
@@ -103,7 +110,7 @@
     <button class="action-link primary" type="button" onclick={() => (learnOpen = true)}>
       {data.lesson.learnChapter ? 'Learn chapter' : 'Learn'}
     </button>
-    <a class="action-link" href="#practice-lab">Start mock interview</a>
+    <a class="action-link" href={showPythonLab ? '#ml-practice-lab' : '#practice-lab'}>{practiceHeroLabel}</a>
     {#if showSimulationLab}
       <a class="action-link" href="#simulation-lab">Open simulation lab</a>
     {/if}
@@ -134,7 +141,23 @@
   </article>
 </section>
 
-<LessonSectionNav sections={lessonSections} />
+{#if showRagPrereqCallout}
+  <section class="panel hero-card lesson-prereq-callout">
+    <p class="eyebrow">Before you go deep</p>
+    <p>
+      RAG and vector search depend on ingest, freshness, and dataset hygiene. Skim
+      <a href={`${base}/module/data-engineering-for-ml/lesson/data-pipelines-at-scale?learn=1`}>
+        Data pipelines at scale
+      </a>
+      if you are jumping straight into retrieval-heavy lessons.
+    </p>
+  </section>
+{/if}
+
+<LessonSectionNav
+  sections={lessonSections}
+  onLearnOpen={data.lesson.learnChapter ? () => (learnOpen = true) : null}
+/>
 
 <section class="lesson-shell" id="lesson-content">
   <div class="lesson-main-stack">
@@ -342,14 +365,19 @@
   </aside>
 </section>
 
-{#if showExerciseGuide}
+{#if showExerciseGuide && !isAiLesson}
   <AiLessonStudyGuide lesson={data.lesson} />
+{/if}
+{#if isAiLesson && showTopicLab}
+  <AiTopicLab lesson={data.lesson} />
 {/if}
 {#if showPythonLab}
   <MLPracticeIDE lesson={data.lesson} />
 {/if}
 
-<LessonExplorer lesson={data.lesson} />
+{#if !isAiLesson}
+  <LessonExplorer lesson={data.lesson} />
+{/if}
 {#if showSimulationLab}
   <SimulationIDE lesson={data.lesson} />
 {/if}

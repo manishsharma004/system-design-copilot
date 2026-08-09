@@ -19,6 +19,7 @@ import { transformersAttentionLabChapters } from './learnChapters/transformersAt
 import { llmRetrievalLabChapters } from './learnChapters/llmRetrievalLabChapters.js';
 import { mlProductionLabChapters } from './learnChapters/mlProductionLabChapters.js';
 import { llmopsEvalLabChapters } from './learnChapters/llmopsEvalLabChapters.js';
+import { aiApplicationLabChapters } from './learnChapters/aiApplicationLabChapters.js';
 
 import { hldFoundationsChapters } from './learnChapters/hldFoundationsChapters.js';
 import { hldEdgeRoutingChapters } from './learnChapters/hldEdgeRoutingChapters.js';
@@ -69,12 +70,13 @@ import { dsaMockLoopsChapters } from './learnChapters/dsaMockLoopsChapters.js';
  *   checkYourself?: LearnCheckYourself[],
  *   callout?: LearnCallout
  * }} LearnChapterPart
+ * @typedef {{ label: string, href: string }} LearnNextStep
  * @typedef {{
  *   title: string,
  *   readingTime: string,
  *   premise: string,
  *   parts: LearnChapterPart[],
- *   wrapUp: { takeaways: string[], nextSteps?: string[] }
+ *   wrapUp: { takeaways: string[], nextSteps?: (string | LearnNextStep)[] }
  * }} LessonLearnChapter
  */
 
@@ -94,6 +96,7 @@ export const lessonLearnChapterIndex = {
   ...llmRetrievalLabChapters,
   ...mlProductionLabChapters,
   ...llmopsEvalLabChapters,
+  ...aiApplicationLabChapters,
   ...hldFoundationsChapters,
   ...hldEdgeRoutingChapters,
   ...hldApplicationArchitectureChapters,

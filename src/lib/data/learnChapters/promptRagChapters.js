@@ -281,6 +281,11 @@ export const promptRagChapters = {
         "callout": {
           "tone": "interview",
           "body": "Draw the pipeline before naming tools. Interviewers want failure attribution, not a library list."
+        },
+        "mermaid": {
+          "title": "RAG ingest and query paths",
+          "caption": "Debug ingest vs query failures separately.",
+          "code": "flowchart LR\n  subgraph ingest [Ingest]\n    Docs[Documents] --> Parse --> Chunk --> Embed --> Index\n  end\n  subgraph query [Query]\n    Q[Question] --> Retrieve --> Rerank --> Pack --> Generate\n  end\n  Index --> Retrieve"
         }
       },
       {
@@ -483,8 +488,18 @@ export const promptRagChapters = {
         "Golden sets of 50-200 curated cases, ACL enforcement, freshness, and failure attribution are core operating practices."
       ],
       "nextSteps": [
-        "Draw a RAG stage diagram and mark which metric catches each stage's main failure.",
-        "Create a starter golden set with exact-token, paraphrase, stale-policy, no-evidence, and permission-filter cases."
+        {
+          "label": "Run the RAG retrieval exercise in the Python lab",
+          "href": "/module/prompt-engineering-and-rag/lesson/rag-systems#ml-practice-lab"
+        },
+        {
+          "label": "Review data pipelines before scaling RAG ingest",
+          "href": "/module/data-engineering-for-ml/lesson/data-pipelines-at-scale?learn=1"
+        },
+        {
+          "label": "Open interview practice: sketch golden-set metrics",
+          "href": "/module/prompt-engineering-and-rag/lesson/rag-systems#practice-lab"
+        }
       ]
     }
   },

@@ -715,8 +715,15 @@ export const llmsNlpChapters = {
         "Hybrid BM25+dense retrieval with RRF k=60 and reranking is a strong production default for mixed query workloads."
       ],
       "nextSteps": [
-        "Build a small golden set with exact-token, paraphrase, and filtered queries before tuning vector infrastructure.",
-        "Document the metric, normalization, chunker version, embedder version, and index build ID for any search release."
+        {
+          "label": "Practice vector search in the Python lab",
+          "href": "/module/llms-and-nlp/lesson/embeddings-and-vector-search#ml-practice-lab"
+        },
+        {
+          "label": "Continue to the RAG systems Learn chapter",
+          "href": "/module/prompt-engineering-and-rag/lesson/rag-systems?learn=1"
+        },
+        "Document metric, normalization, chunker version, embedder version, and index build ID for any search release."
       ]
     }
   }

@@ -3504,5 +3504,263 @@ export const aiInteractiveExtras = {
   Model --> Mon[SLO and version metrics]
   Fallback --> Mon`
     }
+  },
+  'ai-application-lab/chat-api-and-streaming': {
+    title: 'Chat API and streaming lab',
+    summary: 'Choose sync vs SSE, session storage, and error contracts for production chat.',
+    takeaways: [
+      'Stream for long answers; sync for small structured JSON.',
+      'Sessions need auth scope and versioned prompts.',
+      'Cancel upstream on client disconnect.',
+      'Typed errors let clients show actionable UI.'
+    ],
+    examples: [
+      {
+        id: 'sse-support',
+        label: 'SSE support',
+        title: 'Stream support answers with typed errors',
+        scenario: 'Mobile users need first token under 400ms p95 with cancel on navigate-away.',
+        decision: 'SSE with server session store, typed errors, and upstream abort on disconnect.',
+        why: [
+          'Perceived latency beats full-response wait.',
+          'Server history supports audit.',
+          'Abort stops runaway billing.'
+        ],
+        alternative: 'Polling partial responses adds complexity without backpressure control.',
+        outcome: 'Clients implement connecting, streaming, error, and cancelled states.'
+      },
+      {
+        id: 'sync-extract',
+        label: 'Sync extract',
+        title: 'Keep classification on a sync JSON endpoint',
+        scenario: 'Intent routing needs a 50-token label before the heavy chat stream starts.',
+        decision: 'Separate sync classify endpoint from SSE chat stream; share session id.',
+        why: [
+          'Small JSON responses fit sync latency budgets.',
+          'Router failures can block chat without half-open streams.',
+          'Easier to cache stable intent labels.'
+        ],
+        alternative: 'Streaming everything forces clients to parse partial JSON.',
+        outcome: 'Chat opens only after intent and tenant ACL checks pass.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'What should the first version expose?',
+      options: [
+        {
+          id: 'sse-first',
+          label: 'SSE streaming',
+          bestFor: 'Interactive chat with long answers.',
+          chooseWhen: ['Users need early tokens.', 'Mobile clients support long-lived HTTP.'],
+          tradeOffs: ['Reconnect semantics.', 'Harder caching.', 'More tracing surface.'],
+          alternativeOutcome: 'Sync-only feels slow for knowledge work chat.'
+        },
+        {
+          id: 'sync-first',
+          label: 'Sync JSON',
+          bestFor: 'Short classification or extraction endpoints.',
+          chooseWhen: ['Outputs are small.', 'Clients are batch workers.'],
+          tradeOffs: ['Poor UX for long text.', 'Higher perceived latency.'],
+          alternativeOutcome: 'Streaming added later needs session contract redesign.'
+        },
+        {
+          id: 'hybrid',
+          label: 'Hybrid sync + stream',
+          bestFor: 'Router plus long chat in one product.',
+          chooseWhen: ['You need fast intent routing and long answers.', 'Clients can hold two endpoints.'],
+          tradeOffs: ['More API surface to version.', 'Session must link both paths.'],
+          alternativeOutcome: 'One mega-endpoint mixes latency budgets awkwardly.'
+        }
+      ]
+    },
+    caseStudy: caseStudy({
+      title: 'Launch mobile chat v1',
+      prompt: 'Ship SSE chat for a support copilot on iOS and Android.',
+      steps: [
+        { title: 'Define client states', detail: 'Document connecting, streaming, error, cancelled, and reconnect.' },
+        { title: 'Session API', detail: 'Opaque session ids scoped to user; server stores history with TTL.' },
+        { title: 'Stream endpoint', detail: 'SSE with abort on disconnect and typed error codes.' },
+        { title: 'Load test', detail: 'Validate p95 first token under peak concurrent sessions.' }
+      ],
+      metrics: ['time-to-first-token p95', 'disconnect cancel rate', 'session error rate', 'cost per session']
+    }),
+    mermaid: {
+      title: 'Chat request path',
+      caption: 'Auth and session load happen before model prefill.',
+      code: `flowchart LR
+  Client --> API[Chat API]
+  API --> Session[Session load]
+  Session --> Model[Model stream]
+  Model --> Client`
+    }
+  },
+  'ai-application-lab/multi-tenant-rag-products': {
+    title: 'Multi-tenant RAG lab',
+    summary: 'Tenant filters, ACL metadata, and CI escape probes.',
+    takeaways: [
+      'Filter tenant before vector search.',
+      'Audit retrieved ids per answer.',
+      'CI probes must not retrieve foreign tenants.',
+      'Empty retrieval is a product state, not a model bug.'
+    ],
+    examples: [
+      {
+        id: 'acl-probe',
+        label: 'ACL probe',
+        title: 'Block cross-tenant retrieval in CI',
+        scenario: 'Shared index serves 200 tenants; one misconfigured filter leaks finance docs.',
+        decision: 'Mandatory tenant_id filter in query builder plus automated escape probes in CI.',
+        why: ['Model refusal is not a security boundary.', 'Probes catch regressions before prod.'],
+        alternative: 'Post-hoc filtering after top-k still ranks foreign chunks.',
+        outcome: 'Compliance reviewers get retrieval audit per answer.'
+      },
+      {
+        id: 'dedicated-tier',
+        label: 'Dedicated index tier',
+        title: 'Isolate regulated tenants on dedicated indexes',
+        scenario: 'Healthcare tenant requires physical separation from consumer tenants.',
+        decision: 'Dedicated index and ingest pipeline for regulated tier; shared index for standard SaaS.',
+        why: [
+          'Clear blast radius for compliance reviews.',
+          'Independent reindex and key rotation.',
+          'Standard tier keeps cost low.'
+        ],
+        alternative: 'Metadata-only isolation may fail strict regulatory interpretations.',
+        outcome: 'Sales can sell enterprise tier with documented isolation story.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'How do you isolate tenants at retrieve?',
+      options: [
+        {
+          id: 'metadata-filter',
+          label: 'Shared index + filters',
+          bestFor: 'Many small tenants on one cluster.',
+          chooseWhen: ['Filters are mandatory in query builder.', 'CI runs escape probes.'],
+          tradeOffs: ['Filter bugs are high severity.', 'Hot tenant noisy neighbor risk.'],
+          alternativeOutcome: 'Per-tenant indexes multiply ops cost.'
+        },
+        {
+          id: 'per-tenant-index',
+          label: 'Per-tenant index',
+          bestFor: 'Regulated or very large tenants.',
+          chooseWhen: ['Contract requires separation.', 'Tenant scale dominates cost.'],
+          tradeOffs: ['Higher infra cost.', 'More deploy surfaces.'],
+          alternativeOutcome: 'Shared index may fail compliance questionnaires.'
+        },
+        {
+          id: 'hybrid-tier',
+          label: 'Hybrid tiers',
+          bestFor: 'Mixed SMB and enterprise on one product.',
+          chooseWhen: ['You can route by tenant plan at query time.'],
+          tradeOffs: ['Two code paths to test.', 'Migration between tiers is painful.'],
+          alternativeOutcome: 'One-size isolation disappoints either cost or compliance.'
+        }
+      ]
+    },
+    caseStudy: caseStudy({
+      title: 'Enterprise RAG rollout',
+      prompt: 'Add 50 enterprise tenants to an existing SMB RAG product.',
+      steps: [
+        { title: 'Schema', detail: 'Add tenant_id and acl_groups to every chunk at ingest.' },
+        { title: 'Query guard', detail: 'Central filter builder; no raw vector queries in feature code.' },
+        { title: 'CI probes', detail: 'Cross-tenant escape tests on every PR.' },
+        { title: 'Audit export', detail: 'Retrieved ids per answer for compliance API.' }
+      ],
+      metrics: ['ACL violation count', 'empty retrieval rate', 'recall@k per tenant', 'index lag']
+    }),
+    mermaid: {
+      title: 'Tenant RAG',
+      caption: 'Tenant filter precedes search.',
+      code: `flowchart LR
+  Q[Query] --> T[Tenant filter]
+  T --> V[Vector search]
+  V --> G[Generate]`
+    }
+  },
+  'ai-application-lab/shipping-ai-features': {
+    title: 'Shipping AI features lab',
+    summary: 'Golden gates, shadow, canary, rollback triggers.',
+    takeaways: [
+      'Bundle prompt, index, and model in one release artifact.',
+      'Shadow before canary on prompt changes.',
+      'Numeric rollback triggers.',
+      'Post-ship eval monitors catch slow regressions.'
+    ],
+    examples: [
+      {
+        id: 'canary-rag',
+        label: 'RAG canary',
+        title: 'Canary a prompt plus index bundle',
+        scenario: 'New chunking changes retrieval; faithfulness unknown on long-tail.',
+        decision: '5% canary with faithfulness and empty-retrieval monitors; auto-rollback if faithfulness drops 5%.',
+        why: ['Retrieval and generation regressions differ.', 'Small canary limits blast radius.'],
+        alternative: 'Full flip without canary risks broad wrong answers.',
+        outcome: 'Rollback restores previous bundle in one flag change.'
+      },
+      {
+        id: 'ci-gate',
+        label: 'CI gate',
+        title: 'Block merge on golden regression',
+        scenario: 'Prompt tweak improves tone but drops billing faithfulness 8%.',
+        decision: 'CI harness fails PR when any critical slice drops more than 3%.',
+        why: [
+          'Tone improvements can harm citation accuracy.',
+          'Slices catch uneven regressions.',
+          'Developers fix before staging load.'
+        ],
+        alternative: 'Manual QA on 10 prompts misses long-tail failures.',
+        outcome: 'Main branch stays a known quality baseline.'
+      }
+    ],
+    decisionGuide: {
+      prompt: 'What runs before full traffic?',
+      options: [
+        {
+          id: 'ci-only',
+          label: 'CI goldens only',
+          bestFor: 'Early internal features with no external users.',
+          chooseWhen: ['Traffic is low.', 'Goldens cover known slices.'],
+          tradeOffs: ['Misses production distribution.', 'No latency/cost signal.'],
+          alternativeOutcome: 'First real users become the canary.'
+        },
+        {
+          id: 'shadow-then-canary',
+          label: 'Shadow then canary',
+          bestFor: 'Production LLM features with quality SLOs.',
+          chooseWhen: ['You have live traffic for comparison.', 'Side effects are controlled in shadow.'],
+          tradeOffs: ['Shadow infra cost.', 'Longer release cycle.'],
+          alternativeOutcome: 'Skipping shadow hides retrieval regressions until canary.'
+        },
+        {
+          id: 'fast-canary',
+          label: 'Short canary only',
+          bestFor: 'Low-risk prompt copy tweaks with strong offline eval.',
+          chooseWhen: ['Offline harness is trusted.', 'Rollback is one flag.'],
+          tradeOffs: ['Small canary may miss tail.', 'Needs tight SLO alerts.'],
+          alternativeOutcome: 'Over-long shadow delays fixes for urgent incidents.'
+        }
+      ]
+    },
+    caseStudy: caseStudy({
+      title: 'Ship a prompt rewrite',
+      prompt: 'Release a support copilot prompt change safely.',
+      steps: [
+        { title: 'CI goldens', detail: 'Run harness on PR; block if billing slice faithfulness drops.' },
+        { title: 'Shadow', detail: 'Score 24h shadow traffic; compare distributions.' },
+        { title: 'Canary', detail: 'Route 5% with SLO dashboards.' },
+        { title: 'Promote or rollback', detail: 'Promote if gates pass; else restore bundle.' }
+      ],
+      metrics: ['faithfulness', 'empty retrieval', 'p95 latency', 'cost per resolved ticket']
+    }),
+    mermaid: {
+      title: 'Release path',
+      caption: 'Quality gates precede traffic shifts.',
+      code: `flowchart LR
+  PR[PR] --> CI[CI goldens]
+  CI --> Shadow[Shadow traffic]
+  Shadow --> Canary[Canary slice]
+  Canary --> Full[Full promote]`
+    }
   }
 };

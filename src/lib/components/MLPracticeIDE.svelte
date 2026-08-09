@@ -236,7 +236,7 @@ plt.show()
   }[status] ?? status
 </script>
 
-<section id="practice-lab" class="ml-practice-shell panel hero-card">
+<section id="ml-practice-lab" class="ml-practice-shell panel hero-card">
   <div class="ml-heading-row">
     <div>
       <p class="eyebrow">{codingExercises.length ? 'Python lab' : 'ML playground'}</p>

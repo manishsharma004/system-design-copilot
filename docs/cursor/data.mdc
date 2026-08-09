@@ -35,7 +35,8 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `aiIndustryCurrencyLabs.js` | LLMOps evaluation, cost/latency observability, shipping gates/guardrails labs (2026) |
 | `aiIndustryCurrencyPatches.js` | Mid-2026 patches for LLM/RAG/agents/serving/governance lessons |
 | `aiInteractiveExtras.js` | Topic labs for remaining AI core lessons + advanced labs; merged into `interactiveLessons.js` |
-| `aiInteractiveCurrency2026.js` | Interactive overlays + LLMOps topic labs; `mergeInteractiveCurrency` |
+| `aiApplicationLab.js` | AI application architecture lab (chat API, multi-tenant RAG, shipping) |
+| `aiStudyPaths.js` | AI Engineer role paths (app / ML / platform) + module phase labels |
 | `learnChapters.js` + `learnChapters/*` | Book-style Learn chapters for all AI/ML, HLD, LLD, and DSA lessons (`getLessonLearnChapter`); one file per module; see `docs/learn-chapter-reader.md` |
 | `learningExpansionInteractive.js` | On-page interactive labs for HLD/LLD/DSA/AI expansion lessons (incl. HLD exhaustive labs); merged into `interactiveLessons.js` |
 | `lldInteractiveLabs.js` | Topic labs for 12 core + 8 advanced/hot-path LLD lessons |
@@ -46,7 +47,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 - **HLD (14):** foundations … case-studies + `systems-fundamentals-lab`, `reliability-observability-lab`, `data-storage-lab`, `security-operations-lab`, `distributed-systems-lab`
 - **LLD (9):** lld-foundations … lld-machine-coding + patterns/project labs + `lld-solid-principles-lab`, `lld-machine-coding-classics`, `lld-hot-path-labs`
 - **DSA (9):** `dsa-concepts-lab`, `dsa-algorithms-lab`, `dsa-patterns-lab`, `dsa-search-lab`, `dsa-interview-essentials-lab`, then dsa-foundations … dsa-mock-loops
-- **AI (14):** ml-foundations … data-engineering-for-ml + `ml-interactive-lab`, `deep-learning-from-scratch`, `transformers-attention-lab`, `llm-retrieval-lab`, `ml-production-lab`, `llmops-eval-lab`
+- **AI (15):** ml-foundations … data-engineering-for-ml + labs + `ai-application-lab`
 - **Question bank (4):** question-bank-top-sets, question-bank-faang, question-bank-more-companies, question-bank-strategy
 
 ## Lesson shape (typical)

@@ -18,6 +18,7 @@ Product and feature docs live in the root [`docs/`](docs/) folder. Start there b
 | Doc | Topic |
 |-----|--------|
 | [`docs/learn-chapter-reader.md`](docs/learn-chapter-reader.md) | Learn button, book-style chapter modal, AI/ML chapter data, selection Search with AI |
+| [`docs/ai-engineer-update-plan.md`](docs/ai-engineer-update-plan.md) | Phased AI Engineer UX, content, and interactive learning roadmap |
 | [`docs/cursor/`](docs/cursor/) | Agent-maintained architecture snapshots (routes, data, components, LLM, etc.) |
 
 Update the matching root doc when you change user-facing Learn / chapter behavior. Prefer documenting durable product behavior in `docs/` over adding narrow unit tests for UI chrome.
