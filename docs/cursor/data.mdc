@@ -38,6 +38,7 @@ Course content lives under `src/lib/data/`. Assembly hub: `courseData.js`.
 | `aiApplicationLab.js` | AI application architecture lab (chat API, multi-tenant RAG, shipping) |
 | `aiStudyPaths.js` | AI Engineer role paths (app / ML / platform) + module phase labels |
 | `learnChapters.js` + `learnChapters/*` | Book-style Learn chapters for all AI/ML, HLD, LLD, and DSA lessons (`getLessonLearnChapter`); one file per module; see `docs/learn-chapter-reader.md` |
+| `aiLearnChapterEnrichment.js` | AI/ML Learn interactive overlays (mermaid, runnable demos, `nextSteps` deep links); merged in `getLessonLearnChapter`; regenerate via `scripts/generate-ai-learn-chapter-enrichment.mjs` |
 | `learningExpansionInteractive.js` | On-page interactive labs for HLD/LLD/DSA/AI expansion lessons (incl. HLD exhaustive labs); merged into `interactiveLessons.js` |
 | `lldInteractiveLabs.js` | Topic labs for 12 core + 8 advanced/hot-path LLD lessons |
 | `questionBankCourseData.js` | Bank lessons with `questionBank: { key, label, kind }` |
