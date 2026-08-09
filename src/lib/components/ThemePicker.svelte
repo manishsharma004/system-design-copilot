@@ -1,35 +1,31 @@
 <svelte:options runes={false} />
 <script>
+  import { browser } from '$app/environment';
   import { THEME_GROUPS, getThemeOption } from '$lib/themes.js';
   import { theme } from '$lib/stores/theme.js';
 
   $: activeTheme = getThemeOption($theme);
-
-  /** @param {Event} event */
-  function handleChange(event) {
-    const target = /** @type {HTMLSelectElement} */ (event.currentTarget);
-    theme.set(target.value);
-  }
 </script>
 
 <div class="theme-picker">
   <label class="theme-picker-label" for="theme-select">Theme</label>
   <span class="theme-picker-swatch" style="--swatch-color: {activeTheme.swatch}" aria-hidden="true"></span>
-  <select
-    id="theme-select"
-    class="theme-picker-select"
-    value={$theme}
-    aria-label="Color theme"
-    onchange={handleChange}
-  >
-    {#each THEME_GROUPS as group}
-      <optgroup label={group.label}>
-        {#each group.themes as option}
-          <option value={option.id}>{option.label}</option>
-        {/each}
-      </optgroup>
-    {/each}
-  </select>
+  {#if browser}
+    <select
+      id="theme-select"
+      class="theme-picker-select"
+      bind:value={$theme}
+      aria-label="Color theme"
+    >
+      {#each THEME_GROUPS as group}
+        <optgroup label={group.label}>
+          {#each group.themes as option}
+            <option value={option.id}>{option.label}</option>
+          {/each}
+        </optgroup>
+      {/each}
+    </select>
+  {/if}
 </div>
 
 <style>

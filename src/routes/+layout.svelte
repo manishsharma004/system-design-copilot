@@ -10,7 +10,8 @@
   import { progress } from '$lib/stores/progress';
   import PwaUpdateBanner from '$lib/components/PwaUpdateBanner.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
-  import { derived } from 'svelte/store';
+  import { theme, applyTheme } from '$lib/stores/theme.js';
+  import { derived, get } from 'svelte/store';
   import { onMount } from 'svelte';
   import { pwaInfo } from 'virtual:pwa-info';
 
@@ -104,6 +105,17 @@
   }
 
   onMount(() => {
+    try {
+      const saved = window.localStorage.getItem('system-design-copilot-theme-v1');
+      if (saved) {
+        theme.set(saved);
+      } else {
+        applyTheme(get(theme));
+      }
+    } catch {
+      applyTheme(get(theme));
+    }
+
     loadSidebarState();
 
     const mediaQuery = window.matchMedia('(min-width: 1200px)');
