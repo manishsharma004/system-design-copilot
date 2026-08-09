@@ -32,11 +32,14 @@
   let visitedSectionIds = new Set(['learn-premise']);
   /** @type {IntersectionObserver | null} */
   let sectionObserver = null;
+  /** Ignore backdrop close briefly after open (avoids stray pointer events). */
+  let ignoreBackdropCloseUntil = 0;
 
   const POSITION_KEY = 'system-design-copilot-learn-position-v1';
 
   $: if (open && !wasOpen) {
     wasOpen = true;
+    ignoreBackdropCloseUntil = Date.now() + 400;
     openReader();
   } else if (!open && wasOpen) {
     wasOpen = false;
@@ -95,8 +98,16 @@
   }
 
   function requestClose() {
+    if (Date.now() < ignoreBackdropCloseUntil) return;
     persistPosition();
     onClose();
+  }
+
+  /** @param {PointerEvent} event */
+  function handleBackdropPointerDown(event) {
+    if (event.target !== event.currentTarget) return;
+    if (Date.now() < ignoreBackdropCloseUntil) return;
+    requestClose();
   }
 
   function setupSectionObserver() {
@@ -224,7 +235,7 @@
 
 {#if open && lesson}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="learn-reader-backdrop" onclick={requestClose}>
+  <div class="learn-reader-backdrop" onpointerdown={handleBackdropPointerDown}>
     <div
       class="learn-reader-dialog"
       bind:this={dialogEl}
@@ -433,7 +444,7 @@
   .learn-reader-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 70;
+    z-index: 100;
     display: grid;
     place-items: center;
     padding: 1rem;

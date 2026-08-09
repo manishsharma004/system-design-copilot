@@ -84,6 +84,10 @@
   function sectionId(heading) {
     return heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   }
+
+  function openLearnChapter() {
+    learnOpen = true;
+  }
 </script>
 
 <svelte:head>
@@ -107,7 +111,7 @@
   <h1>{data.lesson.title}</h1>
   <p class="hero-subtitle">{data.lesson.summary}</p>
   <div class="action-row">
-    <button class="action-link primary" type="button" onclick={() => (learnOpen = true)}>
+    <button class="action-link primary" type="button" onclick={openLearnChapter}>
       {data.lesson.learnChapter ? 'Learn chapter' : 'Learn'}
     </button>
     <a class="action-link" href={showPythonLab ? '#ml-practice-lab' : '#practice-lab'}>{practiceHeroLabel}</a>
@@ -156,7 +160,7 @@
 
 <LessonSectionNav
   sections={lessonSections}
-  onLearnOpen={data.lesson.learnChapter ? () => { learnOpen = true; } : null}
+  onLearnOpen={data.lesson.learnChapter ? openLearnChapter : null}
 />
 
 <section class="lesson-shell" id="lesson-content">

@@ -21,6 +21,8 @@
   let query = '';
   /** @type {Record<string, boolean>} */
   let expandedModules = {};
+  /** Last lesson path we auto-expanded for — avoids re-opening when user collapses. */
+  let lastAutoExpandPath = '';
   /** @type {HTMLInputElement | null} */
   let searchInput = null;
 
@@ -171,18 +173,22 @@
     : [];
   $: visibleModules = filteredModules.map((module) => ({
     ...module,
-    isExpanded: query.trim()
-      ? true
-      : expandedModules[module.slug] ?? module.slug === activeModule?.slug
+    isExpanded: query.trim() ? true : Boolean(expandedModules[module.slug])
   }));
   $: if (activeFlow && !Object.keys(expandedModules).length) {
-    expandedModules = Object.fromEntries(filteredModules.map((module) => [module.slug, module.slug === activeModule?.slug]));
+    expandedModules = Object.fromEntries(
+      filteredModules.map((module) => [module.slug, module.slug === activeModule?.slug])
+    );
+    saveSidebarState();
   }
-  $: if (activeModule && !query.trim() && !expandedModules[activeModule.slug]) {
-    expandedModules = {
-      ...expandedModules,
-      [activeModule.slug]: true
-    };
+  $: if (activeModule && !query.trim() && normalizedPathname.includes('/lesson/')) {
+    if (normalizedPathname !== lastAutoExpandPath) {
+      lastAutoExpandPath = normalizedPathname;
+      if (!expandedModules[activeModule.slug]) {
+        expandedModules = { ...expandedModules, [activeModule.slug]: true };
+        saveSidebarState();
+      }
+    }
   }
   $: sidebarVisible = isDesktop ? desktopNavOpen : navOpen;
   $: progressLabel = activeFlow
@@ -284,17 +290,24 @@
           {#if visibleModules.length}
             {#each visibleModules as module}
               <div class="sidebar-compact-group">
-                <button
+                <div
                   class="sidebar-compact-module"
                   class:active-module={module.slug === activeModule?.slug}
-                  type="button"
-                  aria-expanded={module.isExpanded}
-                  onclick={() => toggleModule(module.slug)}
                 >
-                  <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
-                  <span class="sidebar-compact-module-title">{module.title}</span>
+                  <button
+                    type="button"
+                    class="sidebar-compact-chevron-btn"
+                    aria-expanded={module.isExpanded}
+                    aria-label="{module.isExpanded ? 'Collapse' : 'Expand'} {module.title}"
+                    onclick={() => toggleModule(module.slug)}
+                  >
+                    <span class="sidebar-compact-chevron">{module.isExpanded ? '▾' : '▸'}</span>
+                  </button>
+                  <a class="sidebar-compact-module-title" href={moduleHref(module.slug)} onclick={closeNavigation}>
+                    {module.title}
+                  </a>
                   <span class="sidebar-compact-count">{$moduleProgress[module.slug]?.completed ?? 0}/{$moduleProgress[module.slug]?.total ?? 0}</span>
-                </button>
+                </div>
                 {#if module.isExpanded}
                   <div class="sidebar-compact-lessons">
                     {#each module.lessons as lesson}
@@ -302,6 +315,7 @@
                         class:active={normalizedPathname === lessonHref(module.slug, lesson.slug)}
                         class="sidebar-compact-link sidebar-compact-lesson"
                         href={lessonHref(module.slug, lesson.slug)}
+                        onclick={closeNavigation}
                       >
                         <span>{lesson.order}. {lesson.title}</span>
                         {#if $progress.completedLessonIds.includes(lesson.id)}
