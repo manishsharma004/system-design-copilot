@@ -6,12 +6,16 @@ import { defineConfig } from 'vite';
 const basePath = '/system-design-copilot';
 
 export default defineConfig({
+	base: `${basePath}/`,
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			includeAssets: ['favicon.svg', 'robots.txt'],
+			kit: {
+				trailingSlash: 'always'
+			},
 			manifest: {
 				name: 'System Design Copilot',
 				short_name: 'SD Copilot',
@@ -45,8 +49,8 @@ export default defineConfig({
 					'client/_app/immutable/nodes/*.{js,css}'
 				],
 				globIgnores: ['**/workers/**'],
-				navigateFallback: `${basePath}/index.html`,
-				navigateFallbackDenylist: [new RegExp(`^${basePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/_app/`)],
+				// Fully prerendered static export: do not SPA-fallback to index.html on navigation.
+				navigateFallback: null,
 				runtimeCaching: [
 					{
 						urlPattern: ({ url }) => url.pathname.includes('/_app/immutable/'),
