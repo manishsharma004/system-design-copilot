@@ -690,7 +690,9 @@ test('AI engineer Learn chapters are interactive (mermaid, runnable code, deep l
     const mermaidParts = chapter.parts.filter((part) => part.mermaid?.code);
     assert.ok(mermaidParts.length >= 2, `expected ≥2 mermaid parts for ${lesson.id}`);
     mermaidParts.forEach((part) => {
-      assert.match(part.mermaid.code, /flowchart|graph/, `invalid mermaid for ${lesson.id} part ${part.id}`);
+      const mermaidCode = part.mermaid?.code;
+      assert.ok(mermaidCode, `missing mermaid code for ${lesson.id} part ${part.id}`);
+      assert.match(mermaidCode, /flowchart|graph/, `invalid mermaid for ${lesson.id} part ${part.id}`);
     });
 
     const runnableParts = chapter.parts.filter((part) => part.workedExample?.code || part.interactiveDemo?.codeTemplate);
@@ -702,9 +704,15 @@ test('AI engineer Learn chapters are interactive (mermaid, runnable code, deep l
     assert.ok(codingExercises.length >= 1, `expected coding exercise for ${lesson.id}`);
 
     const nextSteps = chapter.wrapUp?.nextSteps ?? [];
-    const hrefSteps = nextSteps.filter((step) => typeof step === 'object' && step.href);
+    const hrefSteps = /** @type {import('../src/lib/data/learnChapters.js').LearnNextStep[]} */ (
+      nextSteps.filter(
+        (step) => typeof step === 'object' && step !== null && typeof step.href === 'string'
+      )
+    );
     assert.ok(hrefSteps.length >= 2, `expected ≥2 href nextSteps for ${lesson.id}`);
-    const labLink = hrefSteps.find((step) => step.href.includes('#ml-practice-lab') || step.href.includes('#topic-lab'));
+    const labLink = hrefSteps.find(
+      (step) => step.href.includes('#ml-practice-lab') || step.href.includes('#topic-lab')
+    );
     assert.ok(labLink, `expected topic-lab or Python-lab next step for ${lesson.id}`);
   });
 });
