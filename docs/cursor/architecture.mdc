@@ -5,7 +5,7 @@
 ## Stack
 
 - **SvelteKit 2** + **Svelte 5** (many components still use legacy `export let` / `runes={false}`)
-- **adapter-static** → `dist/`; **base path** `/system-design-copilot` (GitHub Pages)
+- **adapter-static** → `dist/`; **base path** `/system-design-copilot` (GitHub Pages); `paths.relative: false` so `_app` assets use root-absolute URLs on every prerendered page; `dist/.nojekyll` on build
 - **PWA**: `@vite-pwa/sveltekit` — `manifest.webmanifest` + `sw.js`; precaches prerendered lesson HTML; runtime cache for JS chunks and Google Fonts
 - **CSS**: Tailwind 4 + Skeleton; app themes in `src/themes.css` + IDE tokens in `src/ide-theme.css` / `src/ide-chrome.css`; semantic classes in `src/app.css`
 - **Diagrams**: Mermaid + static primer images; **Markdown**: `markdown-it` (LLM replies)
