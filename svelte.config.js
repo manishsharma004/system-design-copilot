@@ -1,6 +1,8 @@
 
 import adapter from '@sveltejs/adapter-static';
 
+const basePath = '/system-design-copilot';
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   kit: {
@@ -9,7 +11,8 @@ const config = {
       assets: 'dist'
     }),
     paths: {
-      base: '/system-design-copilot'
+      base: basePath,
+      relative: false
     },
     serviceWorker: {
       register: false
